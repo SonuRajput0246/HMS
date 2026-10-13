@@ -1,4 +1,3 @@
-from datetime import datetime
 from sqlalchemy.exc import SQLAlchemyError
 from src.database.session import db_session
 from src.api.models import EnumDefinition, EnumOption

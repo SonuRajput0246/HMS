@@ -74,26 +74,3 @@ class User(BaseModel):
 
     def __repr__(self):
         return f"User(id={self.id}, email={self.email})"
-
-
-
-    ### HELPERS
-    # def get_full_name(self) -> str:
-    #     return f"{self.first_name} {self.last_name}".strip()
-
-    # def is_deactivated(self) -> bool:
-    #     return self.deactivated_at is not None
-
-    # def deactivate(self, reason: str, deactivated_by: str, enum_service=None) -> None:
-    #     if self.is_deactivated():
-    #         raise ValueError("User already deactivated")
-
-    #     if enum_service is not None:
-    #         error = enum_service.validate("account_deactivated_by", deactivated_by)
-    #         if error:
-    #             raise ValueError(error)
-
-    #     self.is_active = False
-    #     self.deactivated_at = datetime.now(timezone.utc)
-    #     self.deactivated_by = deactivated_by
-    #     self.deactivation_reason = reason.strip() if reason else None

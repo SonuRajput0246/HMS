@@ -3,10 +3,8 @@ from sqlalchemy.orm import joinedload
 from sqlalchemy import or_, text
 import re
 
-from src.api.models import Role
 from src.api.models.user_model import User
 from src.api.services.enum_service import EnumService
-from flask import current_app
 
 from src.api.utils.responses import service_response
 

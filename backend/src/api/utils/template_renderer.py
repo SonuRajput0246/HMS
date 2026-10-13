@@ -41,7 +41,7 @@ import re
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from functools import lru_cache
-from typing import Any, Iterable
+from typing import Iterable
 
 
 ## Only bare identifiers are recognised as placeholders. Dots, spaces, digits
@@ -54,7 +54,6 @@ LAYOUT_RELATIVE_PATH = os.path.join("templates", "emails", "layout.html")
 
 ## Fallback copy used when a template row is missing, inactive, or fails to
 ## render. A send must degrade rather than break the auth flow.
-FALLBACK_SUBJECT = "Notification from HMS"
 FALLBACK_MESSAGE = (
     "<p>Hello {{ user_name }},</p>"
     "<p>A notification was generated for your account but the message "
@@ -81,12 +80,6 @@ class RenderResult:
     @property
     def has_missing(self) -> bool:
         return bool(self.missing_variables)
-
-    def to_dict(self) -> dict:
-        return {
-            "used_variables": list(self.used_variables),
-            "missing_variables": list(self.missing_variables),
-        }
 
 
 def extract_variables(text: str | None) -> list[str]:
@@ -176,11 +169,6 @@ def load_layout() -> str:
     path = os.path.join(_project_root(), LAYOUT_RELATIVE_PATH)
     with open(path, "r", encoding="utf-8") as handle:
         return handle.read()
-
-
-def clear_layout_cache() -> None:
-    """Drop the cached layout. Call after editing layout.html in development."""
-    load_layout.cache_clear()
 
 
 def build_email_html(subject: str | None, content_fragment: str) -> str:

@@ -245,16 +245,14 @@ class ReservationService:
             )
         )
 
-        ## Date range filter
+        ## Date range filter. Both bounds must be present -- a half-open range
+        ## has no single correct meaning here (arrivals within a window vs
+        ## stays overlapping one), so the schema requires the pair.
         if from_date and to_date:
             query = query.filter(
                 Reservation.check_in_date <= to_date,
                 Reservation.check_out_date >= from_date
             )
-        # elif from_date:
-        #     query = query.filter(Reservation.check_in_date >= from_date)
-        # elif to_date:
-        #     query = query.filter(Reservation.check_in_date <= to_date)
 
         ## Status filter. The value comes from the reservation_status enum table and is
         ## validated in the request schema, but normalising here as well means a

@@ -42,11 +42,6 @@ class Guest(BaseModel):
         back_populates="guest",
         cascade="save-update, merge"
     )
-    # folios = relationship(
-    #     "Folio",
-    #     back_populates="guest",
-    #     cascade="all, delete-orphan"
-    # )
 
     __table_args__ = (
 

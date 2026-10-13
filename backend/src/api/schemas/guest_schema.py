@@ -5,7 +5,6 @@ from src.api.schemas.pagination_schema import PaginationSchema
 from src.api.schemas.fields.text import text_field
 from src.api.schemas.mixins.email_mixin import EmailFieldMixin
 from src.api.schemas.mixins.name_mixin import NameFieldsMixin
-from src.api.schemas.mixins.phone_mixin import PhoneNumberFieldMixin
 
 
 class GetAllGuestsSchema(PaginationSchema):

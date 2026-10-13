@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 
-from src.api.middlewares.authorization import SELF_SERVICE, requires_module
+from src.api.middlewares.authorization import requires_module
 from src.api.schemas.pagination_schema import PaginationSchema
 from src.api.schemas.role_schema import GetRoleByIdSchema, UpsertRoleSchema, UpdateRoleAccessSchema
 from src.api.services.admin_service import AdminService

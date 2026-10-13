@@ -56,10 +56,6 @@ class EnumService:
             info["_enum_option_cache"] = {}
         return info["_enum_option_cache"]
 
-    def clear_cache(self):
-        """Drop cached options. Call after seeding within a live session."""
-        self.db.info.pop("_enum_option_cache", None)
-
     def _active_option_keys(self, enum_key: str) -> list[str]:
         """Active, non-deleted option keys for one enum."""
         cache = self._cache
@@ -92,12 +88,6 @@ class EnumService:
         return cache[enum_key]
 
     ## VALIDATION
-
-    def is_valid(self, enum_key: str, value) -> bool:
-        """True when value is an active option of enum_key."""
-        if value is None:
-            return True
-        return value in self._active_option_keys(enum_key)
 
     def validate(self, enum_key: str, value, allow_none: bool = True):
         """
@@ -133,57 +123,13 @@ class EnumService:
 
         return None
 
-    def validate_many(self, values: dict):
-        """
-        Validates several values at once.
-
-        values maps a column name to either a raw value, or to a
-        (value, enum_key) pair. Returns a dict of column -> error message for
-        the fields that failed, so a single 400 can report every bad field.
-        """
-        errors = {}
-
-        for column, spec in values.items():
-            if isinstance(spec, tuple):
-                value, enum_key = spec
-            else:
-                value = spec
-                enum_key = self.enum_key_for_column(column)
-
-                if enum_key is None:
-                    # Not a registered enum column; nothing to check.
-                    continue
-
-            error = self.validate(enum_key, value)
-            if error:
-                errors[column] = error
-
-        return errors
-
-    def enum_key_for_column(self, column: str):
-        """
-        Resolve the enum_key backing a bare column name.
-
-        Only unambiguous names resolve: 'id_type' maps to two tables, so it is
-        rejected and the caller must pass the (table, column) pair.
-        """
-        matches = {
-            enum_key
-            for (table, col), enum_key in ENUM_COLUMN_BINDINGS.items()
-            if col == column
-        }
-        ## 'room_status' is registered against rooms.room_status, so a bare
-        ## name can be ambiguous only when two tables bind the same column
-        ## name to different enums.
-
-        if len(matches) == 1:
-            return matches.pop()
-        return None
-
     def validate_model(self, table_name: str, values: dict):
         """
         Validates a dict of column -> value for one table, using
         ENUM_COLUMN_BINDINGS. Unregistered columns are ignored.
+
+        Returns a dict of column -> error message for the fields that failed,
+        so one 400 can report every bad field rather than the first.
         """
         errors = {}
 
@@ -197,43 +143,3 @@ class EnumService:
                 errors[column] = error
 
         return errors
-
-    ## LABELS
-
-    def get_option(self, enum_key: str, option_key: str):
-        """One option with its display data, or None."""
-        if option_key is None:
-            return None
-
-        return (
-            self.db.query(EnumOption)
-            .join(EnumDefinition, EnumOption.enum_id == EnumDefinition.id)
-            .filter(
-                EnumDefinition.enum_key == enum_key,
-                EnumDefinition.is_deleted == False,
-                EnumOption.option_key == option_key,
-                EnumOption.is_deleted == False,
-            )
-            .first()
-        )
-
-    def get_label(self, enum_key: str, option_key: str):
-        """Display label for an option, falling back to the key itself.
-
-        Falling back keeps an API response readable when a row references an
-        option that was later deactivated, instead of returning a bare null.
-        """
-        if option_key is None:
-            return None
-
-        option = self.get_option(enum_key, option_key)
-        return option.option_label if option else option_key
-
-    def get_labels(self, enum_key: str, column: str, value):
-        """
-        Display label for a column value. Returns None when value is None, so
-        callers can spread this into a response dict unconditionally.
-        """
-        if value is None:
-            return None
-        return self.get_label(enum_key, value)

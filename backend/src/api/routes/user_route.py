@@ -1,7 +1,7 @@
 from src.database.session import db_session
 from flask import request, jsonify, Blueprint
 from src.api.services.user_service import UserService
-from src.api.middlewares.authorization import SELF_SERVICE, requires_module
+from src.api.middlewares.authorization import requires_module
 from src.api.schemas.pagination_schema import PaginationSchema
 from src.api.schemas.user_schema import GetUserByIdSchema, UpsertUserSchema
 

@@ -16,7 +16,7 @@ def enum_option(enum_key: str, allow_none: bool = True):
 
     Note this opens its own short-lived session, because schema validation
     runs outside the service's session. For several fields on one payload,
-    prefer EnumService.validate_many in the service, which reuses a single
+    prefer EnumService.validate_model in the service, which reuses a single
     session and a per-request cache.
     """
 

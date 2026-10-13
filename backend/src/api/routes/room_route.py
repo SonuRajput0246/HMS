@@ -1,7 +1,7 @@
 from src.database.session import db_session
 from flask import request, jsonify, Blueprint
 from src.api.services.room_service import RoomService
-from src.api.middlewares.authorization import SELF_SERVICE, requires_module
+from src.api.middlewares.authorization import requires_module
 from src.api.schemas.room_schema import GetAllRoomsSchema, GetRoomByIdSchema, UpsertRoomSchema
 
 room_bp = Blueprint('room', __name__)

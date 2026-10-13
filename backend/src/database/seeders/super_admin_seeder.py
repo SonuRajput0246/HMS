@@ -6,7 +6,6 @@ from src.database.session import db_session
 from datetime import datetime, timezone
 
 ## Configuration
-# ADMIN_EMAIL = "admin@hms.com"
 ADMIN_EMAIL = "sonurajput8454@gmail.com"
 ADMIN_PASSWORD = "123456"
 

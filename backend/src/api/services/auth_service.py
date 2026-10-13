@@ -438,8 +438,10 @@ class AuthService:
         if not user_id:
             return {"error": "Invalid refresh token.", "code": 401}
 
-        ## Validate user
-        # user = self.db.query(User).filter_by(is_deleted=False, id=user_id, is_active=True).first()
+        ## Validate user.
+        ## NOTE: deliberately no `is_active` filter, so a token issued before a
+        ## user was deactivated still redeems. If that is not intended, add
+        ## `is_active=True` back.
         user = self.db.query(User).filter_by(is_deleted=False, id=user_id).first()
         if not user:
             return {"error": "User not found.", "code": 404}
@@ -454,19 +456,6 @@ class AuthService:
             return {"error": "Refresh token revoked or invalid.", "code": 401}
 
         return {"user": user}
-
-
-
-    # def forgot_password_request(self, data):
-    #     stmt = select(User).filter_by(email=data['email'], is_deleted=False)
-    #     user = self.db.execute(stmt).scalar_one_or_none()
-    #     if not user:
-    #         return service_response(False, "User not found", None, 404)
-    #
-    #     email_service = EmailService(self.db)
-    #     email_sent = email_service.send_password_reset_otp(user)
-    #     msg = "OTP sent. Please check your email." if email_sent else "Failed to send OTP on email. Please request a new OTP."
-    #     return service_response(True, msg, None, 200)
 
 
     def reset_user_password(self, data):
@@ -512,6 +501,3 @@ class AuthService:
         ).update({"is_revoked": True})
         self.db.commit()
         return {"is_success": True}
-
-
-# auth_service = AuthService(db_session)

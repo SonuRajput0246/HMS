@@ -6,10 +6,6 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 if TYPE_CHECKING:
     from src.api.models.user_model import User
 
-def _enum_values(enum_cls):
-    """Return the enum *values* so the DB stores 'email' / 'in_app'."""
-    return [member.value for member in enum_cls]
-
 
 class Template(BaseModel):
     __tablename__ = 'message_templates'
@@ -19,7 +15,8 @@ class Template(BaseModel):
     ## -------- Identity --------
     ## `code` is the stable contract used by backend services
     ## (e.g. TemplateCode.EMAIL_VERIFICATION_OTP). Never change it on a seeded
-    ## row -- the `is_system` guard in the CRUD service enforces that.
+    ## row -- template_service.py blocks changes to `code` / `channel` on an
+    ## `is_system` row.
     code: Mapped[str] = mapped_column(String(100), nullable=False)
     name: Mapped[str] = mapped_column(String(150), nullable=False)
     description: Mapped[str | None] = mapped_column(String(500), nullable=True)
@@ -75,22 +72,20 @@ class Template(BaseModel):
         nullable=True
     )
 
-
     ## Relationships
     ## `foreign_keys` is required because both columns point at users.id,
     ## which would otherwise leave SQLAlchemy unable to pick a join condition.
     created_by_user: Mapped["User | None"] = relationship(foreign_keys=[created_by])
     updated_by_user: Mapped["User | None"] = relationship(foreign_keys=[updated_by])
 
-
     ## CONSTRAINTS & INDEXES
     ##
     ## NOTE: there is deliberately NO unique constraint on (code, channel).
     ## MySQL does not support partial indexes, so a UNIQUE here would also cover
     ## soft-deleted rows and make it impossible to re-create a template with the
-    ## same code after deleting it. (Note the existing `postgresql_where=` usage
-    ## in services_model.py / folio_model.py is silently ignored on MySQL and
-    ## behaves as a plain UNIQUE -- do not copy that pattern.)
+    ## same code after deleting it. (Note that `postgresql_where=` is silently
+    ## ignored on MySQL and behaves as a plain UNIQUE -- do not copy that
+    ## pattern.)
     ## Uniqueness among live rows is enforced in the CRUD service, which returns
     ## 409 on conflict, matching upsert_role in admin_service.py.
     __table_args__ = (
@@ -135,46 +130,7 @@ class Template(BaseModel):
     )
 
     def __repr__(self):
-        return f"Template(id={self.id}, code='{self.code}', channel='{self.channel.value}')"
-
-
-    ### HELPERS
-
-    def activate(self) -> None:
-        """Mark the template usable for sending."""
-        self.is_active = True
-
-    def deactivate(self) -> None:
-        """Stop the template from being used, without deleting it."""
-        self.is_active = False
-
-    def soft_delete(self) -> None:
-        """Flag the row deleted. `deleted_at` is stamped by the service."""
-        self.is_deleted = True
-
-    def can_be_deleted(self) -> bool:
-        """Seeded templates must stay in place -- services reference them by code."""
-        return not self.is_system
-
-    def can_change_identity(self) -> bool:
-        """`code` and `channel` form the contract used by backend services."""
-        return not self.is_system
+        return f"Template(id={self.id}, code='{self.code}', channel='{self.channel}')"
 
     def is_email(self) -> bool:
         return self.channel == "email"
-
-    def is_in_app(self) -> bool:
-        return self.channel == "in_app"
-
-    def is_resendable(self) -> bool:
-        """Whether this row may be picked up by a send action."""
-        return self.is_active and not self.is_deleted
-
-    def get_allowed_variables(self) -> list[str]:
-        return list(self.variables or [])
-
-    def get_sample_context(self) -> dict:
-        return dict(self.sample_context or {})
-
-    def get_identity(self) -> tuple[str, str]:
-        return (self.code, self.channel.value)

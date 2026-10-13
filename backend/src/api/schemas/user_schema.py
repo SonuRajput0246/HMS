@@ -1,5 +1,4 @@
-from marshmallow import fields, validate, validates_schema, ValidationError
-from src.api.schemas.base import BaseSchema
+from marshmallow import fields, validates_schema, ValidationError
 from src.api.schemas.id_schema import id_schema_factory
 from src.api.schemas.mixins.name_mixin import NameFieldsMixin
 from src.api.schemas.fields.password import update_password_field

@@ -38,17 +38,9 @@ from .guest_model import Guest
 from .additional_guest_model import AdditionalGuest
 from .reservation_primary_guest_model import ReservationPrimaryGuest
 from .reservation_additional_guest_model import ReservationAdditionalGuest
-# from .folio_model import Folio
-# from .folio_charges_model import FolioCharge
-# from .invoice_model import Invoice
-# from .invoice_items_model import InvoiceItem
-# from .services_model import Service
 from .payment_model import Payment
-# from .tax_config_model import TaxConfig
-# from .refund_model import Refund
 from .currency_model import Currency
 from .system_setting_model import SystemSetting
-# from .room_type_pricing_model import RoomTypePricing
 from .template_model import Template
 from .enum_definitions_model import EnumDefinition
 from .enum_options_model import EnumOption

@@ -1,8 +1,7 @@
-from datetime import datetime
 
 from src.database.session import db_session
 from flask import request, jsonify, Blueprint, g
-from src.api.middlewares.authorization import SELF_SERVICE, requires_module
+from src.api.middlewares.authorization import requires_module
 from src.api.services.reservation_service import ReservationService
 from src.api.schemas.reservation_schema import GetAvailableRoomSchema, CreateReservationSchema, GetAllReservationsSchema
 

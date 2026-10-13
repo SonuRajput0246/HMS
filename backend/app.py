@@ -1,13 +1,8 @@
-import logging
 from flask import Flask
-from flask import jsonify
 from flask_cors import CORS
 from src.config import get_config
 from src.api.extensions import bcrypt
-from src.api.utils.errors import APIError
 from src.database.session import db_session
-from marshmallow.exceptions import MarshmallowError
-from sqlalchemy.sql.operators import json_getitem_op
 from src.api.utils.error_handlers import register_error_handlers
 
 ## Routes. Every blueprint below is registered unconditionally -- there is no
@@ -26,6 +21,11 @@ from src.api.routes.room_route import room_bp
 from src.api.routes.guest_route import guest_bp
 from src.api.routes.reservation_route import reservation_bp
 
+## Event listeners. Imported purely for side effect: each module registers
+## SQLAlchemy before_insert / before_update hooks as it is imported. That is not
+## optional decoration -- BaseModel.created_at / updated_at are nullable=False
+## with no column default, so a row inserted without a listener raises
+## MySQLdb.IntegrityError 1048 on MySQL.
 import src.api.events.user_events
 import src.api.events.email_otp_events
 import src.api.events.role_events
@@ -33,12 +33,7 @@ import src.api.events.inventory_events
 import src.api.events.room_events
 import src.api.events.reservation_events
 import src.api.events.guest_events
-import src.api.events.folio_events
-import src.api.events.folio_charges_events
-import src.api.events.invoice_events
-import src.api.events.invoice_item_events
 import src.api.events.payment_events
-import src.api.events.refund_events
 
 def create_app():
     app = Flask(__name__)

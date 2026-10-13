@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 from src.api.extensions import bcrypt
-from src.api.models import Role, AccountDeletions, Token
+from src.api.models import AccountDeletions, Token
 from src.api.models.user_model import User
 from src.api.services.enum_service import EnumService
 from src.api.utils.common_helper import normalize_text

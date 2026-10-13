@@ -1,6 +1,6 @@
 from datetime import datetime
 from src.database.base import Base
-from sqlalchemy import Boolean, func, DateTime
+from sqlalchemy import Boolean, DateTime
 from sqlalchemy.orm import Mapped, mapped_column
 
 
@@ -15,10 +15,3 @@ class BaseModel(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     deleted_at: Mapped[datetime | None] =  mapped_column(DateTime(timezone=True), nullable=True)
-
-
-    def to_dict(self):
-        """
-        Helper to quickly serialize model data for debugging or simple APIs.
-        """
-        return {c.name: getattr(self, c.name) for c in self.__table__.columns}

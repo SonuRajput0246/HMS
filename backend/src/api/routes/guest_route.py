@@ -1,6 +1,6 @@
 from flask import request, jsonify, Blueprint
 
-from src.api.middlewares.authorization import SELF_SERVICE, requires_module
+from src.api.middlewares.authorization import requires_module
 from src.api.schemas.guest_schema import GetAllGuestsSchema, GetGuestByIdSchema
 from src.api.services.guest_service import GuestService
 from src.database.session import db_session

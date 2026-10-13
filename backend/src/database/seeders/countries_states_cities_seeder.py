@@ -14,10 +14,8 @@ zero countries, states and cities while the seeder still printed success.
 
 Skipping is the right trade here: these are reference rows, not user data.
 """
-from sqlalchemy import text
 
 from src.database.seeders.sql_statement_loader import run_sql_seeder
-from src.database.session import db_session
 
 
 def seed_countries_states_cities(file_path):
@@ -26,14 +24,6 @@ def seed_countries_states_cities(file_path):
         file_path,
         "Countries, States & Cities seeded successfully!",
     )
-
-
-def count_rows() -> dict:
-    """Row counts, so a partial load is visible rather than inferred."""
-    return {
-        table: db_session.execute(text(f"SELECT COUNT(*) FROM {table}")).scalar_one()
-        for table in ("countries", "states", "cities")
-    }
 
 
 if __name__ == "__main__":

@@ -52,11 +52,6 @@ from src.api.utils.errors import APIError
 ## made and can be grepped for.
 SELF_SERVICE = "__self_service__"
 
-## Operations that mean "can see this module at all". A role row for a module
-## always carries at least one, but a module granted only via an operation
-## this list does not contain would otherwise be invisible here.
-_ANY_OPERATION = None
-
 
 class ForbiddenError(APIError):
     def __init__(self, message="You do not have access to this resource",
@@ -107,12 +102,6 @@ def granted_modules_for_request():
     return names
 
 
-def can_access(module_name):
-    if module_name == SELF_SERVICE:
-        return True
-    return module_name in granted_modules_for_request()
-
-
 def requires_module(module_name):
     """Authenticate, then require `module_name`.
 
@@ -121,7 +110,7 @@ def requires_module(module_name):
     authenticated view, and it does both jobs.
 
     module_name is a module name as it appears in the module seeder
-    (REPORTS, TABLE, RESERVATIONS, ...), or SELF_SERVICE for routes that only
+    (REPORTS, RESERVATIONS, GUEST, ...), or SELF_SERVICE for routes that only
     need a valid session.
     """
     def decorator(f):

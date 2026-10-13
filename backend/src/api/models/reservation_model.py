@@ -85,11 +85,6 @@ class Reservation(BaseModel):
         back_populates="reservation",
         cascade="all, delete-orphan"
     )
-    # folios = relationship(
-    #     "Folio",
-    #     back_populates="reservation",
-    #     cascade="all, delete-orphan"
-    # )
     payments: Mapped[list["Payment"]] = relationship(
         back_populates="reservation",
         cascade="all, delete-orphan"

@@ -35,7 +35,6 @@ from src.api.utils.template_renderer import (
     render_in_app,
     render_fallback_email,
     audit_declared_variables,
-    extract_variables,
 )
 
 
@@ -278,101 +277,6 @@ class TemplateResolver:
     def render_email(self, code, context: dict) -> dict:
         """Convenience wrapper pinned to the email channel."""
         return self.render(code, context, "email")
-
-    def render_in_app(self, code, context: dict) -> dict:
-        """Convenience wrapper pinned to the in_app channel."""
-        return self.render(code, context, "in_app")
-
-
-    # ---------------------------------------------------------------
-    # DIAGNOSTICS
-    # ---------------------------------------------------------------
-
-    def diagnose(self, code, channel="email") -> dict:
-        """Why would a send for this (code, channel) not produce real content?
-
-        Used by the CRUD API preview endpoint and by any admin health screen.
-        """
-        raw_code = self._normalise_code(code)
-        enum_channel = self._normalise_channel(channel)
-
-        active = self.get_active(raw_code, enum_channel)
-        any_row = self.get_any(raw_code, enum_channel)
-
-        report = {
-            "code": raw_code,
-            "channel": enum_channel if enum_channel else None,
-            "exists": any_row is not None,
-            "active": active is not None,
-            "is_system": any_row.is_system if any_row else None,
-            "version": any_row.version if any_row else None,
-            "declared_variables": [],
-            "used_variables": [],
-            "undeclared_variables": [],
-            "unused_declared_variables": [],
-            "issues": [],
-        }
-
-        if any_row is None:
-            report["issues"].append("No template row exists for this code and channel.")
-            return report
-
-        if any_row.is_deleted:
-            report["issues"].append("Template has been deleted.")
-        elif not any_row.is_active:
-            report["issues"].append(
-                "Template is inactive, so sends will use fallback copy."
-            )
-
-        audit = audit_declared_variables(any_row)
-        report["declared_variables"] = audit["declared"]
-        report["used_variables"] = audit["used"]
-        report["undeclared_variables"] = audit["undeclared"]
-        report["unused_declared_variables"] = audit["unused"]
-
-        if enum_channel == "email" and not any_row.subject_template:
-            report["issues"].append(
-                "Channel is 'email' but subject_template is empty."
-            )
-        if enum_channel == "in_app" and not any_row.title_template:
-            report["issues"].append(
-                "Channel is 'in_app' but title_template is empty."
-            )
-        if not any_row.message_template:
-            report["issues"].append("message_template is empty.")
-
-        return report
-
-    def list_codes(self, channel=None) -> list[dict]:
-        """Every non-deleted row, optionally filtered by channel.
-
-        Returns the raw columns rather than the ORM objects so this can be fed
-        straight to a dropdown or the Angular channel filter.
-        """
-        query = self.db.query(Template).filter(Template.is_deleted == False)
-
-        if channel is not None:
-            enum_channel = self._normalise_channel(channel)
-            if enum_channel is None:
-                return []
-            query = query.filter(Template.channel == enum_channel)
-
-        rows = query.order_by(Template.sort_order.asc(), Template.code.asc()).all()
-
-        return [
-            {
-                "id": row.id,
-                "code": row.code,
-                "name": row.name,
-                "channel": row.channel,
-                "is_active": row.is_active,
-                "is_system": row.is_system,
-                "version": row.version,
-                "sort_order": row.sort_order,
-                "used_variables": extract_variables(row.message_template),
-            }
-            for row in rows
-        ]
 
 
     # ---------------------------------------------------------------

@@ -1,4 +1,4 @@
-from marshmallow import fields, validate, Schema
+from marshmallow import fields, validate
 from src.api.schemas.base import BaseSchema
 from src.api.schemas.id_schema import id_schema_factory
 

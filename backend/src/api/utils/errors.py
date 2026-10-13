@@ -10,10 +10,6 @@ class ResourceConflictError(APIError):
     def __init__(self, message="Resource already exists"):
         super().__init__(message, status_code=409)
 
-class ValidationError(APIError):
-    def __init__(self, message="Invalid input data"):
-        super().__init__(message, status_code=400)
-
 class UnauthorizedError(APIError):
     def __init__(self, message="Unauthorized access", payload=None):
         super().__init__(message, status_code=401, payload=payload)

@@ -1,5 +1,5 @@
 from flask import request, jsonify, Blueprint
-from src.api.middlewares.authorization import SELF_SERVICE, requires_module
+from src.api.middlewares.authorization import requires_module
 from src.api.schemas.pagination_schema import PaginationSchema
 from src.api.schemas.inventory_schema import GetCategoryByIdSchema, GetInventoryById, UpsertInventoryCategorySchema, \
     UpsertInventorySchema
@@ -28,7 +28,6 @@ class InventoryRoute:
 
     def upsert_inventory_category(self):
         payload = request.get_json() or {}
-        print(payload)
         validated_data = UpsertInventoryCategorySchema().load(payload)
         result, status_code = self.inventory_service.upsert_inventory_category(validated_data)
         return jsonify(result), status_code

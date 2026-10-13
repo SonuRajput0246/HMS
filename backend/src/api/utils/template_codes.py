@@ -6,13 +6,13 @@ spelled out as a raw string in two places.
 
 `code` is the stable contract that the database stores in
 `message_templates.code` and that backend services resolve against. The `code`
-column is protected from edits on seeded rows (see `is_system` and the
-`can_change_identity()` guard), so these values only change alongside a
-dedicated migration.
+column is protected from edits on seeded rows (see `is_system` and the guard in
+template_service.py), so these values only change alongside a dedicated
+migration.
 
 NOTE: this enum is NOT persisted as a SQLAlchemy column type. `channel` is the
-only enumerated column on the table, and it is `TemplateChannelEnum` in
-src/api/models/template_model.py.
+only enumerated column on the table, and it is a plain String validated against
+the `template_channel` rows in `enum_definitions`.
 """
 from enum import Enum
 
@@ -46,22 +46,6 @@ OTP_VARIABLES = [
     TemplateVariable.EXPIRY_MINUTES.value,
 ]
 
-# ## Each code is seeded for both channels, giving 6 rows in total.
-# CHANNELS_BY_CODE = {
-#     TemplateCode.EMAIL_VERIFICATION_OTP: [
-#         TemplateChannelEnum.EMAIL,
-#         TemplateChannelEnum.IN_APP,
-#     ],
-#     TemplateCode.ACCOUNT_ACTIVATION_OTP: [
-#         TemplateChannelEnum.EMAIL,
-#         TemplateChannelEnum.IN_APP,
-#     ],
-#     TemplateCode.PASSWORD_RESET_OTP: [
-#         TemplateChannelEnum.EMAIL,
-#         TemplateChannelEnum.IN_APP,
-#     ],
-# }
-
 
 def all_codes() -> list[str]:
     """Every known code as plain strings, for the seeder and for validation."""
@@ -71,15 +55,6 @@ def all_codes() -> list[str]:
 def is_known_code(code: str) -> bool:
     """Guard for admin-created rows: is this code one the app ships with?"""
     return code in all_codes()
-
-
-# def code_for(channel: TemplateChannelEnum) -> list[TemplateCode]:
-#     """Codes that exist for a given channel. Used by the Angular channel filter."""
-#     return [
-#         code
-#         for code, channels in CHANNELS_BY_CODE.items()
-#         if channel in channels
-#     ]
 
 
 def default_sort_order(code: str) -> int:

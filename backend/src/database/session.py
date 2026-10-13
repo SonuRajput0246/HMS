@@ -28,13 +28,3 @@ session_factory = sessionmaker(
 ## 3. Create a Scoped Session
 ## This is thread-safe and perfect for Flask production environments
 db_session = scoped_session(session_factory)
-
-def init_db():
-    """
-    Initializes the database, creating tables if they don't exist.
-    Import all models here before calling create_all()
-    """
-    from base import Base
-    # Import models here (e.g., from app.models import User)
-    # so SQLAlchemy knows about them
-    Base.metadata.create_all(bind=engine)
