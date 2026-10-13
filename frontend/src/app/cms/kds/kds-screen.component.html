@@ -1,0 +1,228 @@
+<div class="kds-shell">
+
+    <!-- ================================================================
+         Station switcher + freshness stamp.
+         The tabs carry the outstanding count so a head chef can see which
+         pass is backing up without visiting every screen.
+         ================================================================ -->
+    <header class="kds-topbar">
+        <button mat-icon-button type="button" aria-label="Back to dashboard"
+                routerLink="/cms/dashboard">
+            <mat-icon>arrow_back</mat-icon>
+        </button>
+
+        <div class="kds-brand">
+            <span class="kds-brand-icon"><mat-icon>soup_kitchen</mat-icon></span>
+            <div class="kds-brand-text">
+                <h2>Kitchen Display</h2>
+                <p>{{ stationLabel }} &middot; {{ ticketCount }} ticket(s)</p>
+            </div>
+        </div>
+
+        <nav class="station-tabs">
+            <!-- "All stations" first: a board that opens on a filtered view
+                 hides work by default, and the chef is the one who has to
+                 know about it. -->
+            <button type="button" class="station-tab"
+                [class.active]="activeStation === null"
+                [class.is-idle]="totalOutstanding === 0"
+                (click)="onStationChange(null)">
+                <mat-icon>apps</mat-icon>
+                <span class="s-label">All stations</span>
+                <span class="s-badge">{{ totalOutstanding }}</span>
+            </button>
+
+            <button type="button" class="station-tab"
+                *ngFor="let row of stations"
+                [class.active]="activeStation === row.station"
+                [class.is-idle]="row.total === 0"
+                (click)="onStationChange(row.station)">
+                <span class="s-label">{{ labelForStation(row.station) }}</span>
+                <span class="s-badge">{{ row.total }}</span>
+                <!-- prep split per station: "is the backlog cooking, or just
+                     not started?" — the two need different nudges. -->
+                <span class="s-split" *ngIf="row.preparing > 0">
+                    <em>{{ row.preparing }} cooking</em>
+                </span>
+            </button>
+        </nav>
+
+        <div class="kds-status">
+            <div class="prep-split">
+                <span class="ps-chip ps-pending">{{ summary.pending }} to start</span>
+                <span class="ps-chip ps-preparing">{{ summary.preparing }} cooking</span>
+                <span class="ps-chip ps-ready">{{ summary.ready }} ready</span>
+            </div>
+
+            <!-- server_time, not Date.now(): if the board and the server
+                 disagree the chef is looking at a stale queue, and this is
+                 how they find out. -->
+            <span class="kds-timestamp" matTooltip="Last board refresh (server time)">
+                <mat-icon>schedule</mat-icon>
+                Updated {{ serverTime | date: 'HH:mm:ss' }}
+            </span>
+
+            <button mat-stroked-button class="kds-refresh" (click)="refreshNow()" [disabled]="isBusy">
+                <mat-icon>refresh</mat-icon>
+                Refresh
+            </button>
+        </div>
+    </header>
+
+    <!-- Plated lines are off by default: a pass only cares about what still
+         needs hands on it. The toggle is how a head chef spot-checks or
+         requeues a cold plate. -->
+    <div class="kds-options">
+        <mat-slide-toggle [checked]="includeReady" (change)="onToggleIncludeReady($event.checked)"
+            color="primary">
+            Show plated items
+        </mat-slide-toggle>
+        <span class="opt-hint">
+            Off: only items the kitchen still owes. On: plated lines come back so they can be requeued.
+        </span>
+    </div>
+
+    <!-- ================================================================
+         Ticket board
+         ================================================================ -->
+    <div class="ticket-board" *ngIf="!isPageLoad">
+
+        <article class="ticket" *ngFor="let ticket of tickets"
+            [ngClass]="waitClass(ticket.max_wait_minutes)"
+            [class.is-busy]="isTicketBusy(ticket)">
+
+            <header class="ticket-head">
+                <div class="th-left">
+                    <span class="th-ref">{{ ticket.reference_label }}</span>
+                    <span class="th-order">{{ ticket.order_number }}</span>
+                </div>
+
+                <!-- The number a chef actually triages on. Amber at 10
+                     minutes, red at 20 — the colour, not just the digit. -->
+                <span class="wait-badge" [ngClass]="waitClass(ticket.max_wait_minutes)">
+                    <mat-icon>schedule</mat-icon>
+                    {{ ticket.max_wait_minutes }} min
+                </span>
+            </header>
+
+            <!-- Kitchen notes ride at the top of the ticket: they are the
+                 reason for the ticket, not an aside. -->
+            <div class="ticket-notes" *ngIf="ticket.kitchen_notes">
+                <mat-icon>sticky_note_2</mat-icon>
+                <span>{{ ticket.kitchen_notes }}</span>
+            </div>
+
+            <div class="ticket-items">
+                <div class="k-item"
+                    *ngFor="let item of ticket.items"
+                    [class.is-voided]="item.prep_status === 'voided'"
+                    [class.is-ready]="item.prep_status === 'ready'"
+                    [class.is-busy]="isLineBusy(item)">
+
+                    <div class="ki-main">
+                        <!-- Quantity is huge: "two biryanis, not one" is the
+                             single most common mis-fire at a pass. -->
+                        <span class="ki-qty">{{ item.quantity }}&times;</span>
+                        <span class="ki-name">{{ item.item_name }}</span>
+                    </div>
+
+                    <div class="ki-detail">
+                        <span class="ki-instr" *ngIf="item.cooking_instructions">
+                            <mat-icon>chat</mat-icon>{{ item.cooking_instructions }}
+                        </span>
+                        <span class="ki-spice" *ngIf="item.spice_level && item.spice_level !== 'none'">
+                            <mat-icon>local_fire</mat-icon>{{ spiceLabel(item.spice_level) }}
+                        </span>
+                        <span class="ki-station" *ngIf="activeStation === null">
+                            {{ labelForStation(item.station) }}
+                        </span>
+                    </div>
+
+                    <div class="ki-actions">
+                        <span class="ki-pill"
+                            [ngClass]="'ps-' + (item.prep_status || 'pending')">
+                            {{ prepLabel(item.prep_status) }}
+                        </span>
+
+                        <!-- pending: both a proper "Start" AND a one-tap
+                             "Ready", because pending -> ready is legal and
+                             waiting for two taps to plate one dish is how a
+                             pass falls behind.
+
+                             Note what is NOT in the disabled expression: a
+                             board read. These buttons are gated only on this
+                             line's own write, because a poll lands every 10
+                             seconds and gating on it would eat a chef's tap
+                             mid-press. -->
+                        <ng-container *ngIf="item.prep_status === 'pending'">
+                            <button mat-stroked-button class="k-btn k-start"
+                                (click)="onStart(item)" [disabled]="isLineBusy(item)">
+                                <mat-icon>play_arrow</mat-icon> Start
+                            </button>
+                            <button mat-flat-button color="primary" class="k-btn k-ready"
+                                (click)="onReady(item)" [disabled]="isLineBusy(item)">
+                                <mat-icon>check</mat-icon> Ready
+                            </button>
+                        </ng-container>
+
+                        <ng-container *ngIf="item.prep_status === 'preparing'">
+                            <button mat-flat-button color="primary" class="k-btn k-ready"
+                                (click)="onReady(item)" [disabled]="isLineBusy(item)">
+                                <mat-icon>check</mat-icon> Ready
+                            </button>
+                        </ng-container>
+
+                        <!-- ready: only shown when the board was asked to
+                             include plated lines, otherwise it is a chip and
+                             nothing more. -->
+                        <ng-container *ngIf="item.prep_status === 'ready'">
+                            <span class="k-done">
+                                <mat-icon>check_circle</mat-icon> Plated
+                            </span>
+                            <button mat-stroked-button class="k-btn k-requeue" *ngIf="includeReady"
+                                (click)="onRequeue(item)" [disabled]="isLineBusy(item)"
+                                matTooltip="Put this line back in the queue and restart its timer">
+                                <mat-icon>replay</mat-icon> Requeue
+                            </button>
+                        </ng-container>
+
+                        <!-- voided: shown struck through and inert. The KDS
+                             never voids -- that is a cashier action with a
+                             reason -- so there is deliberately no control. -->
+                        <ng-container *ngIf="item.prep_status === 'voided'">
+                            <span class="k-voided">
+                                <mat-icon>block</mat-icon> Voided at the till
+                            </span>
+                        </ng-container>
+                    </div>
+                </div>
+            </div>
+
+            <footer class="ticket-foot">
+                <span class="tf-count">
+                    {{ ticket.item_count }} item(s) &middot; {{ countOutstanding(ticket) }} still to plate
+                </span>
+
+                <!-- Hidden once nothing is left to bump: a dead "Bump all"
+                     only invites a 409 and a red toast. -->
+                <button mat-flat-button color="warn" class="bump-btn"
+                    *ngIf="countOutstanding(ticket) > 0"
+                    (click)="onBumpAll(ticket)" [disabled]="isTicketBusy(ticket)">
+                    <mat-icon>done_all</mat-icon>
+                    Bump all
+                </button>
+                <span class="tf-done" *ngIf="countOutstanding(ticket) === 0">
+                    <mat-icon>verified</mat-icon> All plated
+                </span>
+            </footer>
+        </article>
+
+        <div class="board-empty" *ngIf="tickets.length === 0">
+            <mat-icon>restaurant</mat-icon>
+            <h3>Nothing in the queue</h3>
+            <p>{{ stationLabel }} has no outstanding tickets. The board refreshes every 10 seconds.</p>
+        </div>
+    </div>
+</div>
+
+<app-page-loader *ngIf="isPageLoad"></app-page-loader>

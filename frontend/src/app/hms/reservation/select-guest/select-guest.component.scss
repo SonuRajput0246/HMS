@@ -1,0 +1,609 @@
+// ============================================================
+//  SELECT GUEST — styled HMS list page
+//  Brand: navy #003366 / teal #16b4a4
+//  Matches the guest-details design system.
+//  Only the table body scrolls; stepper, hero, card header and
+//  paginator stay fixed.
+// ============================================================
+
+$navy: #003366;
+$navy-light: #0a4387;
+$navy-soft: #eef3fa;
+$teal: #16b4a4;
+$teal-soft: #e2f6f3;
+$page-bg: #f2f6fc;
+$card-bg: #ffffff;
+$text: #1c2b3a;
+$text-muted: #64748b;
+$border: #e2e8f0;
+$danger: #dc2626;
+$danger-soft: #fee2e2;
+$green: #15803d;
+$green-soft: #dcfce7;
+$gray: #6b7280;
+$gray-soft: #f3f4f6;
+$radius-lg: 18px;
+
+// ------------------------------------------------------------
+//  Page layout
+// ------------------------------------------------------------
+.select-guest-page {
+  height: calc(100vh - 110px);
+  display: flex;
+  flex-direction: column;
+  padding: 10px 20px 16px;
+  gap: 10px;
+  box-sizing: border-box;
+  background:
+    radial-gradient(1200px 400px at 85% -10%, rgba(22, 180, 164, 0.10), transparent 60%),
+    radial-gradient(900px 380px at -10% -10%, rgba(10, 67, 135, 0.08), transparent 55%),
+    $page-bg;
+}
+
+// ------------------------------------------------------------
+//  Reservation status band — stepper + draft summary merged
+//  One slim ~38px strip so the table gets nearly all the space
+// ------------------------------------------------------------
+.status-band {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 8px 16px;
+  border-radius: 14px;
+  background:
+    radial-gradient(500px 130px at 100% 0%, rgba(22, 180, 164, 0.28), transparent 60%),
+    linear-gradient(120deg, #0b2f5e 0%, $navy 45%, $navy-light 100%);
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(0, 51, 102, 0.20);
+
+  // ---------- stepper (left) ----------
+  .band-stepper {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+    .bp-step {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+
+      .bp-dot {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        font-size: 10px;
+        color: rgba(255, 255, 255, 0.65);
+        background: rgba(255, 255, 255, 0.10);
+        border: 1.5px solid rgba(255, 255, 255, 0.28);
+        transition: all 0.25s ease;
+
+        mat-icon {
+          font-size: 12px;
+          width: 12px;
+          height: 12px;
+        }
+      }
+
+      .bp-label {
+        font-size: 11px;
+        font-weight: 500;
+        color: rgba(255, 255, 255, 0.72);
+        letter-spacing: 0.2px;
+        white-space: nowrap;
+      }
+
+      &.done .bp-dot {
+        background: $teal;
+        border-color: transparent;
+        color: #fff;
+        box-shadow: 0 2px 6px rgba(22, 180, 164, 0.5);
+      }
+
+      &.active .bp-dot {
+        background: #fff;
+        border-color: transparent;
+        color: $navy;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+      }
+
+      &.active .bp-label {
+        color: #fff;
+        font-weight: 600;
+      }
+    }
+
+    .bp-line {
+      width: 22px;
+      height: 2px;
+      border-radius: 2px;
+      background: rgba(255, 255, 255, 0.18);
+    }
+  }
+
+  // ---------- divider ----------
+  .band-divider {
+    width: 1px;
+    height: 26px;
+    background: rgba(255, 255, 255, 0.18);
+  }
+
+  // ---------- summary (right) ----------
+  .band-summary {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+
+    .band-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+
+      mat-icon {
+        font-size: 15px;
+        width: 15px;
+        height: 15px;
+        color: #8fe8dc;
+      }
+
+      strong {
+        font-size: 12px;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+
+      small {
+        font-size: 10.5px;
+        color: rgba(255, 255, 255, 0.70);
+        white-space: nowrap;
+      }
+
+      &.band-total {
+        background: rgba(22, 180, 164, 0.22);
+        border: 1px solid rgba(22, 180, 164, 0.45);
+        border-radius: 8px;
+        padding: 5px 10px;
+
+        strong {
+          color: #8fe8dc;
+          font-size: 13px;
+        }
+      }
+    }
+
+    .band-change {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: rgba(255, 255, 255, 0.12);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      border-radius: 999px;
+      padding: 4px 12px;
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+
+      mat-icon {
+        font-size: 13px;
+        width: 13px;
+        height: 13px;
+      }
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.22);
+        border-color: rgba(255, 255, 255, 0.6);
+      }
+    }
+  }
+}
+
+// ------------------------------------------------------------
+//  Guest list card — header fixed, only body scrolls
+// ------------------------------------------------------------
+.table-card {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: $card-bg;
+  border: 1px solid $border;
+  border-radius: $radius-lg;
+  box-shadow: 0 6px 24px rgba(15, 42, 77, 0.06);
+  overflow: hidden;
+
+  // ----- fixed header -----
+  .table-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding: 14px 20px;
+    border-bottom: 1px solid $border;
+
+    .table-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+
+      .head-icon {
+        width: 40px;
+        height: 40px;
+        flex: 0 0 40px;
+        border-radius: 11px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, $navy, $navy-light);
+        box-shadow: 0 4px 10px rgba(0, 51, 102, 0.25);
+
+        mat-icon {
+          color: #fff;
+          font-size: 20px;
+          width: 20px;
+          height: 20px;
+        }
+      }
+
+      .head-text {
+        h3 {
+          margin: 0;
+          font-size: 15.5px;
+          font-weight: 700;
+          color: $navy;
+          letter-spacing: 0.2px;
+        }
+
+        p {
+          margin: 2px 0 0;
+          font-size: 12.5px;
+          color: $text-muted;
+        }
+      }
+    }
+
+    .table-tools {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+
+      .table-search {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: #f8fafd;
+        border: 1.5px solid $border;
+        border-radius: 999px;
+        padding: 8px 16px;
+        min-width: 250px;
+        transition: all 0.2s ease;
+
+        &:focus-within {
+          background: #fff;
+          border-color: $navy;
+          box-shadow: 0 0 0 3px rgba(0, 51, 102, 0.10);
+        }
+
+        mat-icon {
+          font-size: 18px;
+          width: 18px;
+          height: 18px;
+          color: #94a3b8;
+        }
+
+        input {
+          flex: 1;
+          border: none;
+          outline: none;
+          background: transparent;
+          font-size: 13px;
+          color: $text;
+          font-family: inherit;
+
+          &::placeholder {
+            color: #94a3b8;
+          }
+        }
+
+        .close-icon {
+          cursor: pointer;
+          color: $navy;
+        }
+      }
+
+      .add-guest-btn {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 9px 18px;
+        border-radius: 999px;
+        border: none;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 0.2px;
+        background: linear-gradient(135deg, $teal, #0f9d8c) !important;
+        color: #fff !important;
+        box-shadow: 0 5px 14px rgba(22, 180, 164, 0.32);
+        transition: all 0.2s ease;
+
+        mat-icon {
+          font-size: 17px;
+          width: 17px;
+          height: 17px;
+        }
+
+        &:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 8px 18px rgba(22, 180, 164, 0.40);
+        }
+      }
+    }
+  }
+
+  // ----- ONLY this area scrolls -----
+  .table-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #c3d2e4 transparent;
+
+    &::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    &::-webkit-scrollbar-thumb {
+      background: #c3d2e4;
+      border-radius: 8px;
+    }
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+  }
+
+  // ----- fixed paginator bar -----
+  .table-footer {
+    border-top: 1px solid $border;
+    background: #fbfcfe;
+    padding: 2px 14px 2px 0;
+  }
+}
+
+// ------------------------------------------------------------
+//  Table styling
+// ------------------------------------------------------------
+.table-scroll .guest-table {
+  width: 100%;
+  min-width: 1040px;
+  table-layout: fixed;
+  background: transparent;
+  // Row height — matches the available-rooms table (35px rows)
+  --mat-table-row-item-container-height: 34px;
+  --mat-table-header-container-height: 29px;
+}
+
+// header cells
+::ng-deep .table-scroll .guest-table th.mat-mdc-header-cell {
+  background: $navy-soft;
+  color: $navy;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  padding: 5px 10px;
+  line-height: 30px;
+  white-space: nowrap;
+  border-bottom: 1.5px solid #d5e0ee;
+}
+
+// body cells
+::ng-deep .table-scroll .guest-table td.mat-mdc-cell {
+  font-size: 12px;
+  color: $text;
+  padding: 3px 10px;
+  line-height: 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-bottom-color: $border;
+}
+
+// keep status pills & action buttons fully visible (no ellipsis clip)
+::ng-deep .table-scroll .guest-table td.mat-column-status,
+::ng-deep .table-scroll .guest-table td.mat-column-actions {
+  overflow: visible;
+}
+
+// row hover
+::ng-deep .table-scroll .guest-table tr.mat-mdc-row {
+  transition: background 0.15s ease;
+}
+::ng-deep .table-scroll .guest-table tr.mat-mdc-row:hover td.mat-mdc-cell {
+  background: $teal-soft;
+}
+
+// status pill
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  line-height: 1.2;
+
+  &::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+  }
+
+  &.active {
+    background: $green-soft;
+    color: $green;
+
+    &::before {
+      background: $green;
+    }
+  }
+
+  &.inactive {
+    background: $gray-soft;
+    color: $gray;
+
+    &::before {
+      background: #9ca3af;
+    }
+  }
+}
+
+// select action button (28px, matches the available-rooms Book button so
+// rows stay at 35px instead of growing to 36+ from Material's min-height)
+.select-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  height: 28px;
+  min-height: 28px !important;   // .mat-mdc-button-base default min-height is 36px
+  line-height: 28px;
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 1.5px solid $teal;
+  background: $teal-soft !important;
+  color: $teal !important;
+  font-size: 10.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  mat-icon {
+    font-size: 11px;
+    width: 11px;
+    height: 11px;
+  }
+
+  &:hover {
+    background: $teal !important;
+    color: #fff !important;
+    box-shadow: 0 4px 10px rgba(22, 180, 164, 0.35);
+  }
+}
+
+// empty state — centered both horizontally and vertically in
+// the table area (fills the visible space under the header).
+// The td MUST stay a real table-cell: .no-data's display:flex was
+// breaking it, collapsing the colspan cell to the first column's
+// width (that's why the message wrapped into a narrow left strip).
+// Height: scroll area = 100vh - page chrome. select-guest has the
+// status band (~48px) + gap (~10px) over list-reservations, so the
+// constant is ~58px larger than that page's 300px.
+::ng-deep .table-scroll .guest-table tr.mat-mdc-no-data-row td {
+  display: table-cell; // override .no-data { display: flex }
+  width: 100%;
+  height: calc(100vh - 377px); // table cells use height as a min row height
+  padding: 40px 16px;
+  border-bottom: none;
+  text-align: center;
+  vertical-align: middle;
+  white-space: normal;
+}
+
+.no-data {
+  width: 100%;
+  height: 100%;
+  padding: 24px 16px;
+  box-sizing: border-box;
+  color: $text-muted;
+  font-size: 13px;
+
+  mat-icon {
+    display: block;
+    margin: 0 auto 10px;
+    font-size: 34px;
+    width: 34px;
+    height: 34px;
+    color: #9db6d4;
+  }
+
+  span {
+    display: block;
+    text-align: center;
+  }
+}
+
+// ------------------------------------------------------------
+//  Responsive
+// ------------------------------------------------------------
+@media (max-width: 1280px) {
+  .status-band .band-stay {
+    display: none;
+  }
+}
+
+@media (max-width: 1000px) {
+  .status-band .band-room {
+    display: none;
+  }
+}
+
+@media (max-width: 820px) {
+  .select-guest-page {
+    padding: 12px 14px 14px;
+  }
+
+  .status-band {
+    padding: 8px 14px;
+
+    .band-divider {
+      display: none;
+    }
+  }
+
+  .table-card .table-header {
+    .table-tools {
+      width: 100%;
+      justify-content: space-between;
+    }
+
+    .table-search {
+      flex: 1;
+      min-width: 0;
+    }
+  }
+}
+
+@media (max-width: 560px) {
+  .status-band {
+    gap: 10px;
+
+    .band-summary {
+      margin-left: 0;
+    }
+  }
+
+  .table-card .table-header {
+    .table-tools {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .add-guest-btn {
+      justify-content: center;
+    }
+  }
+}

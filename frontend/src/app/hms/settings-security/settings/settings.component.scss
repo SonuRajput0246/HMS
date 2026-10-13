@@ -1,0 +1,344 @@
+// ============================================================
+//  SETTINGS & SECURITY — styled HMS settings page
+//  Brand: navy #003366 / teal #16b4a4
+//  Security options and the danger zone are separated so the
+//  destructive actions can never be confused with routine ones.
+// ============================================================
+
+$navy: #003366;
+$navy-light: #0a4387;
+$navy-soft: #eef3fa;
+$teal: #16b4a4;
+$teal-soft: #e2f6f3;
+$page-bg: #f2f6fc;
+$card-bg: #ffffff;
+$text: #1c2b3a;
+$text-muted: #64748b;
+$border: #e2e8f0;
+$green: #15803d;
+$green-soft: #dcfce7;
+$danger: #dc2626;
+$danger-soft: #fee2e2;
+$orange: #ea580c;
+$orange-soft: #ffedd5;
+$radius-lg: 18px;
+$radius: 12px;
+
+// ------------------------------------------------------------
+//  Page wrapper
+// ------------------------------------------------------------
+.settings-page {
+  height: calc(100vh - 110px);
+  display: flex;
+  flex-direction: column;
+  padding: 10px 20px 16px;
+  gap: 10px;
+  box-sizing: border-box;
+  background:
+    radial-gradient(1200px 400px at 85% -10%, rgba(22, 180, 164, 0.10), transparent 60%),
+    radial-gradient(900px 380px at -10% -10%, rgba(10, 67, 135, 0.08), transparent 55%),
+    $page-bg;
+}
+
+.settings-card {
+  flex: 1;
+  min-height: 0;
+  align-self: center;
+  width: 100%;
+  max-width: 860px;
+  display: flex;
+  flex-direction: column;
+  background: $card-bg;
+  border: 1px solid $border;
+  border-radius: $radius-lg;
+  box-shadow: 0 6px 24px rgba(15, 42, 77, 0.06);
+  overflow: hidden;
+}
+
+// ------------------------------------------------------------
+//  Page header
+// ------------------------------------------------------------
+.settings-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 20px 24px;
+  border-bottom: 1px solid $border;
+  background: linear-gradient(135deg, $navy, $navy-light);
+
+  .head-icon {
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.14);
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.18);
+
+    mat-icon {
+      color: #fff;
+      font-size: 22px;
+      width: 22px;
+      height: 22px;
+    }
+  }
+
+  .head-text {
+    min-width: 0;
+
+    h3 {
+      margin: 0;
+      font-size: 17px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: 0.2px;
+    }
+
+    p {
+      margin: 3px 0 0;
+      font-size: 12.5px;
+      color: rgba(255, 255, 255, 0.82);
+    }
+  }
+}
+
+// ------------------------------------------------------------
+//  Option rows
+// ------------------------------------------------------------
+.settings-list {
+  padding: 6px 24px;
+}
+
+.setting-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 0;
+  border-bottom: 1px solid $border;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.row-icon {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: $navy-soft;
+  border: 1px solid #dbe4f0;
+  transition: background 0.2s ease, border-color 0.2s ease;
+
+  mat-icon {
+    font-size: 21px;
+    width: 21px;
+    height: 21px;
+    color: $navy;
+  }
+
+  // MFA switched on — teal reads as "good state"
+  &.is-on {
+    background: $teal-soft;
+    border-color: #bfe9e4;
+
+    mat-icon {
+      color: $teal;
+    }
+  }
+
+  &.is-danger {
+    background: $danger-soft;
+    border-color: #f8cfcf;
+
+    mat-icon {
+      color: $danger;
+    }
+  }
+}
+
+.row-body {
+  flex: 1;
+  min-width: 0;
+
+  h4 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 0;
+    font-size: 14px;
+    font-weight: 700;
+    color: $text;
+    line-height: 1.3;
+  }
+
+  p {
+    margin: 3px 0 0;
+    font-size: 12.5px;
+    line-height: 1.45;
+    color: $text-muted;
+  }
+
+  .enabled-text {
+    color: $teal;
+    font-weight: 500;
+  }
+}
+
+.row-action {
+  flex: 0 0 auto;
+}
+
+// state pill next to the MFA title
+.state-pill {
+  padding: 1px 9px;
+  border-radius: 999px;
+  background: $orange-soft;
+  color: $orange;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  line-height: 1.5;
+  white-space: nowrap;
+
+  &.is-on {
+    background: $green-soft;
+    color: $green;
+  }
+}
+
+// ------------------------------------------------------------
+//  Buttons
+// ------------------------------------------------------------
+.btn-outline {
+  border-radius: 999px !important;
+  padding: 0 20px !important;
+  min-height: 40px;
+  font-size: 13px;
+  font-weight: 600;
+  color: $navy !important;
+  border-color: #cfdcec !important;
+  background: #ffffff !important;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: $navy-soft !important;
+    border-color: $navy !important;
+    color: $navy !important;
+  }
+
+  // teal while MFA is active
+  &.is-on {
+    color: $teal !important;
+    border-color: #bfe9e4 !important;
+
+    &:hover {
+      background: $teal-soft !important;
+      border-color: $teal !important;
+    }
+  }
+}
+
+.btn-danger {
+  border-radius: 999px !important;
+  padding: 0 20px !important;
+  min-height: 40px;
+  font-size: 13px;
+  font-weight: 600;
+  color: $danger !important;
+  border-color: #f3b9b9 !important;
+  background: #ffffff !important;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: $danger-soft !important;
+    border-color: $danger !important;
+  }
+
+  // permanent deletion — solid red so it outranks Deactivate
+  &.is-strong {
+    color: #ffffff !important;
+    background: $danger !important;
+    border-color: $danger !important;
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.28);
+
+    &:hover {
+      background: #b91c1c !important;
+      border-color: #b91c1c !important;
+      box-shadow: 0 6px 16px rgba(220, 38, 38, 0.38);
+    }
+  }
+}
+
+// ------------------------------------------------------------
+//  Danger zone
+// ------------------------------------------------------------
+.danger-zone {
+  margin-top: auto;
+  padding: 0 24px 6px;
+}
+
+.zone-header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 14px 0 10px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: $danger;
+
+  mat-icon {
+    font-size: 17px;
+    width: 17px;
+    height: 17px;
+    color: $danger;
+  }
+}
+
+.setting-row.is-danger {
+  border-bottom: none;
+
+  .row-body h4 {
+    color: #b91c1c;
+  }
+}
+
+// ------------------------------------------------------------
+//  Responsive
+// ------------------------------------------------------------
+@media (max-width: 720px) {
+  .settings-header {
+    padding: 16px;
+  }
+
+  .settings-list,
+  .danger-zone {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .setting-row {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .row-action {
+    width: 100%;
+    padding-left: 56px; // lines up under the body text, past the icon
+
+    button {
+      width: 100%;
+    }
+  }
+}

@@ -1,0 +1,560 @@
+// ============================================================
+//  LIST RESERVATIONS — styled HMS list page
+//  Brand: navy #003366 / teal #16b4a4
+//  Layout: Reserve Room CTA floats top-right (zero vertical
+//  cost); filters live inside the table-card header; only the
+//  table body scrolls — header & paginator stay fixed.
+// ============================================================
+
+$navy: #003366;
+$navy-light: #0a4387;
+$navy-soft: #eef3fa;
+$teal: #16b4a4;
+$teal-soft: #e2f6f3;
+$page-bg: #f2f6fc;
+$card-bg: #ffffff;
+$text: #1c2b3a;
+$text-muted: #64748b;
+$border: #e2e8f0;
+$danger: #dc2626;
+$danger-soft: #fee2e2;
+$green: #15803d;
+$green-soft: #dcfce7;
+$gray: #6b7280;
+$gray-soft: #f3f4f6;
+$radius-lg: 18px;
+
+
+// ------------------------------------------------------------
+//  Page wrapper (same as select-guest)
+// ------------------------------------------------------------
+.reservations-page {
+  height: calc(100vh - 110px);
+  display: flex;
+  flex-direction: column;
+  padding: 10px 20px 16px;
+  gap: 10px;
+  box-sizing: border-box;
+  background:
+    radial-gradient(1200px 400px at 85% -10%, rgba(22, 180, 164, 0.10), transparent 60%),
+    radial-gradient(900px 380px at -10% -10%, rgba(10, 67, 135, 0.08), transparent 55%),
+    $page-bg;
+}
+
+// ------------------------------------------------------------
+//  Table card — fixed header (title + filters), only body
+//  scrolls, fixed paginator
+// ------------------------------------------------------------
+.table-card {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: $card-bg;
+  border: 1px solid $border;
+  border-radius: $radius-lg;
+  box-shadow: 0 6px 24px rgba(15, 42, 77, 0.06);
+  overflow: hidden;
+
+  // ----- fixed header -----
+  .table-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding: 10px 16px;
+    border-bottom: 1px solid $border;
+
+    .table-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+
+      .head-icon {
+        width: 40px;
+        height: 40px;
+        flex: 0 0 40px;
+        border-radius: 11px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, $navy, $navy-light);
+        box-shadow: 0 4px 10px rgba(0, 51, 102, 0.25);
+
+        mat-icon {
+          color: #fff;
+          font-size: 20px;
+          width: 20px;
+          height: 20px;
+        }
+      }
+
+      .head-text {
+        h3 {
+          margin: 0;
+          font-size: 15.5px;
+          font-weight: 700;
+          color: $navy;
+          letter-spacing: 0.2px;
+        }
+
+        p {
+          margin: 2px 0 0;
+          font-size: 12.5px;
+          color: $text-muted;
+        }
+      }
+    }
+
+    // ----- filter controls (kept inside the header) -----
+    .filter-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-left: auto; // keep right-aligned even when wrapped
+
+      .custom-input {
+        width: 220px;
+      }
+    }
+
+    // Clear Filters button
+    .filter-action button {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      border: 1.5px solid $danger;
+      border-radius: 999px;
+      background-color: $danger-soft !important;
+      color: $danger !important;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 2px 14px;
+      transition: all 0.2s ease;
+
+      mat-icon {
+        font-size: 15px;
+        width: 15px;
+        height: 15px;
+      }
+
+      &:hover {
+        background-color: #fecaca !important;
+        box-shadow: 0 4px 10px rgba(220, 38, 38, 0.2);
+      }
+    }
+  }
+
+  // ----- ONLY this area scrolls -----
+  .table-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #c3d2e4 transparent;
+
+    &::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    &::-webkit-scrollbar-thumb {
+      background: #c3d2e4;
+      border-radius: 8px;
+    }
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+  }
+
+  // ----- fixed paginator bar -----
+  .table-footer {
+    border-top: 1px solid $border;
+    background: #fbfcfe;
+    padding: 2px 14px 2px 0;
+  }
+}
+
+// ------------------------------------------------------------
+//  Compact filter fields inside the header (token trick — same
+//  approach as guest-details). Scoped to this page's header so
+//  nothing leaks into other pages.
+// ------------------------------------------------------------
+::ng-deep .reservations-page .table-header .filter-controls .mat-mdc-form-field {
+  --mat-form-field-container-height: 40px;
+  --mat-form-field-container-vertical-padding: 10px;
+  font-size: 13px;
+}
+// Collapse the hint/error subscript row so the visible field chip
+// fills the whole form-field height and centers exactly like the
+// Clear Filters button (otherwise the fields sit slightly higher).
+::ng-deep .reservations-page .table-header .filter-controls .mat-mdc-form-field-subscript-wrapper {
+  display: none;
+}
+::ng-deep .reservations-page .table-header .filter-controls .mat-mdc-text-field-wrapper {
+  background: #f8fafd;
+  border-radius: 11px !important;
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+::ng-deep .reservations-page .table-header .filter-controls .mat-mdc-text-field-wrapper.mdc-text-field--focused {
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(0, 51, 102, 0.12);
+}
+::ng-deep .reservations-page .table-header .filter-controls .mdc-notched-outline__leading {
+  border-radius: 11px 0 0 11px !important;
+}
+::ng-deep .reservations-page .table-header .filter-controls .mdc-notched-outline__trailing {
+  border-radius: 0 11px 11px 0 !important;
+}
+::ng-deep .reservations-page .table-header .filter-controls .mdc-notched-outline > * {
+  border-color: #dbe4f0 !important;
+}
+::ng-deep .reservations-page .table-header .filter-controls
+  .mat-mdc-text-field-wrapper.mdc-text-field--focused:not(.mdc-text-field--invalid)
+  .mdc-notched-outline > * {
+  border-color: $navy !important;
+  border-width: 1.5px !important;
+}
+::ng-deep .reservations-page .table-header .filter-controls .mdc-floating-label {
+  color: #7d8ea3;
+  font-size: 13px;
+}
+::ng-deep .reservations-page .table-header .filter-controls .mdc-floating-label--float-above {
+  color: $navy !important;
+  font-size: 14px !important;
+  font-weight: 600;
+}
+::ng-deep .reservations-page .table-header .filter-controls .mat-mdc-input-element,
+::ng-deep .reservations-page .table-header .filter-controls .mat-mdc-select-value-text {
+  font-size: 13px !important;
+  color: $text !important;
+  font-weight: 500;
+}
+::ng-deep .reservations-page .table-header .filter-controls .mat-mdc-select-arrow {
+  color: $navy;
+}
+::ng-deep .reservations-page .table-header .filter-controls .mdc-line-ripple::before,
+::ng-deep .reservations-page .table-header .filter-controls .mdc-line-ripple::after {
+  display: none;
+}
+::ng-deep .reservations-page .table-header .filter-controls .mat-datepicker-toggle .mat-mdc-icon-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  color: $navy;
+
+  .mat-mdc-button-touch-target {
+    display: none;
+  }
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+}
+
+// ------------------------------------------------------------
+//  Status dropdown panel (scoped via existing panelClass)
+// ------------------------------------------------------------
+::ng-deep .cdk-overlay-container div.compact-select-panel.mat-mdc-select-panel {
+  background-color: #ffffff;
+  border: 1px solid #d5e0ee;
+  border-radius: 12px;
+  padding: 6px;
+  box-shadow: 0 12px 30px rgba(0, 51, 102, 0.18);
+}
+::ng-deep .compact-select-panel .mat-mdc-option {
+  min-height: 36px;
+  padding: 0 12px;
+  margin: 1px 0;
+  border-radius: 9px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: $text;
+
+  &:hover:not(.mat-mdc-option-disabled) {
+    background: $navy-soft;
+    color: $navy;
+  }
+
+  &.mat-mdc-option-active:not(:hover) {
+    background: transparent;
+    color: $text;
+  }
+
+  &.mat-mdc-option-selected:not(.mat-mdc-option-disabled) {
+    background: $teal-soft;
+    color: $teal;
+    box-shadow: inset 3px 0 0 $teal;
+
+    .mdc-list-item__primary-text {
+      font-weight: 700;
+    }
+  }
+
+  .mat-pseudo-checkbox {
+    display: none;
+  }
+}
+
+// ------------------------------------------------------------
+//  Table styling (same compact approach as select-guest)
+// ------------------------------------------------------------
+.table-scroll .reservations-table {
+  width: 100%;
+  min-width: 1120px;
+  table-layout: fixed;
+  background: transparent;
+  // Shrink rows via Material's own height tokens (52px / 56px defaults)
+  --mat-table-row-item-container-height: 30px;
+  --mat-table-header-container-height: 29px;
+}
+
+// header cells
+::ng-deep .table-scroll .reservations-table th.mat-mdc-header-cell {
+  background: $navy-soft;
+  color: $navy;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  padding: 5px 10px;
+  line-height: 30px;
+  white-space: nowrap;
+  border-bottom: 1.5px solid #d5e0ee;
+}
+
+// body cells
+::ng-deep .table-scroll .reservations-table td.mat-mdc-cell {
+  font-size: 12px;
+  color: $text;
+  padding: 4px 10px;
+  line-height: 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-bottom-color: $border;
+}
+
+// keep pills & action buttons fully visible (no ellipsis clip)
+::ng-deep .table-scroll .reservations-table td.mat-column-status,
+::ng-deep .table-scroll .reservations-table td.mat-column-actions {
+  overflow: visible;
+}
+
+// row hover
+::ng-deep .table-scroll .reservations-table tr.mat-mdc-row {
+  transition: background 0.15s ease;
+}
+::ng-deep .table-scroll .reservations-table tr.mat-mdc-row:hover td.mat-mdc-cell {
+  background: $teal-soft;
+}
+
+// amount cell
+.amount-cell {
+  font-weight: 700;
+  color: $navy;
+}
+
+// status pill — color-coded per reservation status
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  line-height: 1.2;
+  white-space: nowrap;
+  background: $gray-soft;
+  color: $gray;
+
+  &::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #9ca3af;
+  }
+
+  &.st-reserved {
+    background: $teal-soft;
+    color: $teal;
+
+    &::before {
+      background: $teal;
+      box-shadow: 0 0 0 2px rgba(22, 180, 164, 0.25);
+    }
+  }
+
+  &.st-checked_in {
+    background: $navy-soft;
+    color: $navy;
+
+    &::before {
+      background: $navy;
+    }
+  }
+
+  &.st-checked_out {
+    background: $gray-soft;
+    color: $gray;
+
+    &::before {
+      background: #9ca3af;
+    }
+  }
+
+  &.st-cancelled {
+    background: $danger-soft;
+    color: $danger;
+
+    &::before {
+      background: $danger;
+    }
+  }
+}
+
+// action (⋮) button — hover circle + dots perfectly centered
+.action-btn {
+  // keep the Material state layer (hover circle) sized with the button
+  --mdc-icon-button-state-layer-size: 28px;
+  width: 28px;
+  height: 28px;
+  padding: 0 !important;          // Material adds 12px padding — that's what pushed the dots down
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  color: $navy !important;
+  transition: all 0.15s ease;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    line-height: 18px;
+    flex: 0 0 auto;
+  }
+
+  &:hover {
+    background: $navy-soft !important;
+  }
+}
+
+// row action menu (rendered in overlay — scoped via its own class)
+::ng-deep .table-actions {
+  border-radius: 12px;
+  min-width: 100px;
+  padding: 5px !important;
+  border: 1px solid $border;
+  box-shadow: 0 12px 30px rgba(0, 51, 102, 0.18);
+
+  .mat-mdc-menu-item {
+    border-radius: 8px;
+    min-height: 32px;
+    font-size: 12px;
+    font-weight: 500;
+    color: $text;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+
+    mat-icon {
+      color: $navy;
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+      margin-right: 6px !important; // was 16px (then 8px) — tight icon → text gap
+    }
+
+    // kill the global `.menu-item .mat-mdc-menu-item-text { text-align: center }`
+    // which centered the label inside its stretched flex span and added ~23px
+    // of visual gap; left-align + match the item font size here.
+    .mat-mdc-menu-item-text {
+      text-align: left;
+      font-size: 12px !important;
+    }
+
+    &:hover {
+      background: $navy-soft;
+      color: $navy;
+    }
+
+    &.delete-item {
+      color: $danger;
+
+      mat-icon {
+        color: $danger;
+      }
+
+      &:hover {
+        background: $danger-soft;
+      }
+    }
+  }
+}
+
+// empty state — centered both horizontally and vertically in
+// the table area (fills the visible space under the header).
+// The td MUST stay a real table-cell: .no-data's display:flex was
+// breaking it, collapsing the colspan cell to the first column's
+// width (that's why the message wrapped into a narrow left strip).
+::ng-deep .table-scroll .reservations-table tr.mat-mdc-no-data-row td {
+  display: table-cell; // override .no-data { display: flex }
+  width: 100%;
+  height: calc(100vh - 300px); // table cells use height as a min row height
+  padding: 40px 16px;
+  border-bottom: none;
+  text-align: center;
+  vertical-align: middle;
+  white-space: normal;
+}
+
+.no-data {
+  width: 100%;
+  height: 100%;
+  padding: 24px 16px;
+  box-sizing: border-box;
+  color: $text-muted;
+  font-size: 13px;
+
+  mat-icon {
+    display: block;
+    margin: 0 auto 10px;
+    font-size: 34px;
+    width: 34px;
+    height: 34px;
+    color: #9db6d4;
+  }
+
+  span {
+    display: block;
+    text-align: center;
+  }
+}
+
+// ------------------------------------------------------------
+//  Responsive
+// ------------------------------------------------------------
+@media (max-width: 1200px) {
+  .table-header .filter-controls .custom-input {
+    width: 185px;
+  }
+}
+
+@media (max-width: 1000px) {
+  .reservations-page {
+    padding: 8px 14px 14px;
+  }
+
+  .table-header .filter-controls .custom-input {
+    width: 100%;
+  }
+}

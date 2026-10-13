@@ -1,0 +1,125 @@
+<app-navigation-bar [navData]="navData"></app-navigation-bar>
+
+<div class="top-sub-nav-controls">
+    <button type="button" mat-raised-button color="primary" routerLink="/hms/settings">
+        <mat-icon>arrow_back</mat-icon> Back
+    </button>
+</div>
+
+<div class="deactivate-page">
+
+    <div class="deactivate-card">
+
+        <!-- ================= Header ================= -->
+        <header class="deactivate-header">
+            <span class="head-icon"><mat-icon>pause_circle</mat-icon></span>
+            <div class="head-text">
+                <h3>Deactivate Account</h3>
+                <p>Temporarily disable your account. You can reactivate anytime.</p>
+            </div>
+        </header>
+
+        <div class="card-body">
+
+            <!-- ================= What happens ================= -->
+            <section class="info-block">
+                <div class="block-title">
+                    <mat-icon>info_outline</mat-icon>
+                    <span>What happens when you deactivate?</span>
+                </div>
+
+                <ul class="info-list">
+                    <li>
+                        <mat-icon class="tick">check</mat-icon>
+                        <span>You will be logged out immediately</span>
+                    </li>
+                    <li>
+                        <mat-icon class="tick">check</mat-icon>
+                        <span>Your account will be disabled</span>
+                    </li>
+                    <li>
+                        <mat-icon class="tick">check</mat-icon>
+                        <span>Your data will remain safe</span>
+                    </li>
+                    <li>
+                        <mat-icon class="tick">check</mat-icon>
+                        <span>You can reactivate by logging in again</span>
+                    </li>
+                </ul>
+            </section>
+
+            <!-- ================= Reason (optional) ================= -->
+            <section class="form-section">
+                <header class="section-header">
+                    <span class="head-icon"><mat-icon>chat</mat-icon></span>
+                    <div class="head-text">
+                        <h3>Help us improve</h3>
+                        <p>Optional — tell us why you're stepping away</p>
+                    </div>
+                </header>
+
+                <form [formGroup]="deactivateForm">
+                    <div class="section-grid">
+
+                        <mat-form-field appearance="outline"
+                            [floatLabel]="isReasonLoading ? 'auto' : 'always'" [hideRequiredMarker]="isReasonLoading">
+                            <mat-label>
+                                <span class="label-loader" *ngIf="isReasonLoading; else reasonLabel">
+                                    <span>Loading...</span>
+                                    <mat-spinner diameter="16"></mat-spinner>
+                                </span>
+                                <ng-template #reasonLabel>Why are you deactivating your account?</ng-template>
+                            </mat-label>
+                            <mat-select formControlName="deactivation_reason" placeholder="Choose Reason"
+                                [disabled]="isReasonLoading" panelClass="deactivate-select-panel">
+                                <mat-option *ngFor="let item of deactivationReasonList" [value]="item.option_key">
+                                    {{ item.option_label }}
+                                </mat-option>
+                            </mat-select>
+                        </mat-form-field>
+
+                        <mat-form-field appearance="outline" floatLabel="always"
+                            *ngIf="isOtherReasonSelected">
+                            <mat-label>Tell us more</mat-label>
+                            <textarea matInput formControlName="other_reason" rows="3" maxlength="250"
+                                placeholder="Your feedback helps us improve..."></textarea>
+                            <mat-hint align="end">
+                                {{ deactivateForm.get('other_reason')?.value?.length || 0 }}/250
+                            </mat-hint>
+                        </mat-form-field>
+
+                    </div>
+                </form>
+            </section>
+
+        </div>
+
+        <!-- ================= Sticky action bar ================= -->
+        <div class="action-bar">
+            <div class="action-left">
+                <strong>Deactivate your account</strong>
+                <span>This action is reversible.</span>
+            </div>
+
+            <div class="action-right">
+                <button mat-stroked-button class="btn-cancel" routerLink="/hms/settings">
+                    Cancel
+                </button>
+
+                <button mat-flat-button class="btn-danger" (click)="openDeactivateDialog()" [disabled]="isLoading">
+                    <span class="btn-content" *ngIf="!isLoading">
+                        <mat-icon>pause</mat-icon>
+                        Deactivate
+                    </span>
+                    <span class="btn-content" *ngIf="isLoading">
+                        Please Wait
+                        <mat-progress-spinner diameter="18" mode="indeterminate" class="btn-spinner">
+                        </mat-progress-spinner>
+                    </span>
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+</div>

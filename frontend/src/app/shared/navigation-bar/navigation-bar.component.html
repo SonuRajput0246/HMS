@@ -1,0 +1,24 @@
+<!-- <div class="mst_bg-div" [ngClass]="isDashboard ? 'sub-div':''">
+    <span class="ico-span">
+        <mat-icon style="color: gray; padding: 0px 15px;">home</mat-icon>
+    </span>
+    <ng-container *ngFor="let item of navData">
+        <span class="sl" [ngClass]="item.isClickable ? 'clickable_sl':''"> / </span>
+        <span [ngClass]="item.isClickable ? 'clickable' : ''" (click)="OnNavClick(item)">
+            {{item.displayValue}}
+        </span>
+    </ng-container>
+</div> -->
+
+
+<div class="mst_bg_div" [ngClass]="isDashboard ? 'sub-div':''">
+    <span class="ico-span">
+        <mat-icon style="color: gray; padding: 0px 15px;">home</mat-icon>
+    </span>
+    <ng-container *ngFor="let item of navData">
+        <mat-icon style="color: #000000c1;" *ngIf="item.displayValue != 'Home'">navigate_next</mat-icon>
+        <span [ngClass]="item.isClickable ? 'clickable' : ''" (click)="OnNavClick(item)">
+            {{item.displayValue}}
+        </span>
+    </ng-container>
+</div>

@@ -1,0 +1,51 @@
+//  Structure only.
+//
+//  The per-state palette (surface tint, accent bar, icon colour) is NOT here:
+//  it is keyed off the `panelClass` that CustomSnackbarService puts on the
+//  Material snack-bar container, which is an *ancestor* of this component and
+//  therefore unreachable from a stylesheet scoped to this view. Those rules
+//  live in src/styles.scss, in the "Snackbar customization" section.
+
+:host {
+  display: block;
+}
+
+.cus_snackbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  // Slightly tighter on the leading edge, where the 4px accent bar of the
+  // surface sits, so the badge is optically centred in the remaining space.
+  padding: 12px 16px 12px 14px;
+}
+
+// Circular badge behind the status icon. Only its geometry is defined here —
+// the background and glyph colour are applied per state from src/styles.scss.
+.cus_snackbar__icon {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+
+  .mat-icon {
+    font-size: 19px;
+    width: 19px;
+    height: 19px;
+    line-height: 19px;
+  }
+}
+
+.cus_snackbar__message {
+  // Dark on the light tint of every state, so one colour works everywhere.
+  color: #1c2b3a;
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.4;
+  letter-spacing: 0.1px;
+
+  // Lets a long server-supplied message wrap instead of stretching the card.
+  min-width: 0;
+}

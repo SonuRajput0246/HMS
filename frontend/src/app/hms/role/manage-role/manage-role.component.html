@@ -1,0 +1,100 @@
+<app-navigation-bar [navData]="navData"></app-navigation-bar>
+
+<div class="top-sub-nav-controls">
+    <button type="button" mat-raised-button color="primary" routerLink="/hms/roles">
+        <mat-icon>arrow_back</mat-icon> Back
+    </button>
+</div>
+
+<div class="manage-role-page">
+
+    <!-- Form area -->
+    <div class="in_up_form form-scroll">
+
+        <form [formGroup]="roleForm" (ngSubmit)="insertUpdateRole()" autocomplete="off">
+            <div class="form-shell manage-role-form">
+
+                <!-- ================= Role Details ================= -->
+                <section class="form-section">
+                    <header class="section-header">
+                        <span class="head-icon"><mat-icon>badge</mat-icon></span>
+                        <div class="head-text">
+                            <h3>Role Details</h3>
+                            <p>Role code & Role name and whether it is available for assignment</p>
+                        </div>
+                    </header>
+
+                    <div class="section-grid">
+                        <mat-form-field appearance="outline" floatLabel="always">
+                            <mat-label>Role Code</mat-label>
+                            <input matInput type="text" formControlName="role_code" placeholder="Enter Role Code">
+                            <mat-error *ngIf="roleForm.get('role_code')?.hasError('required')">
+                                Role Code is required
+                            </mat-error>
+                        </mat-form-field>
+                        <mat-form-field appearance="outline" floatLabel="always">
+                            <mat-label>Role Name</mat-label>
+                            <input matInput type="text" formControlName="role_name" placeholder="Enter Role Name">
+                            <mat-error *ngIf="roleForm.get('role_name')?.hasError('required')">
+                                Role Name is required
+                            </mat-error>
+                        </mat-form-field>
+                    </div>
+                </section>
+
+                <!-- ================= Preferences & Status ================= -->
+                <section class="form-section">
+                    <header class="section-header">
+                        <span class="head-icon"><mat-icon>tune</mat-icon></span>
+                        <div class="head-text">
+                            <h3>Preferences &amp; Status</h3>
+                            <p>Whether this role can be assigned to users</p>
+                        </div>
+                    </header>
+
+                    <div class="toggle-grid">
+                        <div class="toggle-card">
+                            <span class="toggle-icon success"><mat-icon>verified_user</mat-icon></span>
+                            <div class="toggle-body">
+                                <strong>Active Status</strong>
+                                <small>Role is available for assignment</small>
+                            </div>
+                            <mat-slide-toggle formControlName="is_active"></mat-slide-toggle>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+
+            <!-- Footer Actions -->
+            <div class="form-footer">
+                <div class="footer-note">
+                    <mat-icon>lock</mat-icon>
+                    <span>Role details are stored securely</span>
+                </div>
+
+                <div class="footer-buttons">
+                    <button mat-stroked-button type="button" class="btn-cancel" routerLink="/hms/roles">
+                        Cancel
+                    </button>
+                    <button mat-flat-button type="submit" class="btn-submit" [disabled]="isLoading">
+                        <span class="btn-content" *ngIf="!isLoading">
+                            <mat-icon>{{ isEditMode ? 'save' : 'add' }}</mat-icon>
+                            {{ isEditMode ? 'Update Role' : 'Add Role' }}
+                        </span>
+                        <span class="btn-content" *ngIf="isLoading">
+                            Please Wait
+                            <mat-progress-spinner diameter="18" mode="indeterminate" class="btn-spinner">
+                            </mat-progress-spinner>
+                        </span>
+                    </button>
+                </div>
+            </div>
+        </form>
+
+        <ng-container *ngIf="isPageLoad">
+            <app-page-loader></app-page-loader>
+        </ng-container>
+    </div>
+
+</div>

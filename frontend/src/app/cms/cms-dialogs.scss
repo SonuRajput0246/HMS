@@ -1,0 +1,246 @@
+// ---------- CMS dialogs (shared by order + customer) ----------//
+//  mat-dialog renders its content into a CDK overlay container that lives
+//  OUTSIDE the component's view, so component-scoped styles cannot reach it.
+//  These therefore have to be global, the same reason the SweetAlert2 block
+//  above does.
+
+$dlg-navy: #003366;
+$dlg-navy-light: #0a4387;
+$dlg-border: #e2e8f0;
+$dlg-text: #1c2b3a;
+$dlg-muted: #64748b;
+
+.dlg {
+  display: flex;
+  flex-direction: column;
+  max-height: 84vh;
+
+  .dlg-head {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 18px 22px 14px;
+    border-bottom: 1px solid $dlg-border;
+    background: linear-gradient(135deg, rgba(0, 51, 102, 0.04), rgba(22, 180, 164, 0.05));
+
+    .dlg-title {
+      h2 {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 700;
+        color: $dlg-navy;
+        letter-spacing: 0.2px;
+      }
+
+      p {
+        margin: 3px 0 0;
+        font-size: 12.5px;
+        color: $dlg-muted;
+      }
+    }
+  }
+
+  .dlg-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    padding: 18px 22px;
+  }
+
+  .dlg-foot {
+    flex: 0 0 auto;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 14px 22px;
+    border-top: 1px solid $dlg-border;
+    background: #f8fafc;
+  }
+
+  // ---- form rows (customer dialog) ----
+  .field-row {
+    margin-bottom: 4px;
+
+    mat-form-field { width: 100%; }
+  }
+
+  .toggle-row {
+    display: flex;
+    gap: 20px;
+    padding: 6px 0 4px;
+  }
+
+  .note {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin: 8px 0 0;
+    padding: 9px 12px;
+    font-size: 12px;
+    color: $dlg-muted;
+    background: #f1f5f9;
+    border-radius: 8px;
+
+    mat-icon { font-size: 16px; width: 16px; height: 16px; }
+  }
+
+  // ---- order detail meta grid ----
+  .meta-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px 18px;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid $dlg-border;
+  }
+
+  .meta {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+
+    .meta-label {
+      font-size: 10.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: $dlg-muted;
+    }
+
+    .meta-value {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: $dlg-text;
+    }
+  }
+
+  .section {
+    margin: 18px 0 10px;
+    font-size: 13px;
+    font-weight: 700;
+    color: $dlg-navy;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+
+  .lines {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+
+    thead th {
+      text-align: left;
+      padding: 8px 10px;
+      background: #f2f6fc;
+      color: $dlg-muted;
+      font-size: 10.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      border-bottom: 1px solid $dlg-border;
+      white-space: nowrap;
+    }
+
+    tbody td {
+      padding: 9px 10px;
+      border-bottom: 1px solid $dlg-border;
+      color: $dlg-text;
+    }
+
+    tbody tr:last-child td { border-bottom: none; }
+
+    .r { text-align: right; font-variant-numeric: tabular-nums; }
+    .c { text-align: center; font-weight: 600; }
+    .ref { font-family: monospace; font-size: 12px; color: $dlg-muted; }
+
+    .notes {
+      font-size: 12px;
+      color: $dlg-muted;
+
+      .spice {
+        display: inline-block;
+        margin-left: 6px;
+        padding: 1px 7px;
+        font-size: 10.5px;
+        font-weight: 700;
+        text-transform: uppercase;
+        border-radius: 999px;
+        background: #fef3e2;
+        color: #d97706;
+      }
+    }
+  }
+
+  .totals {
+    margin-top: 20px;
+    padding-top: 14px;
+    border-top: 2px solid $dlg-navy;
+  }
+
+  .tot-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    font-size: 13.5px;
+    color: $dlg-text;
+
+    &.grand {
+      font-weight: 700;
+      font-size: 16px;
+      color: $dlg-navy;
+      padding-top: 9px;
+    }
+
+    &.paid { color: #16a34a; font-weight: 600; }
+
+    /* An unpaid balance on a dialog is the one figure that should pull the
+       eye, so it is the only row that gets a colour. */
+    &.due {
+      color: #dc2626;
+      font-weight: 700;
+    }
+  }
+
+  .empty {
+    text-align: center;
+    padding: 22px;
+    color: $dlg-muted;
+    font-size: 13px;
+    margin: 0;
+  }
+}
+
+// status chips shared by the order detail dialog
+.dlg .chip {
+  display: inline-block;
+  padding: 3px 11px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  background: #f1f5f9;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.dlg .st-completed { background: #e8f7ee; color: #16a34a; }
+.dlg .st-cancelled { background: #fdeaea; color: #dc2626; }
+.dlg .st-confirmed { background: #e8efff; color: #2563eb; }
+.dlg .st-preparing { background: #fef3e2; color: #d97706; }
+.dlg .st-ready    { background: #e8f7ee; color: #16a34a; }
+.dlg .st-served   { background: #e6f7f5; color: #16b4a4; }
+
+.dlg .pay-paid     { background: #e8f7ee; color: #16a34a; }
+.dlg .pay-partial  { background: #fef3e2; color: #d97706; }
+.dlg .pay-failed   { background: #fdeaea; color: #dc2626; }
+.dlg .pay-refunded { background: #e6f7f5; color: #16b4a4; }
+
+// Angular Material renders the dialog panel itself; strip its default radius
+// so the dialog matches the card language used everywhere else.
+.customer-form-dialog .mat-mdc-dialog-surface,
+.order-detail-dialog .mat-mdc-dialog-surface {
+  border-radius: 16px;
+  overflow: hidden;
+}

@@ -1,0 +1,158 @@
+<app-navigation-bar [navData]="navData"></app-navigation-bar>
+
+<div class="top-sub-nav-controls">
+    <button type="button" mat-raised-button color="primary" routerLink="/hms/users">
+        <mat-icon>arrow_back</mat-icon> Back
+    </button>
+</div>
+
+<div class="manage-user-page">
+
+    <!-- Form area -->
+    <div class="in_up_form form-scroll">
+
+        <form [formGroup]="userForm" (ngSubmit)="insertUpdateUser()" autocomplete="off">
+            <div class="form-shell manage-user-form">
+
+                <!-- ================= Personal Information ================= -->
+                <section class="form-section">
+                    <header class="section-header">
+                        <span class="head-icon"><mat-icon>person</mat-icon></span>
+                        <div class="head-text">
+                            <h3>Personal Information</h3>
+                            <p>Name of the person using this account</p>
+                        </div>
+                    </header>
+
+                    <div class="section-grid">
+                        <mat-form-field appearance="outline" floatLabel="always">
+                            <mat-label>First Name</mat-label>
+                            <input matInput type="text" formControlName="first_name" placeholder="Enter First Name">
+                            <mat-error *ngIf="userForm.get('first_name')?.hasError('required')">
+                                First Name is required
+                            </mat-error>
+                        </mat-form-field>
+
+                        <mat-form-field appearance="outline" floatLabel="always">
+                            <mat-label>Last Name</mat-label>
+                            <input matInput type="text" formControlName="last_name" placeholder="Enter Last Name">
+                            <mat-error *ngIf="userForm.get('last_name')?.hasError('required')">
+                                Last Name is required
+                            </mat-error>
+                        </mat-form-field>
+                    </div>
+                </section>
+
+                <!-- ================= Account Details ================= -->
+                <section class="form-section">
+                    <header class="section-header">
+                        <span class="head-icon"><mat-icon>admin_panel_settings</mat-icon></span>
+                        <div class="head-text">
+                            <h3>Account Details</h3>
+                            <p>Role, sign-in email and password</p>
+                        </div>
+                    </header>
+
+                    <div class="section-grid">
+                        <mat-form-field appearance="outline" class="edit-disabled-field"
+                            [floatLabel]="isRoleLoading ? 'auto' : 'always'" [hideRequiredMarker]="isRoleLoading">
+                            <mat-label>
+                                <span class="label-loader" *ngIf="isRoleLoading; else roleLabel">
+                                    <span>Loading...</span>
+                                    <mat-spinner diameter="16"></mat-spinner>
+                                </span>
+                                <ng-template #roleLabel>Role Name</ng-template>
+                            </mat-label>
+                            <mat-select formControlName="role_id" placeholder="Choose Role Name"
+                                [disabled]="isRoleLoading" panelClass="manage-user-select-panel">
+                                <mat-option *ngFor="let item of roleList" [value]="item.id">
+                                    {{ item.role_name }}
+                                </mat-option>
+                            </mat-select>
+                            <mat-error *ngIf="userForm.get('role_id')?.hasError('required')">
+                                Role is required
+                            </mat-error>
+                        </mat-form-field>
+
+                        <mat-form-field appearance="outline" floatLabel="always" class="edit-disabled-field">
+                            <mat-label>Email</mat-label>
+                            <input matInput type="email" formControlName="email" placeholder="Enter Email" autocomplete="off">
+                            <mat-error *ngIf="userForm.get('email')?.hasError('required')">
+                                Email is required
+                            </mat-error>
+                            <mat-error *ngIf="userForm.get('email')?.hasError('email')">
+                                Please enter a valid email address
+                            </mat-error>
+                        </mat-form-field>
+
+                        <mat-form-field appearance="outline" floatLabel="always" class="field-span-2 edit-disabled-field">
+                            <mat-label>Password</mat-label>
+                            <input matInput [type]="hidePassword ? 'password' : 'text'" formControlName="password"
+                                placeholder="Enter Password" autocomplete="new-password">
+                            <button mat-icon-button matSuffix type="button" (click)="togglePassword()"
+                                aria-label="Toggle password visibility">
+                                <mat-icon>{{ hidePassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+                            </button>
+                            <mat-error *ngIf="userForm.get('password')?.hasError('required')">
+                                Password is required
+                            </mat-error>
+                        </mat-form-field>
+                    </div>
+                </section>
+
+                <!-- ================= Preferences & Status ================= -->
+                <section class="form-section">
+                    <header class="section-header">
+                        <span class="head-icon"><mat-icon>tune</mat-icon></span>
+                        <div class="head-text">
+                            <h3>Preferences &amp; Status</h3>
+                            <p>Whether this account can sign in</p>
+                        </div>
+                    </header>
+
+                    <div class="toggle-grid">
+                        <div class="toggle-card">
+                            <span class="toggle-icon success"><mat-icon>verified_user</mat-icon></span>
+                            <div class="toggle-body">
+                                <strong>Active Status</strong>
+                                <small>User account can sign in</small>
+                            </div>
+                            <mat-slide-toggle formControlName="is_active"></mat-slide-toggle>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+
+            <!-- Footer Actions -->
+            <div class="form-footer">
+                <div class="footer-note">
+                    <mat-icon>lock</mat-icon>
+                    <span>Account details are stored securely</span>
+                </div>
+
+                <div class="footer-buttons">
+                    <button mat-stroked-button type="button" class="btn-cancel" routerLink="/hms/users">
+                        Cancel
+                    </button>
+                    <button mat-flat-button type="submit" class="btn-submit" [disabled]="isLoading">
+                        <span class="btn-content" *ngIf="!isLoading">
+                            <mat-icon>{{ isEditMode ? 'save' : 'person_add' }}</mat-icon>
+                            {{ isEditMode ? 'Update User' : 'Add User' }}
+                        </span>
+                        <span class="btn-content" *ngIf="isLoading">
+                            Please Wait
+                            <mat-progress-spinner diameter="18" mode="indeterminate" class="btn-spinner">
+                            </mat-progress-spinner>
+                        </span>
+                    </button>
+                </div>
+            </div>
+        </form>
+
+        <ng-container *ngIf="isPageLoad">
+            <app-page-loader></app-page-loader>
+        </ng-container>
+    </div>
+
+</div>

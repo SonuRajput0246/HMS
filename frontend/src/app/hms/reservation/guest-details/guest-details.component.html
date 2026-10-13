@@ -1,0 +1,507 @@
+<app-navigation-bar [navData]="navData"></app-navigation-bar>
+
+<div class="top-sub-nav-controls">
+    <button type="button" mat-raised-button color="primary" routerLink="/hms/reservations/select-guest">
+        <mat-icon>arrow_back</mat-icon> Back
+    </button>
+</div>
+
+<div class="guest-details-page">
+
+    <!-- Compact Reservation Status Band (stepper + draft summary merged) -->
+    <div class="status-band">
+        <div class="band-stepper">
+            <div class="bp-step done">
+                <span class="bp-dot"><mat-icon>check</mat-icon></span>
+                <span class="bp-label">Select Room</span>
+            </div>
+            <span class="bp-line"></span>
+            <div class="bp-step active">
+                <span class="bp-dot">2</span>
+                <span class="bp-label">Guest Details</span>
+            </div>
+            <span class="bp-line"></span>
+            <div class="bp-step">
+                <span class="bp-dot">3</span>
+                <span class="bp-label">Payment</span>
+            </div>
+        </div>
+
+        <span class="band-divider"></span>
+
+        <div class="band-summary" *ngIf="draftReservation() as draft">
+            <span class="band-item band-room">
+                <mat-icon>meeting_room</mat-icon>
+                <strong>Room {{ draft.room_number }}</strong>
+                <small>{{ draft.room_type }}</small>
+            </span>
+            <span class="band-item band-stay">
+                <mat-icon>date_range</mat-icon>
+                <strong class="band-dates">{{ draft.check_in_date }} &rarr; {{ draft.check_out_date }}</strong>
+                <small>{{ draft.total_nights }} {{ draft.total_nights === 1 ? 'Night' : 'Nights' }}</small>
+            </span>
+            <span class="band-item band-total">
+                <mat-icon>confirmation_number</mat-icon>
+                <strong>&#8377;{{ draft.total_amount }}</strong>
+                <small>Total</small>
+            </span>
+            <button type="button" class="band-change" [routerLink]="['/hms/reservations/available-rooms']">
+                <mat-icon>edit</mat-icon> Change Room
+            </button>
+        </div>
+    </div>
+
+    <!-- Form Area -->
+    <div class="in_up_form form-scroll">
+
+        <form [formGroup]="guestForm" (ngSubmit)="insertGuestAndReservation()" autocomplete="off">
+            <div class="form-shell guest-form">
+
+                <!-- ================= Personal Information ================= -->
+                <section class="form-section">
+                    <header class="section-header">
+                        <span class="head-icon"><mat-icon>person</mat-icon></span>
+                        <div class="head-text">
+                            <h3>Personal Information</h3>
+                            <p>Basic details about the primary guest</p>
+                        </div>
+                    </header>
+
+                    <div class="section-grid">
+                        <mat-form-field appearance="outline" floatLabel="always">
+                            <mat-label>First Name</mat-label>
+                            <input matInput type="text" formControlName="first_name" placeholder="Enter First Name">
+                            <mat-error *ngIf="guestForm.get('first_name')?.hasError('required')">
+                                First Name is required
+                            </mat-error>
+                        </mat-form-field>
+
+                        <mat-form-field appearance="outline" floatLabel="always">
+                            <mat-label>Last Name</mat-label>
+                            <input matInput type="text" formControlName="last_name" placeholder="Enter Last Name">
+                            <mat-error *ngIf="guestForm.get('last_name')?.hasError('required')">
+                                Last Name is required
+                            </mat-error>
+                        </mat-form-field>
+
+                        <mat-form-field appearance="outline"
+                            [floatLabel]="isGenderLoading ? 'auto' : 'always'" [hideRequiredMarker]="isGenderLoading">
+                            <mat-label>
+                                <span class="label-loader" *ngIf="isGenderLoading; else genderLabel">
+                                    <span>Loading...</span>
+                                    <mat-spinner diameter="16"></mat-spinner>
+                                </span>
+                                <ng-template #genderLabel>Gender</ng-template>
+                            </mat-label>
+                            <mat-select formControlName="gender" placeholder="Select Gender"
+                                [disabled]="isGenderLoading" panelClass="guest-select-panel">
+                                <mat-option *ngFor="let item of genderList" [value]="item.option_key">
+                                    {{ item.option_label }}
+                                </mat-option>
+                            </mat-select>
+                            <mat-error *ngIf="guestForm.get('gender')?.hasError('required')">
+                                Gender is required
+                            </mat-error>
+                        </mat-form-field>
+
+                        <mat-form-field appearance="outline" floatLabel="always">
+                            <mat-label>Date of Birth</mat-label>
+                            <input matInput [matDatepicker]="dobPicker" formControlName="date_of_birth"
+                                placeholder="Select Date of Birth">
+                            <mat-hint>DD/MM/YYYY</mat-hint>
+                            <mat-datepicker-toggle matIconSuffix [for]="dobPicker"></mat-datepicker-toggle>
+                            <mat-datepicker #dobPicker startView="multi-year" [startAt]="startDate" panelClass="reservation-range-picker"></mat-datepicker>
+                            <mat-error *ngIf="guestForm.get('date_of_birth')?.hasError('required')">
+                                Date of Birth is required
+                            </mat-error>
+                            <mat-error *ngIf="guestForm.get('date_of_birth')?.hasError('underAge')">
+                                Primary Guest must be at least 18 years old
+                            </mat-error>
+                        </mat-form-field>
+                    </div>
+                </section>
+
+                <!-- ================= Contact Information ================= -->
+                <section class="form-section">
+                    <header class="section-header">
+                        <span class="head-icon"><mat-icon>contact_mail</mat-icon></span>
+                        <div class="head-text">
+                            <h3>Contact Information</h3>
+                            <p>How we can reach the guest</p>
+                        </div>
+                    </header>
+
+                    <div class="section-grid">
+                        <mat-form-field appearance="outline" floatLabel="always">
+                            <mat-label>Email</mat-label>
+                            <input matInput type="email" formControlName="email" placeholder="Enter Email"
+                                autocomplete="off">
+                            <mat-error *ngIf="guestForm.get('email')?.hasError('required')">
+                                Email is required
+                            </mat-error>
+                            <mat-error *ngIf="guestForm.get('email')?.hasError('email')">
+                                Please enter a valid email address
+                            </mat-error>
+                        </mat-form-field>
+
+                        <mat-form-field appearance="outline" floatLabel="always">
+                            <mat-label>Phone Number</mat-label>
+                            <input matInput type="text" formControlName="phone_number" placeholder="Enter Phone Number">
+                            <mat-error *ngIf="guestForm.get('phone_number')?.hasError('required')">
+                                Phone Number is required
+                            </mat-error>
+                        </mat-form-field>
+
+                        <mat-form-field appearance="outline" floatLabel="always" class="field-span-2">
+                            <mat-label>Address</mat-label>
+                            <textarea matInput formControlName="address" cdkTextareaAutosize
+                                [cdkAutosizeMinRows]="1" [cdkAutosizeMaxRows]="3" maxlength="250"
+                                placeholder="Enter Address"></textarea>
+                        </mat-form-field>
+                    </div>
+                </section>
+
+                <!-- ================= Location & Nationality ================= -->
+                <section class="form-section">
+                    <header class="section-header">
+                        <span class="head-icon"><mat-icon>location_city</mat-icon></span>
+                        <div class="head-text">
+                            <h3>Location &amp; Nationality</h3>
+                            <p>Residential location of the guest</p>
+                        </div>
+                    </header>
+
+                    <div class="section-grid">
+                        <mat-form-field appearance="outline"
+                            [floatLabel]="isCountryLoading ? 'auto' : 'always'" [hideRequiredMarker]="isCountryLoading">
+                            <mat-label>
+                                <span class="label-loader" *ngIf="isCountryLoading; else countryLabel">
+                                    <span>Loading...</span>
+                                    <mat-spinner diameter="16"></mat-spinner>
+                                </span>
+                                <ng-template #countryLabel>Country</ng-template>
+                            </mat-label>
+                            <mat-select formControlName="country_id" placeholder="Choose Country" panelClass="guest-select-panel">
+                                <mat-option>
+                                    <ngx-mat-select-search
+                                    [formControl]="countrySearchCtrl"
+                                    placeholderLabel="Search Country..."
+                                    noEntriesFoundLabel="No country found">
+                                    </ngx-mat-select-search>
+                                </mat-option>
+                                <mat-option *ngFor="let item of countryList" [value]="item.id">
+                                    {{ item.name }}
+                                </mat-option>
+                            </mat-select>
+                            <mat-error *ngIf="guestForm.get('country_id')?.hasError('required')">
+                                Country is required
+                            </mat-error>
+                        </mat-form-field>
+
+                        <mat-form-field appearance="outline"
+                            [floatLabel]="isStateLoading ? 'auto' : 'always'" [hideRequiredMarker]="isStateLoading">
+                            <mat-label>
+                                <span class="label-loader" *ngIf="isStateLoading; else stateLabel">
+                                    <span>Loading...</span>
+                                    <mat-spinner diameter="16"></mat-spinner>
+                                </span>
+                                <ng-template #stateLabel>State</ng-template>
+                            </mat-label>
+                            <mat-select formControlName="state_id" placeholder="Choose State" panelClass="guest-select-panel">
+                                <mat-option>
+                                    <ngx-mat-select-search
+                                        [formControl]="stateSearchCtrl"
+                                        placeholderLabel="Search State..."
+                                        noEntriesFoundLabel="No state found">
+                                    </ngx-mat-select-search>
+                                </mat-option>
+                                <mat-option *ngFor="let state of stateList" [value]="state.id">
+                                    {{ state.name }}
+                                </mat-option>
+                            </mat-select>
+                            <mat-error *ngIf="guestForm.get('state_id')?.hasError('required')">
+                                State is required
+                            </mat-error>
+                        </mat-form-field>
+
+                        <mat-form-field appearance="outline"
+                            [floatLabel]="isCityLoading ? 'auto' : 'always'"
+                            [hideRequiredMarker]="isCityLoading">
+                            <mat-label>
+                                <span class="label-loader" *ngIf="isCityLoading; else cityLabel">
+                                    <span>Loading...</span>
+                                    <mat-spinner diameter="16"></mat-spinner>
+                                </span>
+                                <ng-template #cityLabel>City</ng-template>
+                            </mat-label>
+                            <mat-select formControlName="city_id" placeholder="Choose City" panelClass="guest-select-panel">
+                                <mat-option>
+                                    <ngx-mat-select-search
+                                    [formControl]="citySearchCtrl"
+                                    placeholderLabel="Search City..."
+                                    noEntriesFoundLabel="No city found">
+                                    </ngx-mat-select-search>
+                                </mat-option>
+                                <mat-option *ngFor="let city of cityList" [value]="city.id">
+                                    {{ city.name }}
+                                </mat-option>
+                            </mat-select>
+                            <mat-error *ngIf="guestForm.get('city_id')?.hasError('required')">
+                                City is required
+                            </mat-error>
+                        </mat-form-field>
+
+                        <mat-form-field appearance="outline"
+                            [floatLabel]="isCountryLoading ? 'auto' : 'always'" [hideRequiredMarker]="isCountryLoading">
+                            <mat-label>
+                                <span class="label-loader" *ngIf="isCountryLoading; else nationalityLabel">
+                                    <span>Loading...</span>
+                                    <mat-spinner diameter="16"></mat-spinner>
+                                </span>
+                                <ng-template #nationalityLabel>Nationality</ng-template>
+                            </mat-label>
+                            <mat-select formControlName="nationality_id" placeholder="Choose Nationality" panelClass="guest-select-panel">
+                                <mat-option>
+                                    <ngx-mat-select-search
+                                    [formControl]="countrySearchCtrl"
+                                    placeholderLabel="Search Nationality..."
+                                    noEntriesFoundLabel="No nationality found">
+                                    </ngx-mat-select-search>
+                                </mat-option>
+                                <mat-option *ngFor="let item of countryList" [value]="item.id">
+                                    {{ item.nationality }}
+                                </mat-option>
+                            </mat-select>
+                            <mat-error *ngIf="guestForm.get('nationality_id')?.hasError('required')">
+                                Nationality is required
+                            </mat-error>
+                        </mat-form-field>
+                    </div>
+                </section>
+
+                <!-- ================= Identity Verification ================= -->
+                <section class="form-section">
+                    <header class="section-header">
+                        <span class="head-icon"><mat-icon>badge</mat-icon></span>
+                        <div class="head-text">
+                            <h3>Identity Verification</h3>
+                            <p>Government ID details required at check-in</p>
+                        </div>
+                    </header>
+
+                    <div class="section-grid">
+                        <mat-form-field appearance="outline"
+                            [floatLabel]="isIdTypeLoading ? 'auto' : 'always'" [hideRequiredMarker]="isIdTypeLoading">
+                            <mat-label>
+                                <span class="label-loader" *ngIf="isIdTypeLoading; else idTypeLabel">
+                                    <span>Loading...</span>
+                                    <mat-spinner diameter="16"></mat-spinner>
+                                </span>
+                                <ng-template #idTypeLabel>Id Type</ng-template>
+                            </mat-label>
+                            <mat-select formControlName="id_type" placeholder="Select Id Type"
+                                [disabled]="isIdTypeLoading" panelClass="guest-select-panel">
+                                <mat-option *ngFor="let item of idTypeList" [value]="item.option_key">
+                                    {{ item.option_label }}
+                                </mat-option>
+                            </mat-select>
+                            <mat-error *ngIf="guestForm.get('id_type')?.hasError('required')">
+                                Id Type is required
+                            </mat-error>
+                        </mat-form-field>
+
+                        <mat-form-field appearance="outline" floatLabel="always">
+                            <mat-label>Id Number</mat-label>
+                            <input matInput type="text" formControlName="id_number" placeholder="Enter Id Number">
+                            <mat-error *ngIf="guestForm.get('id_number')?.hasError('required')">
+                                Id Number is required
+                            </mat-error>
+                        </mat-form-field>
+
+                        <mat-form-field appearance="outline" floatLabel="always" class="field-span-2">
+                            <mat-label>Notes</mat-label>
+                            <textarea matInput formControlName="notes" rows="1" maxlength="250"
+                                placeholder="Any special notes or requests"></textarea>
+                        </mat-form-field>
+                    </div>
+                </section>
+
+                <!-- ================= Preferences ================= -->
+                <section class="form-section">
+                    <header class="section-header">
+                        <span class="head-icon"><mat-icon>tune</mat-icon></span>
+                        <div class="head-text">
+                            <h3>Preferences &amp; Status</h3>
+                            <p>Flags that apply to this guest profile</p>
+                        </div>
+                    </header>
+
+                    <div class="toggle-grid">
+                        <div class="toggle-card">
+                            <span class="toggle-icon vip"><mat-icon>workspace_premium</mat-icon></span>
+                            <div class="toggle-body">
+                                <strong>VIP Status</strong>
+                                <small>Mark this guest as a VIP</small>
+                            </div>
+                            <mat-slide-toggle formControlName="vip_status"></mat-slide-toggle>
+                        </div>
+
+                        <div class="toggle-card">
+                            <span class="toggle-icon danger"><mat-icon>block</mat-icon></span>
+                            <div class="toggle-body">
+                                <strong>Blacklist</strong>
+                                <small>Restrict future bookings</small>
+                            </div>
+                            <mat-slide-toggle formControlName="blacklist_status"></mat-slide-toggle>
+                        </div>
+
+                        <div class="toggle-card">
+                            <span class="toggle-icon success"><mat-icon>verified_user</mat-icon></span>
+                            <div class="toggle-body">
+                                <strong>Active Status</strong>
+                                <small>Guest profile is active</small>
+                            </div>
+                            <mat-slide-toggle formControlName="is_active"></mat-slide-toggle>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ================= Additional Guests ================= -->
+                <section class="form-section">
+                    <header class="section-header">
+                        <span class="head-icon"><mat-icon>group</mat-icon></span>
+                        <div class="head-text">
+                            <h3>Additional Guests</h3>
+                            <p>Other guests staying in the same room</p>
+                        </div>
+                        <button type="button" class="add-guest-btn" (click)="addGuest()">
+                            <mat-icon>person_add</mat-icon> Add Guest
+                        </button>
+                    </header>
+
+                    <div *ngIf="additionalGuests.length === 0" class="empty-guests">
+                        <mat-icon>groups</mat-icon>
+                        <span>No additional guests added yet</span>
+                        <button type="button" mat-stroked-button class="empty-add-btn" (click)="addGuest()">
+                            Add Additional Guest
+                        </button>
+                    </div>
+
+                    <div formArrayName="additional_guests">
+                        <div *ngFor="let guest of additionalGuests.controls; let i = index" [formGroupName]="i">
+                            <div class="guest-card">
+                                <div class="guest-card-head">
+                                    <span class="guest-index">{{ i + 1 }}</span>
+                                    <span class="guest-title">Guest {{ i + 1 }}</span>
+                                    <div class="guest-actions">
+                                        <button mat-icon-button type="button" class="guest-remove"
+                                            (click)="removeGuest(i)" matTooltip="Remove guest">
+                                            <mat-icon>delete_outline</mat-icon>
+                                        </button>
+                                        <button mat-icon-button type="button" class="guest-add"
+                                            *ngIf="i === additionalGuests.length - 1" (click)="addGuest()"
+                                            matTooltip="Fill all fields to add new guest">
+                                            <mat-icon>add</mat-icon>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="guest-fields">
+                                    <mat-form-field appearance="outline" floatLabel="always">
+                                        <mat-label>Full Name</mat-label>
+                                        <input matInput formControlName="full_name" placeholder="Enter Full Name">
+                                        <mat-error *ngIf="guest.get('full_name')?.hasError('required')">
+                                            Name is required
+                                        </mat-error>
+                                    </mat-form-field>
+
+                                    <mat-form-field appearance="outline"
+                                        [floatLabel]="isGenderLoading ? 'auto' : 'always'" [hideRequiredMarker]="isGenderLoading">
+                                        <mat-label>
+                                            <span class="label-loader" *ngIf="isGenderLoading; else companionGenderLabel">
+                                                <span>Loading...</span>
+                                                <mat-spinner diameter="16"></mat-spinner>
+                                            </span>
+                                            <ng-template #companionGenderLabel>Gender</ng-template>
+                                        </mat-label>
+                                        <mat-select formControlName="gender" placeholder="Select Gender"
+                                            [disabled]="isGenderLoading" panelClass="guest-select-panel">
+                                            <mat-option *ngFor="let item of genderList" [value]="item.option_key">
+                                                {{ item.option_label }}
+                                            </mat-option>
+                                        </mat-select>
+                                        <mat-error *ngIf="guest.get('gender')?.hasError('required')">
+                                            Gender is required
+                                        </mat-error>
+                                    </mat-form-field>
+
+                                    <mat-form-field appearance="outline" floatLabel="always">
+                                        <mat-label>Age</mat-label>
+                                        <input matInput type="number" formControlName="age" placeholder="Enter Age">
+                                        <mat-error *ngIf="guest.get('age')?.hasError('required')">
+                                            Age is required
+                                        </mat-error>
+                                    </mat-form-field>
+
+                                    <mat-form-field appearance="outline"
+                                        [floatLabel]="isIdTypeLoading ? 'auto' : 'always'" [hideRequiredMarker]="isIdTypeLoading">
+                                        <mat-label>
+                                            <span class="label-loader" *ngIf="isIdTypeLoading; else companionIdTypeLabel">
+                                                <span>Loading...</span>
+                                                <mat-spinner diameter="16"></mat-spinner>
+                                            </span>
+                                            <ng-template #companionIdTypeLabel>Id Type</ng-template>
+                                        </mat-label>
+                                        <mat-select formControlName="id_type" placeholder="Select Id Type"
+                                            [disabled]="isIdTypeLoading" panelClass="guest-select-panel">
+                                            <mat-option *ngFor="let item of idTypeList" [value]="item.option_key">
+                                                {{ item.option_label }}
+                                            </mat-option>
+                                        </mat-select>
+                                    </mat-form-field>
+
+                                    <mat-form-field appearance="outline" floatLabel="always">
+                                        <mat-label>Id Number</mat-label>
+                                        <input matInput type="text" formControlName="id_number"
+                                            placeholder="Enter Id Number">
+                                    </mat-form-field>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+
+            <!-- Footer Actions -->
+            <div class="form-footer">
+                <div class="footer-note">
+                    <mat-icon>lock</mat-icon>
+                    <span>Guest information is stored securely</span>
+                </div>
+
+                <div class="footer-buttons">
+                    <button mat-stroked-button type="button" class="btn-cancel" routerLink="/hms/reservations">
+                        Cancel
+                    </button>
+                    <button mat-flat-button type="submit" class="btn-submit" [disabled]="isLoading">
+                        <span class="btn-content" *ngIf="!isLoading">
+                            <mat-icon>how_to_reg</mat-icon>
+                            Book Reservation
+                        </span>
+                        <span class="btn-content" *ngIf="isLoading">
+                            Please Wait
+                            <mat-progress-spinner diameter="18" mode="indeterminate" class="btn-spinner">
+                            </mat-progress-spinner>
+                        </span>
+                    </button>
+                </div>
+            </div>
+        </form>
+
+        <ng-container *ngIf="isPageLoad">
+            <app-page-loader></app-page-loader>
+        </ng-container>
+    </div>
+
+</div>

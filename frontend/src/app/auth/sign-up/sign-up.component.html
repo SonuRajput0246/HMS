@@ -1,0 +1,136 @@
+<div class="sign-up-page">
+
+    <div class="sign-up-card">
+
+        <!-- ================= Header ================= -->
+        <header class="su-header">
+            <span class="head-icon"><mat-icon>person_add</mat-icon></span>
+            <div class="head-text">
+                <h3>Create Account</h3>
+                <p>Get started in a few seconds — no approval needed</p>
+            </div>
+        </header>
+
+        <form class="su-form" [formGroup]="signUpForm" (ngSubmit)="signUpUser()" autocomplete="off">
+
+            <div class="card-body">
+
+                <!-- Dummy fields (Chrome autofill trap) -->
+                <input type="text" name="fake-username" autocomplete="username" hidden>
+                <input type="password" name="fake-password" autocomplete="current-password" hidden>
+
+                <!-- Security note -->
+                <div class="security-note">
+                    <mat-icon>info_outline</mat-icon>
+                    <span>Password must be at least 6 characters. We'll email you a code to verify your account.</span>
+                </div>
+
+                <!-- Name — two columns, collapses to one on narrow screens -->
+                <div class="section-grid name-grid">
+
+                    <mat-form-field appearance="outline" floatLabel="always">
+                        <mat-label>First Name</mat-label>
+                        <input matInput type="text" formControlName="first_name" placeholder="Enter First Name"
+                            autocomplete="given-name">
+                        <mat-icon matIconPrefix class="field-icon">person</mat-icon>
+                        <mat-error *ngIf="signUpForm.get('first_name')?.hasError('required')">
+                            First Name is required
+                        </mat-error>
+                    </mat-form-field>
+
+                    <mat-form-field appearance="outline" floatLabel="always">
+                        <mat-label>Last Name</mat-label>
+                        <input matInput type="text" formControlName="last_name" placeholder="Enter Last Name"
+                            autocomplete="family-name">
+                        <mat-icon matIconPrefix class="field-icon">person</mat-icon>
+                        <mat-error *ngIf="signUpForm.get('last_name')?.hasError('required')">
+                            Last Name is required
+                        </mat-error>
+                    </mat-form-field>
+
+                </div>
+
+                <!-- Email -->
+                <mat-form-field appearance="outline" floatLabel="always">
+                    <mat-label>Email</mat-label>
+                    <input matInput type="email" formControlName="email" placeholder="Enter Email"
+                        autocomplete="email" inputmode="email">
+                    <mat-icon matIconPrefix class="field-icon">mail</mat-icon>
+                    <mat-error *ngIf="signUpForm.get('email')?.hasError('required')">
+                        Email is required
+                    </mat-error>
+                    <mat-error *ngIf="signUpForm.get('email')?.hasError('email')">
+                        Please enter a valid email address
+                    </mat-error>
+                </mat-form-field>
+
+                <!-- Password -->
+                <mat-form-field appearance="outline" floatLabel="always">
+                    <mat-label>Password</mat-label>
+                    <input matInput [type]="hide ? 'password' : 'text'" formControlName="new_password"
+                        placeholder="Enter Password" autocomplete="new-password">
+                    <mat-icon matIconPrefix class="field-icon">lock</mat-icon>
+                    <button mat-icon-button matSuffix type="button" (click)="togglePassword()"
+                        aria-label="Toggle password visibility">
+                        <mat-icon>{{ hide ? 'visibility_off' : 'visibility' }}</mat-icon>
+                    </button>
+                    <mat-error *ngIf="signUpForm.get('new_password')?.hasError('required')">
+                        Password is required
+                    </mat-error>
+                    <mat-error *ngIf="signUpForm.get('new_password')?.hasError('minlength')">
+                        Password must be at least 6 characters long
+                    </mat-error>
+                </mat-form-field>
+
+                <!-- Confirm Password -->
+                <mat-form-field appearance="outline" floatLabel="always">
+                    <mat-label>Confirm Password</mat-label>
+                    <input matInput [type]="hideConfirm ? 'password' : 'text'" formControlName="confirmed_password"
+                        placeholder="Re-enter Password" autocomplete="new-password">
+                    <mat-icon matIconPrefix class="field-icon">lock_reset</mat-icon>
+                    <button mat-icon-button matSuffix type="button" (click)="toggleConfirmPassword()"
+                        aria-label="Toggle password visibility">
+                        <mat-icon>{{ hideConfirm ? 'visibility_off' : 'visibility' }}</mat-icon>
+                    </button>
+                    <mat-error *ngIf="signUpForm.get('confirmed_password')?.hasError('required')">
+                        Confirm password is required
+                    </mat-error>
+                    <mat-error *ngIf="signUpForm.get('confirmed_password')?.hasError('passwordMismatch')">
+                        Passwords do not match
+                    </mat-error>
+                </mat-form-field>
+
+            </div>
+
+            <!-- ================= Footer Actions ================= -->
+            <div class="action-bar">
+                <div class="action-left">
+                    <mat-icon>mark_email_read</mat-icon>
+                    <span>You'll verify your email next</span>
+                </div>
+
+                <div class="action-right">
+                    <button mat-stroked-button type="button" class="btn-cancel" routerLink="/auth/login">
+                        <mat-icon>arrow_back</mat-icon>
+                        Cancel
+                    </button>
+
+                    <button mat-flat-button type="submit" class="btn-submit" [disabled]="isLoading">
+                        <span class="btn-content" *ngIf="!isLoading">
+                            <mat-icon>how_to_reg</mat-icon>
+                            Sign Up
+                        </span>
+                        <span class="btn-content" *ngIf="isLoading">
+                            Please Wait
+                            <mat-progress-spinner diameter="18" mode="indeterminate" class="btn-spinner">
+                            </mat-progress-spinner>
+                        </span>
+                    </button>
+                </div>
+            </div>
+
+        </form>
+
+    </div>
+
+</div>

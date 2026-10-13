@@ -1,0 +1,33 @@
+<mat-sidenav-container class="cms-shell">
+    <mat-sidenav #drawer
+                  class="cms-shell-sidenav"
+                  [mode]="isMobile ? 'over' : 'side'"
+                  [opened]="!isMobile">
+        <app-cms-sidenav></app-cms-sidenav>
+    </mat-sidenav>
+
+    <mat-sidenav-content class="cms-shell-content">
+        <header class="cms-shell-topbar">
+            <button *ngIf="isMobile"
+                    mat-icon-button
+                    type="button"
+                    aria-label="Open navigation"
+                    (click)="drawer.toggle()">
+                <mat-icon>menu</mat-icon>
+            </button>
+
+            <button class="cms-shell-home" type="button" (click)="goHome()">
+                <mat-icon>storefront</mat-icon>
+                <span class="cms-shell-brand">Cafe Management System</span>
+            </button>
+
+            <span class="cms-shell-spacer"></span>
+            <span class="cms-shell-crumb" *ngIf="breadcrumb">{{ breadcrumb }}</span>
+            <span class="cms-shell-user" *ngIf="userName">{{ userName }}</span>
+        </header>
+
+        <main class="cms-shell-page">
+            <router-outlet></router-outlet>
+        </main>
+    </mat-sidenav-content>
+</mat-sidenav-container>

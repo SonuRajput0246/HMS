@@ -1,0 +1,142 @@
+<app-navigation-bar [navData]="navData"></app-navigation-bar>
+
+<div class="top-sub-nav-controls">
+    <button type="button" mat-raised-button color="primary" routerLink="/hms/settings">
+        <mat-icon>arrow_back</mat-icon> Back
+    </button>
+</div>
+
+<div class="mfa-page-container">
+
+    <div class="mfa-card">
+
+        <!-- Full-card loading shade while the QR/secret are fetched -->
+        @if (isPageLoad()) {
+            <div class="loading-overlay">
+                <mat-spinner diameter="44"></mat-spinner>
+                <p>Preparing your setup key…</p>
+            </div>
+        }
+
+        <!-- ================= Header ================= -->
+        <header class="mfa-header">
+            <span class="head-icon"><mat-icon>security</mat-icon></span>
+            <div class="head-text">
+                <h3>Two-Factor Authentication</h3>
+                <p>Add a second step to your sign-in for stronger security</p>
+            </div>
+        </header>
+
+        <mat-divider></mat-divider>
+
+        <!-- ================= Stepper ================= -->
+        <mat-stepper orientation="vertical" #stepper [linear]="true" class="mfa-stepper">
+
+            <!-- Step 1 — install app -->
+            <mat-step [editable]="!isLoadingSignal()">
+                <ng-template matStepLabel>Install Authenticator App</ng-template>
+                <div class="step-content">
+                    <p>
+                        Download a TOTP app like <strong>Google Authenticator</strong> or
+                        <strong>Microsoft Authenticator</strong> on your mobile device.
+                    </p>
+                    <div class="stepper-actions">
+                        <button mat-flat-button class="btn-submit" matStepperNext>
+                            <span class="btn-content">
+                                <mat-icon>download</mat-icon>
+                                I've installed it
+                            </span>
+                        </button>
+                    </div>
+                </div>
+            </mat-step>
+
+            <!-- Step 2 — scan QR -->
+            <mat-step [editable]="!isLoadingSignal()">
+                <ng-template matStepLabel>Scan QR Code</ng-template>
+                <div class="step-content centered">
+                    <p>Open your app and scan this QR code to link your account.</p>
+
+                    <div class="qr-container">
+                        @if (qr_uri()) {
+                            <qrcode [qrdata]="qr_uri()" [width]="190" [errorCorrectionLevel]="'M'"></qrcode>
+                        } @else {
+                            <div class="qr-placeholder">
+                                <mat-icon>qr_code_2</mat-icon>
+                                <span>Generating QR code…</span>
+                            </div>
+                        }
+                    </div>
+
+                    <div class="manual-entry">
+                        <span class="label">Can't scan? Use the setup key:</span>
+                        <div class="code-badge">
+                            <code>{{ secret() }}</code>
+                        </div>
+                    </div>
+
+                    <div class="stepper-actions">
+                        <button mat-button class="btn-back" matStepperPrevious>Back</button>
+                        <button mat-flat-button class="btn-submit" matStepperNext>
+                            <span class="btn-content">
+                                <mat-icon>arrow_forward</mat-icon>
+                                Next: Verify Code
+                            </span>
+                        </button>
+                    </div>
+                </div>
+            </mat-step>
+
+            <!-- Step 3 — verify -->
+            <mat-step>
+                <ng-template matStepLabel>Verify Connection</ng-template>
+                <form [formGroup]="mfaOtpForm" (ngSubmit)="verifyAndEnableMfa()">
+                    <div class="step-content">
+                        <p>Enter the 6-digit code from your app to finalize setup.</p>
+
+                        <mat-form-field appearance="outline" floatLabel="always" class="otp-field">
+                            <mat-label>Verification Code</mat-label>
+                            <input matInput
+                                formControlName="totp"
+                                inputmode="numeric"
+                                autocomplete="one-time-code"
+                                (keypress)="allowOnlyNumbers($event)"
+                                (paste)="onOtpPaste($event)"
+                                placeholder="000000"
+                                maxlength="6"
+                                (keyup.enter)="otpCode().length === 6">
+                            <mat-icon matIconSuffix class="otp-icon">verified_user</mat-icon>
+                            <mat-error *ngIf="mfaOtpForm.get('totp')?.hasError('required')">
+                                OTP is required
+                            </mat-error>
+                            <mat-error *ngIf="mfaOtpForm.get('totp')?.hasError('pattern') || mfaOtpForm.get('totp')?.hasError('minlength')">
+                                Please enter a valid 6-digit numeric code
+                            </mat-error>
+                        </mat-form-field>
+
+                        <div class="stepper-actions">
+                            <button mat-button class="btn-back" matStepperPrevious [disabled]="isLoadingSignal()">Back</button>
+                            <button mat-flat-button class="btn-submit"
+                                [disabled]="mfaOtpForm.invalid || isLoadingSignal()">
+                                {{ isLoadingSignal() ? 'Verifying...' : 'Enable MFA' }}
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </mat-step>
+        </mat-stepper>
+
+        <!-- ================= Footer ================= -->
+        <div class="card-footer">
+            <div class="footer-note">
+                <mat-icon>info_outline</mat-icon>
+                <span>You'll be asked for this code every time you sign in</span>
+            </div>
+            <button mat-stroked-button class="btn-cancel" (click)="onCancel()" [disabled]="isLoadingSignal()">
+                Cancel and Return
+            </button>
+        </div>
+
+    </div>
+
+</div>

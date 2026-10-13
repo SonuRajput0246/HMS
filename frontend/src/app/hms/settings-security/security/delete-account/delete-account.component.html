@@ -1,0 +1,153 @@
+<app-navigation-bar [navData]="navData"></app-navigation-bar>
+
+<div class="top-sub-nav-controls">
+    <button type="button" mat-raised-button color="primary" routerLink="/hms/settings">
+        <mat-icon>arrow_back</mat-icon> Back
+    </button>
+</div>
+
+<div class="delete-page">
+
+    <div class="delete-card">
+
+        <!-- ================= Header ================= -->
+        <header class="delete-header">
+            <span class="head-icon"><mat-icon>delete_forever</mat-icon></span>
+            <div class="head-text">
+                <h3>Delete Account</h3>
+                <p>Permanently delete your account and all associated data.</p>
+            </div>
+        </header>
+
+        <div class="card-body">
+
+            <!-- ================= What happens ================= -->
+            <section class="info-block">
+                <div class="block-title">
+                    <mat-icon>warning_amber</mat-icon>
+                    <span>What happens when you delete your account?</span>
+                </div>
+
+                <ul class="info-list">
+                    <li>
+                        <mat-icon class="mark">close</mat-icon>
+                        <span>Your account will be permanently deleted</span>
+                    </li>
+                    <li>
+                        <mat-icon class="mark">close</mat-icon>
+                        <span>All personal data will be erased</span>
+                    </li>
+                    <li>
+                        <mat-icon class="mark">close</mat-icon>
+                        <span>This action cannot be undone</span>
+                    </li>
+                    <li>
+                        <mat-icon class="mark">close</mat-icon>
+                        <span>You will lose access immediately</span>
+                    </li>
+                </ul>
+            </section>
+
+            <!-- ================= Reason (optional) ================= -->
+            <section class="form-section">
+                <header class="section-header">
+                    <span class="head-icon"><mat-icon>chat</mat-icon></span>
+                    <div class="head-text">
+                        <h3>Help us improve <span class="optional">Optional</span></h3>
+                        <p>Tell us why you're leaving so we can do better</p>
+                    </div>
+                </header>
+
+                <form [formGroup]="deleteAccountReasonForm">
+                    <div class="section-grid">
+
+                        <mat-form-field appearance="outline"
+                            [floatLabel]="isReasonLoading ? 'auto' : 'always'" [hideRequiredMarker]="isReasonLoading">
+                            <mat-label>
+                                <span class="label-loader" *ngIf="isReasonLoading; else reasonLabel">
+                                    <span>Loading...</span>
+                                    <mat-spinner diameter="16"></mat-spinner>
+                                </span>
+                                <ng-template #reasonLabel>Why are you deleting your account?</ng-template>
+                            </mat-label>
+                            <mat-select formControlName="deletion_reason" placeholder="Choose Reason"
+                                [disabled]="isReasonLoading" panelClass="delete-select-panel">
+                                <mat-option *ngFor="let item of deletionReasonList" [value]="item.option_key">
+                                    {{ item.option_label }}
+                                </mat-option>
+                            </mat-select>
+                        </mat-form-field>
+
+                        <mat-form-field appearance="outline" floatLabel="always"
+                            *ngIf="isOtherReasonSelected">
+                            <mat-label>Please tell us more</mat-label>
+                            <textarea matInput formControlName="other_reason" rows="3" maxlength="250"
+                                placeholder="Your feedback helps us improve..."></textarea>
+                            <mat-hint align="end">
+                                {{ deleteAccountReasonForm.get('other_reason')?.value?.length || 0 }}/250
+                            </mat-hint>
+                        </mat-form-field>
+
+                    </div>
+                </form>
+            </section>
+
+            <!-- ================= Security confirmation ================= -->
+            <section class="form-section">
+                <header class="section-header">
+                    <span class="head-icon is-danger"><mat-icon>lock</mat-icon></span>
+                    <div class="head-text">
+                        <h3>Security confirmation <span class="required">*</span></h3>
+                        <p>Re-enter your password to confirm it's you</p>
+                    </div>
+                </header>
+
+                <form [formGroup]="deleteAccountSecurityForm" autocomplete="off">
+                    <mat-form-field appearance="outline" floatLabel="always" class="confirm-field">
+                        <mat-label>Confirm your password</mat-label>
+                        <input matInput [type]="hidePassword ? 'password' : 'text'"
+                            formControlName="password" required autocomplete="current-password"
+                            placeholder="Enter Password">
+                        <mat-icon matIconPrefix class="field-icon">lock</mat-icon>
+                        <button mat-icon-button matSuffix type="button" (click)="togglePassword()"
+                            aria-label="Toggle password visibility">
+                            <mat-icon>{{ hidePassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+                        </button>
+                        <mat-error *ngIf="deleteAccountSecurityForm.get('password')?.hasError('required')">
+                            Password is required
+                        </mat-error>
+                    </mat-form-field>
+                </form>
+            </section>
+
+        </div>
+
+        <!-- ================= Sticky action bar ================= -->
+        <div class="action-bar">
+            <div class="action-left">
+                <strong>Delete your account</strong>
+                <span>This action is permanent and cannot be reversed.</span>
+            </div>
+
+            <div class="action-right">
+                <button mat-stroked-button class="btn-cancel" routerLink="/hms/settings">
+                    Cancel
+                </button>
+
+                <button mat-flat-button class="btn-danger" (click)="openAccountDeletionDialog()" [disabled]="isLoading">
+                    <span class="btn-content" *ngIf="!isLoading">
+                        <mat-icon>delete</mat-icon>
+                        Delete Account
+                    </span>
+                    <span class="btn-content" *ngIf="isLoading">
+                        Please Wait
+                        <mat-progress-spinner diameter="18" mode="indeterminate" class="btn-spinner">
+                        </mat-progress-spinner>
+                    </span>
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+</div>

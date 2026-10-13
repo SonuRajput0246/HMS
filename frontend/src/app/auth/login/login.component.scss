@@ -1,0 +1,249 @@
+.main {
+  display: flex;
+  height: 100vh;
+  width: 100%;
+
+
+  transition: filter 0.3s ease; // Makes the blur smooth
+  
+  &.blur-content {
+      filter: blur(5px); // Adjust pixels for more/less blur
+      pointer-events: none; // Prevents user from clicking inputs while blurred
+      user-select: none;    // Prevents text selection
+  }
+
+  .left-panel {
+    height: inherit;
+    width: 65%;
+    display: flex;
+    align-items: center;
+
+    .info-wrapper {
+      height: 75%;
+      width: 80%;
+      margin-left: auto;
+      border-top-left-radius: 10px;
+      border-bottom-left-radius: 10px;
+      box-shadow: 0px 0px 13px -4px rgba(0, 0, 0, 0.75);
+
+      .img-slider {
+        height: calc(100% - 20px);
+        padding-top: 10px;
+      }
+    }
+  }
+
+  .right-panel {
+    background-color: #614b9d;
+    height: inherit;
+    width: 35%;
+    display: flex;
+    align-items: center;
+    z-index: 2;
+
+    .login-wrapper {
+      height: 75%;
+      width: 70%;
+      margin-right: auto;
+      border-top-right-radius: 10px;
+      border-bottom-right-radius: 10px;
+      box-shadow: 0px 0px 13px -4px rgba(0, 0, 0, 0.75);
+      display: flex;
+
+      .login {
+        width: 85%;
+        margin: auto;
+
+        form {
+          display: flex;
+          flex-direction: column;
+          // gap: 1px;
+          width: 100%;
+        }
+
+        mat-form-field {
+          width: 100%;
+        }
+
+        .login-btn {
+          width: 100%;
+          background-color: #edcd84;
+          color: #000;
+          margin-top: 10px;
+
+          .login-btn-content {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+          }
+
+          .login-btn-spinner {
+            width: 18px !important;
+            height: 18px !important;
+          }
+        }
+
+        .head {
+          font-size: 1.8rem;
+          text-align: center;
+          color: #fff;
+          text-transform: uppercase;
+          padding-bottom: 20px;
+
+          line-height: 1.4;  /* This adds breathing room between lines */
+          display: block;
+        }
+      }
+    }
+  }
+}
+
+
+.small-button {
+  width: 30px;
+  height: 30px;
+  margin-right: 5px;
+  padding: 4px 0px 0px 0px;
+}
+
+.small-icon {
+  font-size: 20px;
+}
+
+:host ::ng-deep .login-btn-spinner circle {
+  stroke: #000;
+}
+
+
+:host ::ng-deep button.mat-mdc-raised-button {
+  border-radius: 0 !important;
+}
+
+
+:host ::ng-deep .custom-input {
+  font-size: 13px;
+}
+
+
+:host ::ng-deep .custom-input input::placeholder {
+  opacity: 0.7;
+  font-size: 13px;
+}
+
+:host ::ng-deep .mat-mdc-form-field-infix {
+  display: flex;
+  align-items: center;
+  min-height: 35px;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+:host ::ng-deep .mat-mdc-input-element {
+  height: 100%;
+  line-height: normal;
+}
+
+:host ::ng-deep .mat-mdc-text-field-wrapper {
+  margin-bottom: 10px;
+  padding-left: 6px !important;
+  background-color: white;
+  border-bottom-left-radius: 5px;
+  border-bottom-right-radius: 5px;
+}
+
+/* ===== Remove extra spacing added by wrapper ===== */
+:host ::ng-deep .custom-input .mat-mdc-text-field-wrapper {
+  margin-bottom: 0 !important;
+}
+
+// :host ::ng-deep .mat-mdc-form-field-subscript-wrapper {
+//   height: 0 !important;
+// }
+
+.forgot-pass {
+  display: flex;
+  justify-content: flex-end;
+  color: white;
+  margin-bottom: 2px;
+  padding-bottom: 0px;
+}
+
+
+
+.signup-cta {
+  margin-top: 14px;
+  text-align: center;
+  font-size: 0.9rem;
+  color: #ccc;
+
+  a {
+    display: inline-flex;    /* Only as wide as content */
+    align-items: center;    /* Center icon and text vertically */
+    justify-content: center;
+    gap: 5px;
+
+    margin-left: 6px;
+    color: #ffffff;
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: none;
+
+    &:hover {
+      opacity: 0.85;
+      text-decoration: underline;
+    }
+  }
+}
+
+
+.custom-input {
+  margin-bottom: 6px;
+}
+
+
+.custom-input.no-margin {
+  margin-bottom: 0;
+}
+
+
+
+
+
+
+
+.external-label {
+    display: block;
+    color: white;
+    font-size: 14px;
+    font-weight: 400;
+}
+
+
+.mfa-desc {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.9rem;
+    text-align: center;
+    margin-bottom: 20px;
+    line-height: 1.4;
+}
+
+.otp-field {
+    input {
+        text-align: center;
+        letter-spacing: 5px;
+        font-size: 1.3rem;
+        font-weight: bold;
+        color: #fff !important;
+    }
+}
+
+.mfa-section {
+    display: flex;
+    flex-direction: column;
+    animation: fadeIn 0.4s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}

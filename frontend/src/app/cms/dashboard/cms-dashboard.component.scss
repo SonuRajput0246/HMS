@@ -1,0 +1,360 @@
+@use '../cms-theme' as theme;
+
+// ============================================================
+//  CMS DASHBOARD — Style
+//  Consistent with inventory screens
+// ============================================================
+
+theme.$navy: #003366;
+theme.$navy-light: #0a4387;
+theme.$navy-soft: #eef3fa;
+theme.$teal: #16b4a4;
+theme.$page-bg: #f2f6fc;
+theme.$card-bg: #ffffff;
+theme.$border: #e2e8f0;
+theme.$text: #1c2b3a;
+theme.$text-muted: #64748b;
+theme.$radius: 14px;
+theme.$shadow-card: 0 4px 16px rgba(15, 42, 77, 0.05);
+
+.dashboard-shell {
+  @include theme.cms-shell(16px);
+}
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+
+  @media (max-width: 900px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.kpi-card {
+  @include theme.cms-card;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: theme.$shadow-raised;
+  }
+
+  mat-card-content {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 20px;
+  }
+
+  .kpi-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+
+    mat-icon {
+      font-size: 24px;
+      width: 24px;
+      height: 24px;
+    }
+
+    &.primary { background: theme.$navy-soft; color: theme.$navy; }
+    &.accent  { background: theme.$teal-soft; color: theme.$teal; }
+    &.warn    { background: theme.$warn-soft; color: theme.$warn; }
+    &.primary { background: theme.$info-soft; color: theme.$info; }
+  }
+
+  .kpi-info {
+    flex: 1;
+    min-width: 0;
+
+    .kpi-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: theme.$text;
+      line-height: 1.2;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .kpi-label {
+      font-size: 12px;
+      color: theme.$text-muted;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 4px;
+    }
+  }
+}
+
+.panels-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 24px;
+
+  @media (max-width: 1100px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.panel-card {
+  @include theme.cms-card;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+
+  &.actions-card {
+    .action-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+
+      @media (max-width: 700px) {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    .action-btn {
+      height: 90px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-weight: 500;
+      font-size: 13px;
+      text-align: center;
+      padding: 12px 8px;
+      border-radius: 12px;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+
+      mat-icon {
+        font-size: 28px;
+        width: 28px;
+        height: 28px;
+      }
+
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(15, 42, 77, 0.15);
+      }
+    }
+  }
+
+  .panel-icon {
+    color: theme.$navy;
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
+
+  .header-actions {
+    button {
+      margin-left: auto;
+    }
+  }
+
+  mat-card-header {
+    padding: 16px 20px 8px;
+    border-bottom: 1px solid theme.$border;
+  }
+
+  mat-card-subtitle {
+    font-size: 12px;
+    color: theme.$text-muted;
+    margin-top: 4px;
+  }
+
+  mat-card-content {
+    flex: 1;
+    padding: 16px 20px 20px;
+  }
+}
+
+.kds-mini-board {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mini-ticket {
+  @include theme.cms-card;
+  padding: 12px 16px;
+  border-left: 4px solid theme.$navy;
+  transition: box-shadow 0.15s ease;
+
+  &:hover {
+    box-shadow: theme.$shadow-raised;
+  }
+
+  .ticket-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 6px;
+    flex-wrap: wrap;
+  }
+
+  .ticket-number {
+    font-weight: 700;
+    font-size: 14px;
+    color: theme.$text;
+  }
+
+  .ticket-ref {
+    font-size: 12px;
+    color: theme.$text-muted;
+  }
+
+  .wait-badge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 999px;
+    margin-left: auto;
+    white-space: nowrap;
+
+    &.warn {
+      @include theme.cms-pill(theme.$warn-soft, theme.$warn);
+    }
+
+    &.accent {
+      @include theme.cms-pill(theme.$danger-soft, theme.$danger);
+    }
+
+    &.primary {
+      @include theme.cms-pill(theme.$info-soft, theme.$info);
+    }
+  }
+
+  .ticket-items {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12px;
+    color: theme.$text-muted;
+
+    .item-count {
+      font-weight: 600;
+      color: theme.$navy;
+    }
+  }
+}
+
+.actions-card {
+  .action-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+
+    @media (max-width: 700px) {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  .action-btn {
+    height: 90px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-weight: 500;
+    font-size: 13px;
+    text-align: center;
+    padding: 12px 8px;
+    border-radius: 12px;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+
+    mat-icon {
+      font-size: 28px;
+      width: 28px;
+      height: 28px;
+    }
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(15, 42, 77, 0.15);
+    }
+  }
+}
+
+.empty-state {
+  text-align: center;
+  padding: 24px 16px;
+  color: theme.$text-muted;
+
+  mat-icon {
+    font-size: 48px;
+    width: 48px;
+    height: 48px;
+    margin-bottom: 12px;
+    opacity: 0.4;
+  }
+
+  p {
+    margin: 0;
+    font-size: 14px;
+  }
+}
+
+.kpi-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  mat-icon {
+    font-size: 24px;
+    width: 24px;
+    height: 24px;
+  }
+
+  &.primary { background: theme.$navy-soft; color: theme.$navy; }
+  &.accent  { background: theme.$teal-soft; color: theme.$teal; }
+  &.warn    { background: theme.$warn-soft; color: theme.$warn; }
+  &.info    { background: theme.$info-soft; color: theme.$info; }
+}
+
+.kpi-info {
+  flex: 1;
+  min-width: 0;
+
+  .kpi-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: theme.$text;
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .kpi-label {
+    font-size: 12px;
+    color: theme.$text-muted;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 4px;
+  }
+}
+
+.loading-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  border-radius: theme.$radius;
+
+  mat-spinner {
+    color: theme.$navy;
+  }
+}

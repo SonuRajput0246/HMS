@@ -1,0 +1,87 @@
+<app-page-loader *ngIf="isPageLoad"></app-page-loader>
+
+<div class="otp-verification-page">
+
+    <div class="otp-verification-card">
+
+        <!-- ================= Header ================= -->
+        <header class="ov-header">
+            <span class="head-icon"><mat-icon>mark_email_read</mat-icon></span>
+            <div class="head-text">
+                <h3>Verify Your Account</h3>
+                <p>Enter the code we sent you to finish setting up your account</p>
+            </div>
+        </header>
+
+        <form class="ov-form" [formGroup]="otpForm" (ngSubmit)="verifyOtp()" autocomplete="off">
+
+            <div class="card-body">
+
+                <!-- Security note -->
+                <div class="security-note">
+                    <mat-icon>mail</mat-icon>
+                    <span>We sent a 6-digit code to <strong>{{ email }}</strong>. It may take a minute to arrive.</span>
+                </div>
+
+                <!-- OTP -->
+                <mat-form-field class="otp-field" appearance="outline" floatLabel="always">
+                    <mat-label>Verification Code</mat-label>
+                    <input matInput formControlName="otp" maxlength="6" inputmode="numeric"
+                        autocomplete="one-time-code" placeholder="000000" (keypress)="allowOnlyNumbers($event)"
+                        (paste)="onOtpPaste($event)">
+                    <mat-error *ngIf="otpForm.get('otp')?.hasError('required')">
+                        OTP is required
+                    </mat-error>
+                    <mat-error *ngIf="otpForm.get('otp')?.hasError('pattern') || otpForm.get('otp')?.hasError('minlength')">
+                        Please enter a valid 6-digit numeric code
+                    </mat-error>
+                </mat-form-field>
+
+                <!-- Resend -->
+                <div class="resend-bar">
+                    <div class="resend-note" *ngIf="!canResend">
+                        <mat-icon>timer</mat-icon>
+                        <span>Resend code in <strong>{{ timerSeconds }}s</strong></span>
+                    </div>
+
+                    <button mat-button type="button" class="btn-resend" *ngIf="canResend" (click)="resendOtp()"
+                        [disabled]="isLoading">
+                        <mat-icon>refresh</mat-icon>
+                        Resend Code
+                    </button>
+                </div>
+
+            </div>
+
+            <!-- ================= Footer Actions ================= -->
+            <div class="action-bar">
+                <div class="action-left">
+                    <mat-icon>timer</mat-icon>
+                    <span>The code expires in a short while</span>
+                </div>
+
+                <div class="action-right">
+                    <button mat-stroked-button type="button" class="btn-cancel" routerLink="/auth/login">
+                        <mat-icon>arrow_back</mat-icon>
+                        Back
+                    </button>
+
+                    <button mat-flat-button type="submit" class="btn-submit" [disabled]="otpForm.invalid || isLoading">
+                        <span class="btn-content" *ngIf="!isLoading">
+                            <mat-icon>verified</mat-icon>
+                            Verify &amp; Proceed
+                        </span>
+                        <span class="btn-content" *ngIf="isLoading">
+                            Please Wait
+                            <mat-progress-spinner diameter="18" mode="indeterminate" class="btn-spinner">
+                            </mat-progress-spinner>
+                        </span>
+                    </button>
+                </div>
+            </div>
+
+        </form>
+
+    </div>
+
+</div>

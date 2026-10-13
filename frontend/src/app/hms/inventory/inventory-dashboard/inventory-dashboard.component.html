@@ -1,0 +1,31 @@
+<app-navigation-bar [navData]="navData"></app-navigation-bar>
+
+<div class="inventory-shell">
+
+    <!-- Tab bar: Categories | Inventory -->
+    <mat-tab-group class="inventory-tabs" [selectedIndex]="selectedTabIndex"
+        (selectedTabChange)="onTabChange($event.index)">
+        <mat-tab>
+            <ng-template mat-tab-label>
+                <span class="tab-label">
+                    <mat-icon>category</mat-icon>
+                    Categories
+                </span>
+            </ng-template>
+        </mat-tab>
+        <mat-tab>
+            <ng-template mat-tab-label>
+                <span class="tab-label">
+                    <mat-icon>inventory_2</mat-icon>
+                    Inventory
+                </span>
+            </ng-template>
+        </mat-tab>
+    </mat-tab-group>
+
+    <!-- Routed child (category / inventory list & forms) -->
+    <div class="tab-body">
+        <router-outlet></router-outlet>
+    </div>
+
+</div>

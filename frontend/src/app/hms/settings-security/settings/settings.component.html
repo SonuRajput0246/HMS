@@ -1,0 +1,106 @@
+<app-navigation-bar [navData]="navData"></app-navigation-bar>
+
+<div class="settings-page">
+
+    <div class="settings-card">
+
+        <!-- ================= Page header ================= -->
+        <header class="settings-header">
+            <span class="head-icon"><mat-icon>shield</mat-icon></span>
+            <div class="head-text">
+                <h3>Security</h3>
+                <p>Manage your password and account security</p>
+            </div>
+        </header>
+
+        <!-- ================= Security options ================= -->
+        <div class="settings-list">
+
+            <!-- Change Password -->
+            <section class="setting-row">
+                <span class="row-icon"><mat-icon>lock_reset</mat-icon></span>
+                <div class="row-body">
+                    <h4>Change Password</h4>
+                    <p>Update your password regularly to keep your account secure.</p>
+                </div>
+                <div class="row-action">
+                    <button mat-stroked-button class="btn-outline" routerLink="/hms/settings/security/change-password">
+                        Change Password
+                    </button>
+                </div>
+            </section>
+
+            <!-- Multi-Factor Authentication -->
+            <section class="setting-row">
+                <span class="row-icon" [class.is-on]="mfaEnabled()"><mat-icon>phonelink_lock</mat-icon></span>
+                <div class="row-body">
+                    <h4>
+                        MFA (Multi-Factor Authentication)
+                        <span class="state-pill" [class.is-on]="mfaEnabled()">
+                            {{ mfaEnabled() ? 'Enabled' : 'Not enabled' }}
+                        </span>
+                    </h4>
+                    <p *ngIf="!mfaEnabled()">
+                        Adds an extra layer of security by requiring a code from your authenticator app.
+                    </p>
+                    <p *ngIf="mfaEnabled()" class="enabled-text">
+                        MFA is enabled for your account
+                    </p>
+                </div>
+                <div class="row-action">
+                    <!-- Button changes dynamically -->
+                    <button mat-stroked-button class="btn-outline" *ngIf="!mfaEnabled()"
+                        routerLink="/hms/settings/security/setup-multi-factor-authentication">
+                        Enable MFA
+                    </button>
+
+                    <button mat-stroked-button class="btn-outline is-on" *ngIf="mfaEnabled()" (click)="onDisableMFA()">
+                        Disable MFA
+                    </button>
+                </div>
+            </section>
+
+        </div>
+
+        <!-- ================= Danger zone ================= -->
+        <section class="danger-zone">
+            <header class="zone-header">
+                <mat-icon>warning_amber</mat-icon>
+                <span>Danger Zone</span>
+            </header>
+
+            <!-- Deactivate Account -->
+            <div class="setting-row is-danger">
+                <span class="row-icon is-danger"><mat-icon>pause_circle</mat-icon></span>
+                <div class="row-body">
+                    <h4>Deactivate Account</h4>
+                    <p>Temporarily disable your account. You can reactivate it at any time.</p>
+                </div>
+                <div class="row-action">
+                    <button mat-stroked-button class="btn-danger" routerLink="/hms/settings/security/deactivate-account">
+                        Deactivate
+                    </button>
+                </div>
+            </div>
+
+            <!-- Delete Account -->
+            <div class="setting-row is-danger">
+                <span class="row-icon is-danger"><mat-icon>delete_forever</mat-icon></span>
+                <div class="row-body">
+                    <h4>Delete Account</h4>
+                    <p>Permanently delete your account and all associated data. This action is irreversible.</p>
+                </div>
+                <div class="row-action">
+                    <button mat-stroked-button class="btn-danger is-strong"
+                        routerLink="/hms/settings/security/delete-account">
+                        Delete Account
+                    </button>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+</div>
+
+<app-page-loader *ngIf="isPageLoad()"></app-page-loader>

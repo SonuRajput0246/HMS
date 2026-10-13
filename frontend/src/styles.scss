@@ -1,0 +1,690 @@
+@import "./scss/main.scss";
+
+
+
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  margin: 0;
+  font-family: Roboto, "Helvetica Neue", sans-serif;
+}
+
+
+
+//-----------------------------UPDATED CSS------------------------------//
+
+
+
+//------- Scrollbar customization ------//
+
+.grid_div {
+  height: calc(100vh - 184px);
+  overflow: auto;
+}
+
+.tab_grid_div {
+  height: calc(100vh - 220px);
+  overflow: auto;
+}
+
+.extra_band_grid_div {
+  height: calc(100vh - 230px);
+  overflow: auto;
+  position: relative;
+  z-index: 10;
+}
+
+// .in_up_form {
+//   height: calc(100vh - 110px);
+//   overflow: auto;
+// }
+
+
+
+//---------- Snackbar customization ----------//
+//  Tinted card with a leading accent bar. Each state gets a soft background,
+//  a matching 4px bar down its leading edge, and a solid circular icon badge,
+//  while the message stays dark (#1c2b3a) so it keeps AA contrast on all four
+//  tints. The colours reuse the navy / teal / amber treatment already applied
+//  to the datepicker and the SweetAlert2 dialog further down this file.
+//
+//  Material renders:
+//
+//    mat-snack-bar-container.<panelClass>   full-width, fixed, transparent
+//      .mdc-snackbar__surface               the visible card
+//        .mat-mdc-snack-bar-label
+//          simple-snack-bar  ->  <app-custom-snackbar>
+//
+//  `panelClass` is attached to the *container*, which is a fixed, full-width,
+//  pointer-events: none element — not to the surface, as an earlier version of
+//  this comment claimed. So the container is left transparent and all painting
+//  happens on the surface. A background on the container would stretch across
+//  the whole viewport instead of hugging the message.
+//
+//  Material's stock surface is a dark rounded rectangle with generous padding,
+//  so container colour, radius, padding, min-width and the entrance animation
+//  are all overridden to get a compact, centred card.
+//
+//  SELECTIVITY. Material ships its surface rules as
+//  `.mat-mdc-snack-bar-container .mdc-snackbar__surface` (0,2,0) — the same
+//  specificity a plain `.<panelClass> .mdc-snackbar__surface` selector would
+//  reach — but Material injects them at runtime, *after* this stylesheet, so
+//  on a tie they win. Qualifying with `.mat-mdc-snack-bar-container` as well
+//  lifts these to 0,3,0 and settles it on specificity instead of resorting to
+//  `!important`.
+
+$snack-text: #1c2b3a;
+
+//  name, accent bar, icon glyph, surface tint, border + badge fill
+$snack-states: (
+  (success, #16b4a4, #0f766e, #e6f7f4, #b6e4dd),
+  (error, #ef4444, #b91c1c, #fdedec, #f6cdca),
+  (warn, #f59e0b, #b45309, #fdf5e3, #f2ddb0),
+  (info, #0a4387, #003366, #eef3fa, #cddcef)
+);
+
+// The structural rules live inside the loop rather than in a shared block
+// above it: they carry the same 0,3,0 selector, so a shared block would need
+// its own list of four panel classes kept in sync with this one.
+@each $name, $accent, $glyph, $tint, $edge in $snack-states {
+  .mat-mdc-snack-bar-container.#{$name}-snackbar {
+    // The prebuilt indigo-pink theme sets --mdc-snackbar-container-color to
+    // #333333 on `html`, which would paint a full-width dark band behind the
+    // card. Override it here, on the element that actually needs it.
+    background: transparent;
+    --mdc-snackbar-container-color: transparent;
+    --mdc-snackbar-supporting-text-color: #{$snack-text};
+
+    .mdc-snackbar__surface {
+      // `fit-content` + auto side margins is what makes the card hug the
+      // message and sit centred. Stated explicitly rather than left to the
+      // surface's flex-item intrinsic sizing, so the card is the same width in
+      // a flex (`.mdc-snackbar--open`) or block container.
+      display: block;
+      width: fit-content;
+      margin: 18px auto;
+      padding: 0;
+      min-width: auto;
+      min-height: auto;
+      // border-box so `max-width` is the card's *total* width, borders included;
+      // MDC's border-box is not guaranteed to survive our other overrides.
+      box-sizing: border-box;
+      max-width: min(560px, calc(100vw - 32px));
+
+      background: $tint;
+      // `border-left-width` thickens the leading edge into the accent bar while
+      // `overflow: hidden` keeps the tint and bar clipped to the rounded corners.
+      border: 1px solid $edge;
+      border-left-width: 4px;
+      border-left-color: $accent;
+      border-radius: 12px;
+      overflow: hidden;
+
+      box-shadow: 0 12px 30px rgba(3, 20, 44, 0.16);
+      animation: snack-in 0.26s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    // Stock label adds 16px/8px side and 14px top/bottom padding, which would
+    // double up with the padding on .cus_snackbar.
+    .mat-mdc-snack-bar-label {
+      margin: 0;
+      padding: 0;
+      width: auto;
+      flex: none;
+    }
+
+    // Badge is filled with the state's border tone so it reads as a chip on
+    // the tint rather than a second competing colour.
+    .cus_snackbar__icon {
+      color: $glyph;
+      background: $edge;
+    }
+  }
+}
+
+// Entrance runs on the surface. Material's own scale/fade is a transition on
+// the same element, and a CSS animation outranks a transition while it runs,
+// so the two do not fight. There is no matching exit animation: Material
+// removes the container as soon as its @state resolves, which (with no
+// keyframes defined for it in the prebuilt theme) is immediate.
+@keyframes snack-in {
+  from {
+    opacity: 0;
+    transform: translateY(-14px) scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+// Respect a reduced-motion preference: keep the card, drop the movement.
+// Selector has to match the specificity of the rule it cancels (0,3,0).
+@media (prefers-reduced-motion: reduce) {
+  @each $name in success, error, warn, info {
+    .mat-mdc-snack-bar-container.#{$name}-snackbar .mdc-snackbar__surface {
+      animation: none;
+    }
+  }
+}
+
+
+
+
+
+
+
+
+
+
+//------------ Serach Bar Customization (For all lists) ----------//
+
+.top-sub-nav-controls {
+  position: absolute;
+  right: 16px;
+  top: 5px;
+  display: flex;
+  align-items: center;
+
+  button {
+    background-color: #003366 !important;
+    border-radius: 18px;
+    min-width: 120px;
+    color: #E4E4E4;
+  }
+
+  .searchBar_cust {
+    margin-right: 20px;
+
+    .searchBar {
+      width: 100%;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      position: relative;
+
+      .searchQueryInput {
+        width: 240px;
+        height: 2rem;
+        background: #f5f5f5;
+        outline: none;
+        border: none;
+        border-radius: 1.625rem;
+        padding: 0 3.5rem 0 1.5rem;
+        font-size: 14px;
+      }
+
+      .mat-icon {
+        position: absolute;
+        right: 15px;
+      }
+
+      .close-icon {
+        cursor: pointer;
+      }
+    }
+  }
+}
+
+
+//------------ Manage page form customization ----------//
+
+.in_up_form {
+  // margin: 0px -15px;
+
+  .in_up_form_footer {
+
+    margin-top: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    .form_button {
+      background-color: #003366 !important;
+      border-radius: 18px !important;
+      min-width: 120px !important;
+      color: #E4E4E4 !important;
+
+      .btn-content {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;   // space between text and spinner
+      }
+
+      .btn-spinner {
+        width: 18px !important;
+        height: 18px !important;
+      }
+
+      .btn-spinner circle {
+        stroke: #ffffff;
+      }
+    }
+
+    .form_button:disabled {
+      background-color: #003366 !important;
+      // color: #003366 !important;
+      color: #E4E4E4 !important;
+    }
+  }
+
+}
+
+
+
+//---------- Confirmation dialog (SweetAlert2) ----------//
+//  Brand: navy #003366 / amber warning
+//
+//  This styling has to live in the global stylesheet rather than in
+//  confirmation.service.ts's consumers: SweetAlert2 appends the popup
+//  to <body>, outside every Angular component's view, so a component
+//  stylesheet could never reach it.
+//
+//  SweetAlert2 also injects its own `:root { --swal2-* }` block at
+//  runtime, which lands in <head> *after* the compiled stylesheet.
+//  Every override below is therefore scoped to
+//  `div.swal2-container.swal-container-css` (specificity 0,2,1) so it
+//  wins on specificity instead of relying on source order.
+//
+//  The dialog is deliberately compact. It interrupts a task mid-flow,
+//  so it should take up as little of the screen as possible while
+//  still reading comfortably: a fraction of the width and roughly
+//  half the height of SweetAlert2's stock popup.
+
+$swal-navy: #003366;
+$swal-navy-light: #0a4387;
+$swal-navy-soft: #eef3fa;
+$swal-text: #1c2b3a;
+$swal-muted: #64748b;
+$swal-border: #e2e8f0;
+$swal-amber: #d97706;
+
+div.swal2-container.swal-container-css {
+  // ---- sizing ----------------------------------------------------
+  // 32em (512px) stock width is far wider than a yes/no prompt needs.
+  --swal2-width: 21em;
+  --swal2-padding: 18px 20px 16px;
+  --swal2-border: 1px solid #{$swal-border};
+  --swal2-border-radius: 14px;
+  --swal2-background: #ffffff;
+  --swal2-color: #{$swal-text};
+
+  // ---- chrome ----------------------------------------------------
+  --swal2-backdrop: rgba(3, 20, 44, 0.55);
+  --swal2-outline: 0 0 0 3px rgba(0, 51, 102, 0.22);
+
+  // The popup's own padding already frames the title, so the title's
+  // default top padding would double the gap.
+  --swal2-title-padding: 0;
+  --swal2-html-container-padding: 6px 0 0;
+
+  // ---- actions ---------------------------------------------------
+  --swal2-actions-width: 100%;
+  --swal2-actions-margin: 16px 0 0;
+  --swal2-actions-justify-content: center;
+
+  --swal2-confirm-button-background-color: #{$swal-navy};
+  --swal2-confirm-button-color: #ffffff;
+  --swal2-cancel-button-background-color: #ffffff;
+  --swal2-cancel-button-color: #{$swal-muted};
+  --swal2-confirm-button-border-radius: 999px;
+  --swal2-cancel-button-border-radius: 999px;
+
+  // Sizing the icon explicitly below beats --swal2-icon-zoom: that is a
+  // `zoom` multiplier, which shrinks the box but leaves the surrounding
+  // margins at their stock size, so it still eats ~90px of height.
+  --swal2-icon-zoom: 1;
+
+  // ---- backdrop --------------------------------------------------
+  background: rgba(3, 20, 44, 0.55);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+
+  .swal2-popup {
+    box-shadow: 0 14px 40px rgba(0, 51, 102, 0.22);
+  }
+
+  // ---- title -----------------------------------------------------
+  // Stock title is 1.875em (30px), which dwarfs a short prompt.
+  .swal2-title {
+    font-size: 15.5px;
+    font-weight: 700;
+    line-height: 1.4;
+    color: $swal-navy;
+  }
+
+  // ---- body text -------------------------------------------------
+  // Stock body is 1.125em (18px), as large as the title, so the two
+  // don't read as a hierarchy.
+  .swal2-html-container {
+    font-size: 13px;
+    line-height: 1.55;
+    color: $swal-muted;
+  }
+
+  // Most callers pass a title and no message, which still reserved
+  // ~25px of padding around nothing. Collapse it in that case.
+  .swal2-html-container:empty {
+    display: none;
+  }
+
+  // ---- text input (confirmWithReason) ----------------------------
+  // Stock .swal2-input is 1.125em (18px) and centre-aligned. Against the 21em
+  // popup above, a guidance placeholder like "e.g. Guest cancelled by phone"
+  // overflows the field and gets clipped. Brought down to the same 13px as the
+  // body text and left-aligned, so a reason reads as a sentence rather than a
+  // centred fragment.
+  .swal2-input {
+    box-sizing: border-box;
+    width: 100%;
+    margin: 12px 0 0;
+    padding: 9px 12px;
+    font-family: inherit;
+    font-size: 13px;
+    line-height: 1.45;
+    text-align: left;
+    color: $swal-text;
+    background: #ffffff;
+    border: 1px solid #d3dce8;
+    border-radius: 8px;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+
+    &::placeholder {
+      color: #94a3b8;
+      font-size: 12.5px;
+      opacity: 1;
+    }
+
+    &:focus {
+      outline: none;
+      border-color: $swal-navy;
+      box-shadow: 0 0 0 3px rgba(0, 51, 102, 0.14);
+    }
+  }
+
+  // A dialog that collects a reason needs more room than a yes/no prompt.
+  // Applied by confirmation.service.confirmWithReason via the popup's
+  // customClass, rather than a `:has()` rule, so it does not depend on
+  // :has() support and cannot leak into the plain confirm() dialogs.
+  .swal2-popup.swal-popup-input-css {
+    width: 27em;
+    max-width: calc(100vw - 32px);
+  }
+
+  // ---- warning icon ----------------------------------------------
+  // Stock is 5em (80px) plus 2.5em of top margin, about 130px tall on its own.
+  .swal2-icon {
+    box-sizing: content-box;
+    width: 38px;
+    height: 38px;
+    line-height: 38px;
+    margin: 0 auto 12px;
+    border-width: 3px;
+    border-color: $swal-amber;
+    color: $swal-amber;
+
+    .swal2-icon-content {
+      font-size: 24px;
+    }
+  }
+
+  // ---- buttons ---------------------------------------------------
+  .swal2-actions {
+    gap: 10px;
+  }
+
+  .swal2-styled {
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 36px;
+    margin: 0;
+    padding: 0 16px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+  }
+
+  .swal2-confirm {
+    background: linear-gradient(135deg, $swal-navy, $swal-navy-light);
+    box-shadow: 0 6px 16px rgba(0, 51, 102, 0.26);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+
+    &:hover:not([disabled]) {
+      transform: translateY(-1px);
+      box-shadow: 0 9px 20px rgba(0, 51, 102, 0.32);
+    }
+  }
+
+  .swal2-cancel {
+    border: 1px solid #d3dce8;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+
+    &:hover:not([disabled]) {
+      background: $swal-navy-soft;
+      border-color: $swal-navy;
+      color: $swal-navy;
+    }
+  }
+}
+
+
+
+
+
+
+
+ 
+//------------ Page blur on logout ----------//
+
+.logout-blur::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+
+  pointer-events: none;
+}
+
+
+
+
+
+
+//------------ Button hover customization ----------//
+//// Hover Effect 1
+.mat-mdc-raised-button:hover {
+  outline: 2px solid rgba(255, 255, 255, 0.6);
+  outline-offset: -2px;
+}
+
+
+
+
+
+//-------------- Table Menu Options customization ----------//
+
+.mat-mdc-menu-content {
+  padding: 0 !important;
+}
+
+.table-actions button:not(:last-child) {
+  position: relative;
+}
+
+.table-actions button:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);   /* centers the line */
+  width: 85%;                    /* adjust as needed */
+  border-bottom: 1px solid;
+}
+
+.menu-item {
+  .mat-mdc-menu-item-text {
+    text-align: center;
+    font-size: 13px !important;
+  }
+}
+
+
+
+//============================================================================//
+//  Shared datepicker treatment (navy/teal, compact)                          //
+//                                                                            //
+//  Opt-in per picker: add  panelClass="reservation-range-picker"  to any    //
+//  <mat-datepicker> / <mat-date-range-picker> — Angular Material puts that  //
+//  class on <mat-calendar> inside the CDK overlay, so all rules below stay  //
+//  scoped to pickers that opt in (single & range share the same calendar).  //
+//                                                                            //
+//  Day-cell rows are sized by a %-padding aspect-ratio trick that scales    //
+//  with the calendar width, so narrowing the calendar also shortens the     //
+//  rows; the header chrome is trimmed separately.                           //
+//============================================================================//
+
+// Popup shell — rounded, bordered, brand shadow (scoped via :has)
+.mat-datepicker-content:has(.reservation-range-picker) {
+  border-radius: 14px !important;
+  overflow: hidden;
+  background: #ffffff;
+  border: 1px solid #d5e0ee;
+  box-shadow: 0 14px 34px rgba(0, 51, 102, 0.18) !important;
+}
+
+.mat-calendar.reservation-range-picker {
+  // 296px → 250px (cells become (250-12)/7 ≈ 34px, rows scale too)
+  width: 250px !important;
+  height: auto !important;
+
+  // ----- brand color tokens (redeclared locally so they win) -----
+  --mat-datepicker-calendar-period-button-text-color: #003366;
+  --mat-datepicker-calendar-period-button-text-weight: 600;
+  --mat-datepicker-calendar-period-button-icon-color: #003366;
+  --mat-datepicker-calendar-navigation-button-icon-color: #003366;
+  --mat-datepicker-calendar-header-text-color: #64748b;
+  --mat-datepicker-calendar-header-divider-color: #dbe4f0;
+  --mat-datepicker-calendar-body-label-text-color: #94a3b8;
+  --mat-datepicker-calendar-date-text-color: #1c2b3a;
+  --mat-datepicker-calendar-date-today-outline-color: #16b4a4;
+  --mat-datepicker-calendar-date-disabled-state-text-color: #b6c4d6;
+  --mat-datepicker-calendar-date-hover-state-background-color: #eef3fa;
+  --mat-datepicker-calendar-date-focus-state-background-color: #eef3fa;
+  --mat-datepicker-calendar-date-selected-state-background-color: #16b4a4;
+  --mat-datepicker-calendar-date-selected-state-text-color: #ffffff;
+  --mat-datepicker-calendar-date-in-range-state-background-color: #e2f6f3;
+
+  // ----- header chrome -----
+  .mat-calendar-header {
+    padding: 6px 6px 0 6px;
+  }
+
+  .mat-calendar-content {
+    padding: 0 6px 6px 6px;
+  }
+
+  .mat-calendar-controls {
+    margin: 6px 0;
+    gap: 4px;
+  }
+
+  .mat-calendar-period-button {
+    height: 30px !important;
+    min-height: 30px !important; // .mat-mdc-button-base default min-height is 36px
+    line-height: 30px !important;
+    font-size: 12.5px !important;
+    padding: 0 8px !important;
+    margin: 0 4px !important;
+  }
+
+  .mat-calendar-previous-button,
+  .mat-calendar-next-button {
+    --mdc-icon-button-state-layer-size: 30px;
+    width: 30px !important;   // was 40px
+    height: 30px !important;
+    flex: 0 0 30px;
+    line-height: 30px !important;
+    padding: 0 !important;
+
+    .mat-mdc-button-touch-target {
+      width: 30px;
+      height: 30px;
+    }
+
+    // smaller chevron inside the 30px button (was margin 15.5px)
+    &::after {
+      margin: 10.5px;
+      border-top-width: 2px;
+    }
+  }
+
+  // ----- weekday header -----
+  .mat-calendar-table-header th {
+    font-size: 10.5px !important;
+    font-weight: 600 !important;
+    padding: 0 0 4px 0 !important;
+  }
+
+  .mat-calendar-table-header-divider {
+    height: 5px;
+
+    &::after {
+      left: -6px;
+      right: -6px;
+    }
+  }
+
+  // ----- day cells -----
+  .mat-calendar-body-cell {
+    font-size: 12.5px !important;
+  }
+
+  // today ring on top of the teal/soft pill colors
+  .mat-calendar-body-today {
+    box-shadow: inset 0 0 0 1px #16b4a4;
+  }
+}
+
+//--------------------------------------------------------------------------//
+//  Datepicker toggle — clear the stuck "hover" tint (all toggles)          //
+//                                                                            //
+//  After the calendar closes (e.g. clicking outside), Material              //
+//  programmatically returns focus to the toggle icon button. That paints    //
+//  its *focus* state layer, which looks identical to the hover tint and     //
+//  stays until the button loses focus. We drop that focus tint and add a    //
+//  teal :focus-visible ring so keyboard users keep an indicator. Because    //
+//  the lingering focus rule is more specific than Material's hover rule,    //
+//  we re-assert the hover tint with !important so hovering the icon always  //
+//  gives feedback, before and after a close.                                //
+//--------------------------------------------------------------------------//
+.mat-datepicker-toggle .mat-mdc-icon-button {
+  --mat-icon-button-focus-state-layer-opacity: 0;
+
+  &:hover .mat-mdc-button-persistent-ripple::before {
+    opacity: var(--mat-icon-button-hover-state-layer-opacity) !important;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #16b4a4;
+    outline-offset: 2px;
+  }
+}
+
+
+
+
+
+// ---------- CMS dialogs ----------
+// mat-dialog renders into a CDK overlay outside the component view, so these
+// styles cannot live in a component stylesheet.
+@import 'app/cms/cms-dialogs';
+

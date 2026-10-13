@@ -1,0 +1,970 @@
+<app-navigation-bar [navData]="navData"></app-navigation-bar>
+
+<div class="edit-page">
+
+    <!-- ================= Header band ================= -->
+    <div class="edit-band" *ngIf="!isLoading && reservation">
+        <div class="band-left">
+            <span class="band-icon"><mat-icon>edit_calendar</mat-icon></span>
+            <div class="band-title">
+                <h2>Reservation #{{ reservation.reservation_number || reservation.reservation_id }}</h2>
+                <div class="band-sub">
+                    <span class="status-badge" [ngClass]="status">{{ status | snakeToTitle }}</span>
+                    <span class="band-meta">
+                        <mat-icon>event</mat-icon>
+                        {{ stayForm.get('check_in_date')?.value | date:'dd MMM' }}
+                        <em>&rarr;</em>
+                        {{ stayForm.get('check_out_date')?.value | date:'dd MMM yyyy' }}
+                    </span>
+                    <span class="band-meta">
+                        <mat-icon>hotel</mat-icon> Room {{ selectedRoomNumber }}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div class="band-actions">
+            <button mat-raised-button color="primary" class="btn-back" (click)="onBack()" matTooltip="Back to list">
+                <mat-icon>arrow_back</mat-icon> Back
+            </button>
+            <button mat-raised-button color="primary" class="btn-view" (click)="onViewDetails()">
+                <mat-icon>visibility</mat-icon> View
+            </button>
+            <button mat-raised-button color="primary" class="btn-save-all" (click)="saveAll()"
+                [disabled]="!canSaveAll">
+                <span class="btn-content" *ngIf="!isSavingAll">
+                    <mat-icon>save</mat-icon> Save Changes
+                </span>
+                <span class="btn-content" *ngIf="isSavingAll">
+                    Saving
+                    <mat-progress-spinner diameter="16" mode="indeterminate" class="btn-spinner"></mat-progress-spinner>
+                </span>
+            </button>
+            <button mat-raised-button class="btn-cancel-res" [disabled]="!isCancellable || isCancelling"
+                *ngIf="status !== 'cancelled'" (click)="onCancel()" matTooltip="Cancel this reservation">
+                <mat-icon>cancel</mat-icon>
+                {{ isCancelling ? 'Cancelling' : 'Cancel Reservation' }}
+            </button>
+        </div>
+    </div>
+
+    <!-- ================= Status lock banner ================= -->
+    <div class="lock-banner" *ngIf="isReadOnly && !isLoading">
+        <mat-icon>lock</mat-icon>
+        <div class="lock-text">
+            <strong>This reservation is {{ status | snakeToTitle }}</strong>
+            <span>It is kept as a permanent record — every section below is read-only.</span>
+        </div>
+    </div>
+
+    <div class="lock-banner warn" *ngIf="!isReadOnly && areDatesLocked">
+        <mat-icon>info</mat-icon>
+        <div class="lock-text">
+            <strong>The stay has started</strong>
+            <span>Check-in / check-out dates and guest identity are locked. Contact and preference details can still be updated.</span>
+        </div>
+    </div>
+
+    <!-- ================= Body ================= -->
+    <div class="edit-body" *ngIf="!isLoading && reservation">
+
+        <!-- ---------- Left: sections ---------- -->
+        <div class="sections">
+
+            <!-- =============== 1. STAY & ROOM =============== -->
+            <section class="form-shell" [class.section-dirty]="isRoomDirty">
+                <header class="section-header">
+                    <span class="head-icon"><mat-icon>hotel</mat-icon></span>
+                    <div class="head-text">
+                        <h3>Stay &amp; Room</h3>
+                        <p>Dates, assigned room and stay pricing</p>
+                    </div>
+                    <span class="chip chip-dirty" *ngIf="isRoomDirty">Unsaved</span>
+                    <span class="chip chip-saved" *ngIf="!isRoomDirty && roomState === 'saved'">
+                        <mat-icon>check</mat-icon> Saved
+                    </span>
+                    <div class="section-actions" *ngIf="!isReadOnly">
+                        <button mat-flat-button class="btn-section-save" (click)="saveRoom()"
+                            [disabled]="!isRoomDirty || isSavingRoom || isSavingAll">
+                            <mat-icon>save</mat-icon>
+                            {{ isSavingRoom ? 'Saving...' : 'Save' }}
+                        </button>
+                    </div>
+                </header>
+
+                <form [formGroup]="stayForm" autocomplete="off">
+                    <!-- assigned room card -->
+                    <div class="room-card">
+                        <div class="room-card-left">
+                            <span class="room-no">{{ selectedRoomNumber }}</span>
+                            <div class="room-meta">
+                                <span class="room-type">{{ selectedRoomType }}</span>
+                                <span class="room-rate" *ngIf="pricePerNight">
+                                    &#8377;{{ pricePerNight | number:'1.0-0' }} <small>/ night</small>
+                                </span>
+                            </div>
+                        </div>
+                        <button type="button" mat-stroked-button class="btn-change-room"
+                            (click)="toggleRoomPicker()" *ngIf="!isReadOnly && !areDatesLocked">
+                            <mat-icon>swap_horiz</mat-icon>
+                            {{ showRoomPicker ? 'Close' : 'Change Room' }}
+                        </button>
+                        <span class="room-locked" *ngIf="areDatesLocked">
+                            <mat-icon>lock</mat-icon> Locked
+                        </span>
+                    </div>
+
+                    <!-- inline room picker -->
+                    <div class="room-picker" *ngIf="showRoomPicker">
+                        <div class="picker-head">
+                            <span>
+                                <mat-icon>meeting_room</mat-icon>
+                                <strong>{{ roomTotalDocs }}</strong> room(s) available for
+                                {{ stayForm.get('check_in_date')?.value | date:'dd MMM' }} &rarr;
+                                {{ stayForm.get('check_out_date')?.value | date:'dd MMM yyyy' }}
+                            </span>
+                            <span class="picker-note">
+                                <mat-icon>info</mat-icon> Includes the room currently assigned to this reservation
+                            </span>
+                        </div>
+
+                        <!-- search + type filter -->
+                        <div class="picker-toolbar">
+                            <div class="pt-search">
+                                <mat-icon>search</mat-icon>
+                                <input type="text" [formControl]="roomSearchCtrl"
+                                    placeholder="Search room no. or type...">
+                                <button type="button" class="pt-search-clear" *ngIf="roomSearchCtrl.value"
+                                    (click)="roomSearchCtrl.setValue('')" matTooltip="Clear search">
+                                    <mat-icon>close</mat-icon>
+                                </button>
+                            </div>
+
+                            <mat-form-field appearance="outline" subscriptSizing="dynamic" class="pt-type">
+                                <mat-select [formControl]="roomTypeFilterCtrl" (selectionChange)="onRoomTypeFilter()"
+                                    panelClass="guest-select-panel">
+                                    <mat-option value="all">All types</mat-option>
+                                    <mat-option *ngFor="let type of roomTypeOptions" [value]="type">{{ type }}</mat-option>
+                                </mat-select>
+                            </mat-form-field>
+
+                            <button type="button" class="pt-clear" *ngIf="hasActiveRoomFilter"
+                                (click)="clearRoomFilters()">
+                                <mat-icon>filter_alt_off</mat-icon> Clear
+                            </button>
+                        </div>
+
+                        <div class="picker-loading" *ngIf="isAvailabilityLoading">
+                            <mat-spinner diameter="24"></mat-spinner> Checking availability...
+                        </div>
+
+                        <div class="picker-empty" *ngIf="!isAvailabilityLoading && availableRooms.length === 0">
+                            <mat-icon>event_busy</mat-icon>
+                            <span>No rooms available for the selected dates.</span>
+                        </div>
+
+                        <div class="picker-empty" *ngIf="!isAvailabilityLoading && availableRooms.length > 0
+                            && filteredRooms.length === 0">
+                            <mat-icon>search_off</mat-icon>
+                            <span>No rooms match your search on this page. Try a different term or clear the filters.</span>
+                        </div>
+
+                        <!-- bounded height so a long list never stretches the page -->
+                        <div class="room-list" *ngIf="!isAvailabilityLoading && filteredRooms.length">
+                            <button type="button" class="room-option" *ngFor="let room of filteredRooms; trackBy: trackByRoomId"
+                                [class.assigned]="isAssignedRoom(room)" (click)="selectRoom(room)">
+                                <span class="ro-no">{{ room.room_number }}</span>
+                                <span class="ro-type">{{ room.room_type }}</span>
+                                <span class="ro-cap">
+                                    <mat-icon>group</mat-icon>
+                                    {{ room.max_adults }}A<span *ngIf="room.max_children"> · {{ room.max_children }}C</span>
+                                </span>
+                                <span class="ro-price">&#8377;{{ room.price | number:'1.0-0' }}</span>
+                                <span class="ro-tag" *ngIf="isAssignedRoom(room)">Assigned</span>
+                                <span class="ro-tag current-tag" *ngIf="isCurrentRoom(room) && !isAssignedRoom(room)">Current</span>
+                            </button>
+                        </div>
+
+                        <div class="picker-foot" *ngIf="!isAvailabilityLoading && roomTotalDocs > roomPageSize">
+                            <span class="pf-label">{{ roomRangeLabel }}</span>
+                            <mat-paginator [length]="roomTotalDocs" [pageSize]="roomPageSize"
+                                [pageIndex]="roomPageNumber - 1" [hidePageSize]="true"
+                                (page)="onRoomPageChange($event)"></mat-paginator>
+                        </div>
+                    </div>
+
+                    <!-- capacity warning (occupancy derives from the guest roster) -->
+                    <div class="alert alert-warn" *ngIf="isOverCapacity">
+                        <mat-icon>warning</mat-icon>
+                        <span>
+                            {{ occupancyLabel }} ({{ guestOccupancy }} guests) exceed the capacity of
+                            {{ selectedRoomType }} ({{ roomCapacity }}). Remove a guest or pick a larger room.
+                        </span>
+                    </div>
+
+                    <!-- dates + occupancy -->
+                    <div class="section-grid">
+                        <mat-form-field appearance="outline" floatLabel="always">
+                            <mat-label>Check In</mat-label>
+                            <input matInput [matDatepicker]="checkInPicker" formControlName="check_in_date"
+                                [min]="minCheckInDate" placeholder="Select check-in date">
+                            <mat-hint>{{ areDatesLocked ? 'Locked' : 'Cannot be in the past' }}</mat-hint>
+                            <mat-datepicker-toggle matIconSuffix [for]="checkInPicker"></mat-datepicker-toggle>
+                            <!-- `min` is an input of MatDatepickerInput (the [matDatepicker]
+                                 directive); the panel's calendar reads it via _getMinDate() -->
+                            <mat-datepicker #checkInPicker panelClass="reservation-range-picker"></mat-datepicker>
+                            <mat-error *ngIf="stayForm.get('check_in_date')?.hasError('required')">
+                                Check-in date is required
+                            </mat-error>
+                        </mat-form-field>
+
+                        <mat-form-field appearance="outline" floatLabel="always">
+                            <mat-label>Check Out</mat-label>
+                            <input matInput [matDatepicker]="checkOutPicker" formControlName="check_out_date"
+                                [min]="minCheckOutDate" placeholder="Select check-out date">
+                            <mat-hint>
+                                {{ areDatesLocked ? 'Locked' : (minCheckOutDate | date:'dd MMM yyyy') + ' or later' }}
+                            </mat-hint>
+                            <mat-datepicker-toggle matIconSuffix [for]="checkOutPicker"></mat-datepicker-toggle>
+                            <mat-datepicker #checkOutPicker panelClass="reservation-range-picker"></mat-datepicker>
+                            <mat-error *ngIf="stayForm.get('check_out_date')?.hasError('required')">
+                                Check-out date is required
+                            </mat-error>
+                            <mat-error *ngIf="stayForm.hasError('stayWindow')">
+                                Check-out must be after check-in
+                            </mat-error>
+                            <mat-error *ngIf="stayForm.hasError('stayWindowInPast')">
+                                Check-out cannot be in the past
+                            </mat-error>
+                        </mat-form-field>
+                    </div>
+
+                    <!-- pricing -->
+                    <div class="pricing">
+                        <div class="price-calc">
+                            <span class="calc-item">
+                                <small>Nights</small>
+                                <strong>{{ totalNights }}</strong>
+                            </span>
+                            <span class="calc-op">&times;</span>
+                            <span class="calc-item">
+                                <small>Rate / night</small>
+                                <strong>&#8377;{{ pricePerNight | number:'1.0-0' }}</strong>
+                            </span>
+                            <span class="calc-op">=</span>
+                            <span class="calc-item total">
+                                <small>Total</small>
+                                <strong>&#8377;{{ computedTotal | number:'1.0-0' }}</strong>
+                            </span>
+                        </div>
+
+                        <div class="override-row">
+                            <mat-checkbox formControlName="total_amount_override">Override total amount</mat-checkbox>
+                        </div>
+
+                        <div class="section-grid override-grid" *ngIf="stayForm.get('total_amount_override')?.value">
+                            <mat-form-field appearance="outline" floatLabel="always">
+                                <mat-label>Custom Total Amount</mat-label>
+                                <input matInput type="number" formControlName="total_amount" min="0">
+                                <mat-error *ngIf="stayForm.get('total_amount')?.invalid">
+                                    Enter a valid amount
+                                </mat-error>
+                            </mat-form-field>
+
+                            <mat-form-field appearance="outline" floatLabel="always" class="field-span-2">
+                                <mat-label>Reason for override</mat-label>
+                                <input matInput type="text" formControlName="total_amount_override_reason"
+                                    placeholder="e.g. corporate rate, long stay discount">
+                            </mat-form-field>
+                        </div>
+                    </div>
+                </form>
+            </section>
+
+            <!-- =============== 2. GUEST DETAILS =============== -->
+            <section class="form-shell" [class.section-dirty]="isGuestDirty">
+                <header class="section-header">
+                    <span class="head-icon"><mat-icon>person</mat-icon></span>
+                    <div class="head-text">
+                        <h3>Guest Details</h3>
+                        <p>Primary guest profile and other occupants</p>
+                    </div>
+                    <span class="chip chip-dirty" *ngIf="isGuestDirty">Unsaved</span>
+                    <span class="chip chip-saved" *ngIf="!isGuestDirty && guestState === 'saved'">
+                        <mat-icon>check</mat-icon> Saved
+                    </span>
+                    <div class="section-actions" *ngIf="!isReadOnly">
+                        <button mat-flat-button class="btn-section-save" (click)="saveGuest()"
+                            [disabled]="!isGuestDirty || isSavingGuest || isSavingAll">
+                            <mat-icon>save</mat-icon>
+                            {{ isSavingGuest ? 'Saving...' : 'Save' }}
+                        </button>
+                    </div>
+                </header>
+
+                <div class="alert alert-warn" *ngIf="isIdentityLocked && !isReadOnly">
+                    <mat-icon>lock</mat-icon>
+                    <span>Guest identity is locked for a stay in progress. Contact and preference fields remain editable.</span>
+                </div>
+
+                <form [formGroup]="guestForm" autocomplete="off">
+                    <div class="sub-section">
+                        <h4 class="sub-title"><mat-icon>badge</mat-icon> Personal Information</h4>
+                        <div class="section-grid">
+                            <mat-form-field appearance="outline" floatLabel="always">
+                                <mat-label>First Name</mat-label>
+                                <input matInput type="text" formControlName="first_name" placeholder="Enter First Name">
+                                <mat-error *ngIf="guestForm.get('first_name')?.hasError('required')">
+                                    First Name is required
+                                </mat-error>
+                            </mat-form-field>
+
+                            <mat-form-field appearance="outline" floatLabel="always">
+                                <mat-label>Last Name</mat-label>
+                                <input matInput type="text" formControlName="last_name" placeholder="Enter Last Name">
+                                <mat-error *ngIf="guestForm.get('last_name')?.hasError('required')">
+                                    Last Name is required
+                                </mat-error>
+                            </mat-form-field>
+
+                            <mat-form-field appearance="outline"
+                                [floatLabel]="isGenderLoading ? 'auto' : 'always'" [hideRequiredMarker]="isGenderLoading">
+                                <mat-label>
+                                    <span class="label-loader" *ngIf="isGenderLoading; else genderLabel">
+                                        <span>Loading...</span>
+                                        <mat-spinner diameter="16"></mat-spinner>
+                                    </span>
+                                    <ng-template #genderLabel>Gender</ng-template>
+                                </mat-label>
+                                <mat-select formControlName="gender" placeholder="Select Gender"
+                                    [disabled]="isGenderLoading" panelClass="guest-select-panel">
+                                    <mat-option *ngFor="let item of genderList" [value]="item.option_key">
+                                        {{ item.option_label }}
+                                    </mat-option>
+                                </mat-select>
+                                <mat-error *ngIf="guestForm.get('gender')?.hasError('required')">
+                                    Gender is required
+                                </mat-error>
+                            </mat-form-field>
+
+                            <mat-form-field appearance="outline" floatLabel="always">
+                                <mat-label>Date of Birth</mat-label>
+                                <input matInput [matDatepicker]="dobPicker" formControlName="date_of_birth"
+                                    placeholder="Select Date of Birth">
+                                <mat-hint>DD/MM/YYYY</mat-hint>
+                                <mat-datepicker-toggle matIconSuffix [for]="dobPicker"></mat-datepicker-toggle>
+                                <mat-datepicker #dobPicker startView="multi-year" [startAt]="maxDob"
+                                    panelClass="reservation-range-picker"></mat-datepicker>
+                                <mat-error *ngIf="guestForm.get('date_of_birth')?.hasError('required')">
+                                    Date of Birth is required
+                                </mat-error>
+                                <mat-error *ngIf="guestForm.get('date_of_birth')?.hasError('underAge')">
+                                    Primary Guest must be at least 18 years old
+                                </mat-error>
+                            </mat-form-field>
+                        </div>
+                    </div>
+
+                    <div class="sub-section">
+                        <h4 class="sub-title"><mat-icon>contact_mail</mat-icon> Contact Information</h4>
+                        <div class="section-grid">
+                            <mat-form-field appearance="outline" floatLabel="always">
+                                <mat-label>Email</mat-label>
+                                <input matInput type="email" formControlName="email" placeholder="Enter Email" autocomplete="off">
+                                <mat-error *ngIf="guestForm.get('email')?.hasError('required')">
+                                    Email is required
+                                </mat-error>
+                                <mat-error *ngIf="guestForm.get('email')?.hasError('email')">
+                                    Please enter a valid email address
+                                </mat-error>
+                            </mat-form-field>
+
+                            <mat-form-field appearance="outline" floatLabel="always">
+                                <mat-label>Phone Number</mat-label>
+                                <input matInput type="text" formControlName="phone_number" placeholder="Enter Phone Number">
+                                <mat-error *ngIf="guestForm.get('phone_number')?.hasError('required')">
+                                    Phone Number is required
+                                </mat-error>
+                            </mat-form-field>
+
+                            <mat-form-field appearance="outline" floatLabel="always" class="field-span-2">
+                                <mat-label>Address</mat-label>
+                                <textarea matInput formControlName="address" cdkTextareaAutosize
+                                    [cdkAutosizeMinRows]="1" [cdkAutosizeMaxRows]="3" maxlength="250"
+                                    placeholder="Enter Address"></textarea>
+                            </mat-form-field>
+                        </div>
+                    </div>
+
+                    <div class="sub-section">
+                        <h4 class="sub-title"><mat-icon>location_city</mat-icon> Location &amp; Nationality</h4>
+                        <div class="section-grid">
+                            <mat-form-field appearance="outline"
+                                [floatLabel]="isCountryLoading ? 'auto' : 'always'" [hideRequiredMarker]="isCountryLoading">
+                                <mat-label>
+                                    <span class="label-loader" *ngIf="isCountryLoading; else countryLabel">
+                                        <span>Loading...</span>
+                                        <mat-spinner diameter="16"></mat-spinner>
+                                    </span>
+                                    <ng-template #countryLabel>Country</ng-template>
+                                </mat-label>
+                                <mat-select formControlName="country_id" placeholder="Choose Country" panelClass="guest-select-panel"
+                                    (selectionChange)="onCountryChange()">
+                                    <mat-option>
+                                        <ngx-mat-select-search [formControl]="countrySearchCtrl"
+                                            placeholderLabel="Search Country..." noEntriesFoundLabel="No country found">
+                                        </ngx-mat-select-search>
+                                    </mat-option>
+                                    <mat-option *ngFor="let item of countryList" [value]="item.id">
+                                        {{ item.name }}
+                                    </mat-option>
+                                </mat-select>
+                                <mat-error *ngIf="guestForm.get('country_id')?.hasError('required')">
+                                    Country is required
+                                </mat-error>
+                            </mat-form-field>
+
+                            <mat-form-field appearance="outline"
+                                [floatLabel]="isStateLoading ? 'auto' : 'always'" [hideRequiredMarker]="isStateLoading">
+                                <mat-label>
+                                    <span class="label-loader" *ngIf="isStateLoading; else stateLabel">
+                                        <span>Loading...</span>
+                                        <mat-spinner diameter="16"></mat-spinner>
+                                    </span>
+                                    <ng-template #stateLabel>State</ng-template>
+                                </mat-label>
+                                <mat-select formControlName="state_id" placeholder="Choose State" panelClass="guest-select-panel"
+                                    (selectionChange)="onStateChange()">
+                                    <mat-option>
+                                        <ngx-mat-select-search [formControl]="stateSearchCtrl"
+                                            placeholderLabel="Search State..." noEntriesFoundLabel="No state found">
+                                        </ngx-mat-select-search>
+                                    </mat-option>
+                                    <mat-option *ngFor="let state of stateList" [value]="state.id">
+                                        {{ state.name }}
+                                    </mat-option>
+                                </mat-select>
+                                <mat-error *ngIf="guestForm.get('state_id')?.hasError('required')">
+                                    State is required
+                                </mat-error>
+                            </mat-form-field>
+
+                            <mat-form-field appearance="outline"
+                                [floatLabel]="isCityLoading ? 'auto' : 'always'" [hideRequiredMarker]="isCityLoading">
+                                <mat-label>
+                                    <span class="label-loader" *ngIf="isCityLoading; else cityLabel">
+                                        <span>Loading...</span>
+                                        <mat-spinner diameter="16"></mat-spinner>
+                                    </span>
+                                    <ng-template #cityLabel>City</ng-template>
+                                </mat-label>
+                                <mat-select formControlName="city_id" placeholder="Choose City" panelClass="guest-select-panel">
+                                    <mat-option>
+                                        <ngx-mat-select-search [formControl]="citySearchCtrl"
+                                            placeholderLabel="Search City..." noEntriesFoundLabel="No city found">
+                                        </ngx-mat-select-search>
+                                    </mat-option>
+                                    <mat-option *ngFor="let city of cityList" [value]="city.id">
+                                        {{ city.name }}
+                                    </mat-option>
+                                </mat-select>
+                                <mat-error *ngIf="guestForm.get('city_id')?.hasError('required')">
+                                    City is required
+                                </mat-error>
+                            </mat-form-field>
+
+                            <mat-form-field appearance="outline" floatLabel="always">
+                                <mat-label>Nationality</mat-label>
+                                <mat-select formControlName="nationality_id" placeholder="Choose Nationality"
+                                    panelClass="guest-select-panel">
+                                    <mat-option>
+                                        <ngx-mat-select-search [formControl]="countrySearchCtrl"
+                                            placeholderLabel="Search Nationality..." noEntriesFoundLabel="No nationality found">
+                                        </ngx-mat-select-search>
+                                    </mat-option>
+                                    <mat-option *ngFor="let item of countryList" [value]="item.id">
+                                        {{ item.nationality }}
+                                    </mat-option>
+                                </mat-select>
+                                <mat-error *ngIf="guestForm.get('nationality_id')?.hasError('required')">
+                                    Nationality is required
+                                </mat-error>
+                            </mat-form-field>
+                        </div>
+                    </div>
+
+                    <div class="sub-section">
+                        <h4 class="sub-title"><mat-icon>verified_user</mat-icon> Identity &amp; Preferences</h4>
+                        <div class="section-grid">
+                            <mat-form-field appearance="outline"
+                                [floatLabel]="isIdTypeLoading ? 'auto' : 'always'" [hideRequiredMarker]="isIdTypeLoading">
+                                <mat-label>
+                                    <span class="label-loader" *ngIf="isIdTypeLoading; else idTypeLabel">
+                                        <span>Loading...</span>
+                                        <mat-spinner diameter="16"></mat-spinner>
+                                    </span>
+                                    <ng-template #idTypeLabel>Id Type</ng-template>
+                                </mat-label>
+                                <mat-select formControlName="id_type" placeholder="Select Id Type"
+                                    [disabled]="isIdTypeLoading" panelClass="guest-select-panel">
+                                    <mat-option *ngFor="let item of idTypeList" [value]="item.option_key">
+                                        {{ item.option_label }}
+                                    </mat-option>
+                                </mat-select>
+                                <mat-error *ngIf="guestForm.get('id_type')?.hasError('required')">
+                                    Id Type is required
+                                </mat-error>
+                            </mat-form-field>
+
+                            <mat-form-field appearance="outline" floatLabel="always">
+                                <mat-label>Id Number</mat-label>
+                                <input matInput type="text" formControlName="id_number" placeholder="Enter Id Number">
+                                <mat-error *ngIf="guestForm.get('id_number')?.hasError('required')">
+                                    Id Number is required
+                                </mat-error>
+                            </mat-form-field>
+
+                            <mat-form-field appearance="outline" floatLabel="always" class="field-span-2">
+                                <mat-label>Notes</mat-label>
+                                <textarea matInput formControlName="notes" rows="1" maxlength="250"
+                                    placeholder="Any special notes or requests"></textarea>
+                            </mat-form-field>
+                        </div>
+
+                        <div class="toggle-grid">
+                            <div class="toggle-card">
+                                <span class="toggle-icon vip"><mat-icon>workspace_premium</mat-icon></span>
+                                <div class="toggle-body">
+                                    <strong>VIP Status</strong>
+                                    <small>Mark this guest as a VIP</small>
+                                </div>
+                                <mat-slide-toggle formControlName="vip_status"></mat-slide-toggle>
+                            </div>
+
+                            <div class="toggle-card">
+                                <span class="toggle-icon danger"><mat-icon>block</mat-icon></span>
+                                <div class="toggle-body">
+                                    <strong>Blacklist</strong>
+                                    <small>Restrict future bookings</small>
+                                </div>
+                                <mat-slide-toggle formControlName="blacklist_status"></mat-slide-toggle>
+                            </div>
+
+                            <div class="toggle-card">
+                                <span class="toggle-icon success"><mat-icon>check_circle</mat-icon></span>
+                                <div class="toggle-body">
+                                    <strong>Active Status</strong>
+                                    <small>Guest profile is active</small>
+                                </div>
+                                <mat-slide-toggle formControlName="is_active"></mat-slide-toggle>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="sub-section">
+                        <h4 class="sub-title">
+                            <mat-icon>group</mat-icon> Additional Guests
+                            <span class="occupancy-chip" matTooltip="Derived from this guest list — edit the guests to change the count">
+                                <mat-icon>groups</mat-icon> {{ occupancyLabel }}
+                            </span>
+                            <button type="button" class="add-guest-btn" (click)="addGuest()" *ngIf="!isReadOnly">
+                                <mat-icon>person_add</mat-icon> Add Guest
+                            </button>
+                        </h4>
+
+                        <div class="empty-guests" *ngIf="additionalGuests.length === 0">
+                            <mat-icon>groups</mat-icon>
+                            <span>No additional guests on this reservation</span>
+                        </div>
+
+                        <div formArrayName="additional_guests">
+                            <div *ngFor="let guest of additionalGuests.controls; let i = index" [formGroupName]="i">
+                                <div class="guest-card">
+                                    <div class="guest-card-head">
+                                        <span class="guest-index">{{ i + 1 }}</span>
+                                        <span class="guest-title">Guest {{ i + 1 }}</span>
+                                        <div class="guest-actions" *ngIf="!isReadOnly">
+                                            <button mat-icon-button type="button" class="guest-remove"
+                                                (click)="removeGuest(i)" matTooltip="Remove guest">
+                                                <mat-icon>delete_outline</mat-icon>
+                                            </button>
+                                            <button mat-icon-button type="button" class="guest-add"
+                                                *ngIf="i === additionalGuests.length - 1" (click)="addGuest()"
+                                                matTooltip="Fill all fields to add new guest">
+                                                <mat-icon>add</mat-icon>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div class="guest-fields">
+                                        <mat-form-field appearance="outline" floatLabel="always">
+                                            <mat-label>Full Name</mat-label>
+                                            <input matInput formControlName="full_name" placeholder="Enter Full Name">
+                                            <mat-error *ngIf="guest.get('full_name')?.hasError('required')">
+                                                Name is required
+                                            </mat-error>
+                                        </mat-form-field>
+
+                                        <mat-form-field appearance="outline"
+                                            [floatLabel]="isGenderLoading ? 'auto' : 'always'" [hideRequiredMarker]="isGenderLoading">
+                                            <mat-label>
+                                                <span class="label-loader" *ngIf="isGenderLoading; else companionGenderLabel">
+                                                    <span>Loading...</span>
+                                                    <mat-spinner diameter="16"></mat-spinner>
+                                                </span>
+                                                <ng-template #companionGenderLabel>Gender</ng-template>
+                                            </mat-label>
+                                            <mat-select formControlName="gender" placeholder="Select Gender"
+                                                [disabled]="isGenderLoading" panelClass="guest-select-panel">
+                                                <mat-option *ngFor="let item of genderList" [value]="item.option_key">
+                                                    {{ item.option_label }}
+                                                </mat-option>
+                                            </mat-select>
+                                            <mat-error *ngIf="guest.get('gender')?.hasError('required')">
+                                                Gender is required
+                                            </mat-error>
+                                        </mat-form-field>
+
+                                        <mat-form-field appearance="outline" floatLabel="always">
+                                            <mat-label>Age</mat-label>
+                                            <input matInput type="number" formControlName="age" placeholder="Enter Age">
+                                            <mat-error *ngIf="guest.get('age')?.hasError('required')">
+                                                Age is required
+                                            </mat-error>
+                                        </mat-form-field>
+
+                                        <mat-form-field appearance="outline"
+                                            [floatLabel]="isIdTypeLoading ? 'auto' : 'always'" [hideRequiredMarker]="isIdTypeLoading">
+                                            <mat-label>
+                                                <span class="label-loader" *ngIf="isIdTypeLoading; else companionIdTypeLabel">
+                                                    <span>Loading...</span>
+                                                    <mat-spinner diameter="16"></mat-spinner>
+                                                </span>
+                                                <ng-template #companionIdTypeLabel>Id Type</ng-template>
+                                            </mat-label>
+                                            <mat-select formControlName="id_type" placeholder="Select Id Type"
+                                                [disabled]="isIdTypeLoading" panelClass="guest-select-panel">
+                                                <mat-option *ngFor="let item of idTypeList" [value]="item.option_key">
+                                                    {{ item.option_label }}
+                                                </mat-option>
+                                            </mat-select>
+                                        </mat-form-field>
+
+                                        <mat-form-field appearance="outline" floatLabel="always">
+                                            <mat-label>Id Number</mat-label>
+                                            <input matInput type="text" formControlName="id_number"
+                                                placeholder="Enter Id Number">
+                                        </mat-form-field>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </section>
+
+            <!-- =============== 3. PAYMENTS =============== -->
+            <section class="form-shell">
+                <header class="section-header">
+                    <span class="head-icon"><mat-icon>payments</mat-icon></span>
+                    <div class="head-text">
+                        <h3>Payments</h3>
+                        <p>Recorded transactions — append only, nothing is edited in place</p>
+                    </div>
+                    <div class="section-actions" *ngIf="!isReadOnly">
+                        <button mat-flat-button class="btn-section-save" [class.active]="showPaymentForm"
+                            (click)="togglePaymentForm()">
+                            <mat-icon>add</mat-icon>
+                            {{ showPaymentForm ? 'Close' : 'Record Payment' }}
+                        </button>
+                    </div>
+                </header>
+
+                <!-- money strip -->
+                <div class="money-strip">
+                    <div class="money-item">
+                        <small>Total</small>
+                        <strong>&#8377;{{ effectiveTotal | number:'1.0-0' }}</strong>
+                    </div>
+                    <div class="money-item paid">
+                        <small>Paid</small>
+                        <strong>&#8377;{{ paidAmount | number:'1.0-0' }}</strong>
+                    </div>
+                    <div class="money-item balance" [class.due]="balanceAmount > 0">
+                        <small>Balance</small>
+                        <strong>&#8377;{{ balanceAmount | number:'1.0-0' }}</strong>
+                    </div>
+                </div>
+
+                <!-- add payment form -->
+                <div class="payment-form-wrap" *ngIf="showPaymentForm">
+                    <form [formGroup]="paymentForm" (ngSubmit)="addPayment()" autocomplete="off">
+                        <div class="section-grid">
+                            <mat-form-field appearance="outline" floatLabel="always">
+                                <mat-label>Payment Type</mat-label>
+                                <mat-select formControlName="payment_type" panelClass="guest-select-panel">
+                                    <mat-option *ngFor="let type of availablePaymentTypes" [value]="type.value">
+                                        {{ type.label }}
+                                    </mat-option>
+                                </mat-select>
+                            </mat-form-field>
+
+                            <mat-form-field appearance="outline" floatLabel="always">
+                                <mat-label>Amount</mat-label>
+                                <input matInput type="number" formControlName="amount" placeholder="Enter Amount" min="0">
+                                <mat-error *ngIf="paymentForm.get('amount')?.hasError('required')">
+                                    Amount is required
+                                </mat-error>
+                                <mat-error *ngIf="paymentForm.get('amount')?.hasError('min')">
+                                    Amount must be greater than 0
+                                </mat-error>
+                            </mat-form-field>
+
+                            <mat-form-field appearance="outline"
+                                [floatLabel]="isCurrencyLoading ? 'auto' : 'always'" [hideRequiredMarker]="isCurrencyLoading">
+                                <mat-label>
+                                    <span class="label-loader" *ngIf="isCurrencyLoading; else currencyLabel">
+                                        <span>Loading...</span>
+                                        <mat-spinner diameter="16"></mat-spinner>
+                                    </span>
+                                    <ng-template #currencyLabel>Currency</ng-template>
+                                </mat-label>
+                                <mat-select formControlName="currency" placeholder="Choose Currency" panelClass="guest-select-panel">
+                                    <mat-option>
+                                        <ngx-mat-select-search [formControl]="currencySearchCtrl"
+                                            placeholderLabel="Search Currency..." noEntriesFoundLabel="No currency found">
+                                        </ngx-mat-select-search>
+                                    </mat-option>
+                                    <mat-option *ngFor="let item of currencyList" [value]="item.code">
+                                        {{ item.code }}
+                                    </mat-option>
+                                </mat-select>
+                            </mat-form-field>
+
+                            <mat-form-field appearance="outline"
+                                [floatLabel]="isPaymentMethodLoading ? 'auto' : 'always'" [hideRequiredMarker]="isPaymentMethodLoading">
+                                <mat-label>
+                                    <span class="label-loader" *ngIf="isPaymentMethodLoading; else paymentMethodLabel">
+                                        <span>Loading...</span>
+                                        <mat-spinner diameter="16"></mat-spinner>
+                                    </span>
+                                    <ng-template #paymentMethodLabel>Payment Method</ng-template>
+                                </mat-label>
+                                <mat-select formControlName="payment_method" placeholder="Choose Payment Method"
+                                    [disabled]="isPaymentMethodLoading" panelClass="guest-select-panel">
+                                    <mat-option *ngFor="let item of paymentMethodList" [value]="item.option_key">
+                                        {{ item.option_label }}
+                                    </mat-option>
+                                </mat-select>
+                                <mat-error *ngIf="paymentForm.get('payment_method')?.hasError('required')">
+                                    Payment Method is required
+                                </mat-error>
+                            </mat-form-field>
+
+                            <mat-form-field appearance="outline"
+                                [floatLabel]="isPaymentStatusLoading ? 'auto' : 'always'" [hideRequiredMarker]="isPaymentStatusLoading">
+                                <mat-label>
+                                    <span class="label-loader" *ngIf="isPaymentStatusLoading; else paymentStatusLabel">
+                                        <span>Loading...</span>
+                                        <mat-spinner diameter="16"></mat-spinner>
+                                    </span>
+                                    <ng-template #paymentStatusLabel>Payment Status</ng-template>
+                                </mat-label>
+                                <mat-select formControlName="payment_status" placeholder="Choose Payment Status"
+                                    [disabled]="isPaymentStatusLoading" panelClass="guest-select-panel">
+                                    <mat-option *ngFor="let item of paymentStatusList" [value]="item.option_key">
+                                        {{ item.option_label }}
+                                    </mat-option>
+                                </mat-select>
+                                <mat-error *ngIf="paymentForm.get('payment_status')?.hasError('required')">
+                                    Payment Status is required
+                                </mat-error>
+                            </mat-form-field>
+
+                            <mat-form-field appearance="outline" floatLabel="always">
+                                <mat-label>Paid At</mat-label>
+                                <input matInput [matDatepicker]="paidAtPicker" formControlName="paid_at"
+                                    placeholder="Select Payment Date">
+                                <mat-hint>DD/MM/YYYY</mat-hint>
+                                <mat-datepicker-toggle matIconSuffix [for]="paidAtPicker"></mat-datepicker-toggle>
+                                <mat-datepicker #paidAtPicker panelClass="reservation-range-picker"></mat-datepicker>
+                                <mat-error *ngIf="paymentForm.get('paid_at')?.hasError('required')">
+                                    Paid At date is required
+                                </mat-error>
+                            </mat-form-field>
+
+                            <mat-form-field appearance="outline" floatLabel="always">
+                                <mat-label>Transaction Reference</mat-label>
+                                <input matInput type="text" formControlName="transaction_ref"
+                                    placeholder="Enter Transaction Reference">
+                            </mat-form-field>
+
+                            <mat-form-field appearance="outline" floatLabel="always">
+                                <mat-label>Remarks</mat-label>
+                                <input matInput type="text" formControlName="remarks" placeholder="Enter Remarks">
+                            </mat-form-field>
+                        </div>
+
+                        <div class="payment-actions">
+                            <button mat-stroked-button type="button" class="btn-cancel" (click)="togglePaymentForm()">
+                                Cancel
+                            </button>
+                            <button mat-flat-button type="submit" class="btn-submit" [disabled]="isSavingPayment">
+                                <span class="btn-content" *ngIf="!isSavingPayment">
+                                    <mat-icon>check</mat-icon> Record Payment
+                                </span>
+                                <span class="btn-content" *ngIf="isSavingPayment">
+                                    Saving
+                                    <mat-progress-spinner diameter="18" mode="indeterminate" class="btn-spinner">
+                                    </mat-progress-spinner>
+                                </span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- ledger -->
+                <div class="ledger" *ngIf="payments.length; else noPayments">
+                    <table class="custom-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Type</th>
+                                <th>Method</th>
+                                <th>Reference</th>
+                                <th>Status</th>
+                                <th class="amount-cell">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr *ngFor="let payment of payments">
+                                <td>{{ (payment.paid_at | date:'dd MMM yyyy') || '—' }}</td>
+                                <td>
+                                    <span class="pay-type" [ngClass]="payment.payment_type">
+                                        {{ typeLabel(payment.payment_type) }}
+                                    </span>
+                                </td>
+                                <td>{{ methodLabel(payment.payment_method) }}</td>
+                                <td class="muted-cell">{{ payment.transaction_ref || '—' }}</td>
+                                <td>
+                                    <span class="pay-status" [ngClass]="payment.payment_status">
+                                        {{ statusLabel(payment.payment_status) || '—' }}
+                                    </span>
+                                </td>
+                                <td class="amount-cell" [class.refund]="payment.payment_type === 'refund'">
+                                    {{ signedAmount(payment) < 0 ? '-' : '' }}&#8377;{{ absAmount(payment) | number:'1.0-0' }}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <ng-template #noPayments>
+                    <div class="no-payments" *ngIf="!showPaymentForm">
+                        <mat-icon>receipt_long</mat-icon>
+                        <span>No payments recorded against this reservation yet.</span>
+                        <button type="button" mat-stroked-button class="empty-add-btn" (click)="togglePaymentForm()"
+                            *ngIf="!isReadOnly">
+                            Record the first payment
+                        </button>
+                    </div>
+                </ng-template>
+            </section>
+        </div>
+
+        <!-- ---------- Right: sticky summary rail ---------- -->
+        <aside class="summary-rail">
+            <div class="rail-card">
+                <h4 class="rail-title">
+                    <mat-icon>receipt_long</mat-icon> Reservation Summary
+                </h4>
+
+                <div class="rail-group">
+                    <div class="rail-row">
+                        <span>Room</span>
+                        <strong class="teal">{{ selectedRoomNumber }}</strong>
+                    </div>
+                    <div class="rail-row">
+                        <span>Room Type</span>
+                        <strong>{{ selectedRoomType }}</strong>
+                    </div>
+                    <div class="rail-row">
+                        <span>Check In</span>
+                        <strong>{{ stayForm.get('check_in_date')?.value | date:'dd MMM yyyy' }}</strong>
+                    </div>
+                    <div class="rail-row">
+                        <span>Check Out</span>
+                        <strong>{{ stayForm.get('check_out_date')?.value | date:'dd MMM yyyy' }}</strong>
+                    </div>
+                    <div class="rail-row">
+                        <span>Nights</span>
+                        <strong>{{ totalNights }}</strong>
+                    </div>
+                    <div class="rail-row">
+                        <span>Rate / Night</span>
+                        <strong>&#8377;{{ pricePerNight | number:'1.0-0' }}</strong>
+                    </div>
+                </div>
+
+                <div class="rail-group money">
+                    <div class="rail-row">
+                        <span>Total</span>
+                        <strong class="teal">&#8377;{{ effectiveTotal | number:'1.0-0' }}</strong>
+                    </div>
+                    <div class="rail-row">
+                        <span>Paid</span>
+                        <strong>&#8377;{{ paidAmount | number:'1.0-0' }}</strong>
+                    </div>
+                    <div class="rail-row">
+                        <span>Balance</span>
+                        <strong [class.danger-text]="balanceAmount > 0" [class.ok-text]="balanceAmount <= 0">
+                            &#8377;{{ balanceAmount | number:'1.0-0' }}
+                        </strong>
+                    </div>
+                </div>
+
+                <div class="rail-group">
+                    <div class="rail-row">
+                        <span>Guests</span>
+                        <strong>{{ guestOccupancy }}{{ roomCapacity ? ' / ' + roomCapacity : '' }}</strong>
+                    </div>
+                    <div class="rail-row">
+                        <span>Additional</span>
+                        <strong>{{ additionalGuests.length }}</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div class="rail-card">
+                <h4 class="rail-title">
+                    <mat-icon>fact_check</mat-icon> Section Status
+                </h4>
+
+                <div class="status-list">
+                    <div class="status-item" [class.dirty]="isRoomDirty">
+                        <span class="st-dot"></span>
+                        <span class="st-name">Stay &amp; Room</span>
+                        <span class="st-state" [ngClass]="roomState">{{ sectionStateLabel(roomState) }}</span>
+                    </div>
+                    <div class="status-item" [class.dirty]="isGuestDirty">
+                        <span class="st-dot"></span>
+                        <span class="st-name">Guest Details</span>
+                        <span class="st-state" [ngClass]="guestState">{{ sectionStateLabel(guestState) }}</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="st-dot"></span>
+                        <span class="st-name">Payments</span>
+                        <span class="st-state saved">Ledger</span>
+                    </div>
+                </div>
+            </div>
+
+            <button mat-flat-button class="btn-save-all rail-save" (click)="saveAll()"
+                [disabled]="!canSaveAll" *ngIf="!isReadOnly">
+                <mat-icon>save</mat-icon> Save Changes
+            </button>
+        </aside>
+    </div>
+</div>
+
+<app-page-loader *ngIf="isLoading"></app-page-loader>

@@ -1,0 +1,305 @@
+<app-navigation-bar [navData]="navData"></app-navigation-bar>
+
+<div class="top-sub-nav-controls">
+    <button type="button" mat-raised-button color="primary" (click)="onBack()">
+        <mat-icon>arrow_back</mat-icon> Back
+    </button>
+</div>
+
+<div class="manage-template-page">
+
+    <div class="in_up_form form-scroll">
+        <form [formGroup]="templateForm" (ngSubmit)="insertUpdateTemplate()" autocomplete="off">
+            <div class="form-shell">
+
+                <!-- ================= Identity ================= -->
+                <section class="form-section">
+                    <header class="section-header">
+                        <span class="head-icon"><mat-icon>badge</mat-icon></span>
+                        <div class="head-text">
+                            <h3>Template Identity</h3>
+                            <p>The code is the reference backend services use to send this message</p>
+                        </div>
+                    </header>
+
+                    <div class="section-grid">
+                        <mat-form-field appearance="outline" floatLabel="always">
+                            <mat-label>Code</mat-label>
+                            <input matInput type="text" formControlName="code" placeholder="PASSWORD_RESET_OTP"
+                                [readonly]="isCodeLocked()">
+                            <mat-hint *ngIf="isCodeLocked()">Locked: system templates keep their code</mat-hint>
+                            <mat-error *ngIf="templateForm.get('code')?.hasError('required')">
+                                Code is required
+                            </mat-error>
+                            <mat-error *ngIf="templateForm.get('code')?.hasError('pattern')">
+                                Use uppercase letters, digits and underscores only
+                            </mat-error>
+                        </mat-form-field>
+
+                        <mat-form-field appearance="outline" floatLabel="always">
+                            <mat-label>Name</mat-label>
+                            <input matInput type="text" formControlName="name" placeholder="Password Reset OTP">
+                            <mat-error *ngIf="templateForm.get('name')?.hasError('required')">
+                                Name is required
+                            </mat-error>
+                        </mat-form-field>
+                    </div>
+
+                    <div class="section-grid one-col">
+                        <mat-form-field appearance="outline" floatLabel="always">
+                            <mat-label>Description</mat-label>
+                            <textarea matInput formControlName="description" rows="2" maxlength="500"
+                                placeholder="When is this template sent, and to whom?"></textarea>
+                            <mat-hint align="end">{{ templateForm.get('description')?.value?.length || 0 }}/500</mat-hint>
+                        </mat-form-field>
+                    </div>
+                </section>
+
+                <!-- ================= Channel ================= -->
+                <section class="form-section">
+                    <header class="section-header">
+                        <span class="head-icon"><mat-icon>send</mat-icon></span>
+                        <div class="head-text">
+                            <h3>Delivery Channel</h3>
+                            <p>Where this message is delivered</p>
+                        </div>
+                    </header>
+
+                    <div class="channel-toggle" *ngIf="channels.length; else noChannels">
+                        <button type="button" *ngFor="let c of channels"
+                            class="channel-option" [class.active]="channel === c.option_key"
+                            (click)="templateForm.get('channel')?.setValue(c.option_key)">
+                            <mat-icon>{{ channelIcon(c) }}</mat-icon>
+                            <span>{{ c.option_label }}</span>
+                        </button>
+                    </div>
+                    <ng-template #noChannels>
+                        <p class="channel-unavailable" *ngIf="!isEnumLoading">
+                            Delivery channels could not be loaded. Saving will use
+                            &ldquo;{{ defaultChannel }}&rdquo;.
+                        </p>
+                    </ng-template>
+                    <input type="hidden" formControlName="channel">
+                </section>
+
+                <!-- ================= Content ================= -->
+                <section class="form-section">
+                    <header class="section-header">
+                        <span class="head-icon"><mat-icon>edit_note</mat-icon></span>
+                        <div class="head-text">
+                            <h3>Message Content</h3>
+                            <p>Insert variables with double braces, for example {{ '{{ user_name }}' }}</p>
+                        </div>
+                    </header>
+
+                    <!-- Subject: email only -->
+                    <div class="section-grid" *ngIf="isEmail()">
+                        <mat-form-field appearance="outline" floatLabel="always" class="full">
+                            <mat-label>Subject Template</mat-label>
+                            <input matInput type="text" formControlName="subject_template"
+                                placeholder="Password reset OTP">
+                            <mat-error *ngIf="templateForm.get('subject_template')?.hasError('required')">
+                                Subject template is required for email templates
+                            </mat-error>
+                        </mat-form-field>
+                    </div>
+
+                    <!-- Title: in-app only -->
+                    <div class="section-grid" *ngIf="!isEmail()">
+                        <mat-form-field appearance="outline" floatLabel="always" class="full">
+                            <mat-label>Title Template</mat-label>
+                            <input matInput type="text" formControlName="title_template"
+                                placeholder="Reset Your Password">
+                            <mat-error *ngIf="templateForm.get('title_template')?.hasError('required')">
+                                Title template is required for in-app templates
+                            </mat-error>
+                        </mat-form-field>
+                    </div>
+
+                    <div class="section-grid one-col">
+                        <mat-form-field appearance="outline" floatLabel="always" class="full">
+                            <mat-label>Message Template</mat-label>
+                            <textarea matInput formControlName="message_template" rows="12" maxlength="20000"
+                                placeholder="<p>Hello {{ '{{ user_name }}' }}, your code is <b>{{ '{{ otp }}' }}</b></p>"></textarea>
+                            <mat-hint>HTML for email, rendered as markup in-app. Do not include &lt;html&gt; or &lt;body&gt;.</mat-hint>
+                            <mat-error *ngIf="templateForm.get('message_template')?.hasError('required')">
+                                Message template is required
+                            </mat-error>
+                        </mat-form-field>
+                    </div>
+                </section>
+
+                <!-- ================= Variables ================= -->
+                <section class="form-section">
+                    <header class="section-header">
+                        <span class="head-icon"><mat-icon>data_object</mat-icon></span>
+                        <div class="head-text">
+                            <h3>Variables</h3>
+                            <p>Every placeholder used above must be declared here</p>
+                        </div>
+                    </header>
+
+                    <div class="variable-chips" *ngIf="variables.length">
+                        <span class="var-chip" *ngFor="let v of variables">
+                            <code>{{ '{{ ' + v + ' }}' }}</code>
+                            <button type="button" class="chip-remove" (click)="removeVariable(v)"
+                                [attr.aria-label]="'Remove ' + v">
+                                <mat-icon>close</mat-icon>
+                            </button>
+                        </span>
+                    </div>
+
+                    <p class="no-variables" *ngIf="!variables.length">
+                        No variables declared yet.
+                    </p>
+
+                    <!-- Undeclared placeholders found in the body -->
+                    <div class="warn-box" *ngIf="undeclaredVariables().length">
+                        <mat-icon>warning_amber</mat-icon>
+                        <div>
+                            <strong>Used but not declared:</strong>
+                            <span *ngFor="let v of undeclaredVariables(); let last = last">{{ '{{ ' + v + ' }}' }}<span
+                                    *ngIf="!last">, </span></span>
+                            <p class="warn-hint">Add them below or the save will be rejected.</p>
+                        </div>
+                    </div>
+
+                    <div class="variable-picker">
+                        <mat-form-field appearance="outline" floatLabel="always" class="picker-input">
+                            <mat-label>Add a variable</mat-label>
+                            <input matInput type="text" [(ngModel)]="newVariable" [ngModelOptions]="{standalone: true}"
+                                placeholder="e.g. room_number" (keyup.enter)="addVariable()">
+                        </mat-form-field>
+                        <button mat-stroked-button type="button" class="btn-add-var" (click)="addVariable()">
+                            <mat-icon>add</mat-icon> Add
+                        </button>
+                    </div>
+
+                    <div class="suggestions" *ngIf="knownVariables.length">
+                        <span class="suggestions-label">Suggested:</span>
+                        <button type="button" class="suggestion-chip" *ngFor="let v of knownVariables"
+                            [disabled]="variables.includes(v)" (click)="addVariable(v)">
+                            {{ v }}
+                        </button>
+                    </div>
+                </section>
+
+                <!-- ================= Status ================= -->
+                <section class="form-section">
+                    <header class="section-header">
+                        <span class="head-icon"><mat-icon>tune</mat-icon></span>
+                        <div class="head-text">
+                            <h3>Preferences &amp; Status</h3>
+                            <p>Inactive templates are skipped; the send falls back to default copy</p>
+                        </div>
+                    </header>
+
+                    <div class="toggle-grid">
+                        <div class="toggle-card">
+                            <span class="toggle-icon success"><mat-icon>verified_user</mat-icon></span>
+                            <div class="toggle-body">
+                                <strong>Active Status</strong>
+                                <small>Template is used when the matching event fires</small>
+                            </div>
+                            <mat-slide-toggle formControlName="is_active"></mat-slide-toggle>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+
+            <!-- Footer Actions -->
+            <div class="form-footer">
+                <div class="footer-note">
+                    <mat-icon>lock</mat-icon>
+                    <span>Template changes apply to the next send</span>
+                </div>
+
+                <div class="footer-buttons">
+                    <button mat-stroked-button type="button" class="btn-cancel" (click)="onBack()">
+                        Cancel
+                    </button>
+                    <button mat-flat-button type="submit" class="btn-submit" [disabled]="isLoading">
+                        <span class="btn-content" *ngIf="!isLoading">
+                            <mat-icon>{{ isEditMode ? 'save' : 'add' }}</mat-icon>
+                            {{ isEditMode ? 'Update Template' : 'Add Template' }}
+                        </span>
+                        <span class="btn-content" *ngIf="isLoading">
+                            Please Wait
+                            <mat-progress-spinner diameter="18" mode="indeterminate" class="btn-spinner">
+                            </mat-progress-spinner>
+                        </span>
+                    </button>
+                </div>
+            </div>
+        </form>
+
+        <ng-container *ngIf="isPageLoad">
+            <app-page-loader></app-page-loader>
+        </ng-container>
+    </div>
+
+    <!-- ================= Live Preview ================= -->
+    <aside class="preview-panel">
+        <header class="preview-header">
+            <div class="preview-title">
+                <span class="head-icon"><mat-icon>visibility</mat-icon></span>
+                <div class="head-text">
+                    <h3>Live Preview</h3>
+                    <p>Rendered by the server with sample values</p>
+                </div>
+            </div>
+            <mat-progress-spinner *ngIf="isPreviewLoading" diameter="20" mode="indeterminate"></mat-progress-spinner>
+        </header>
+
+        <div class="preview-body" *ngIf="preview as p; else noPreview">
+
+            <!-- Subject/Title stays pinned; only the content below scrolls. -->
+            <div class="preview-meta" *ngIf="isEmail()">
+                <span class="meta-label">Subject</span>
+                <span class="meta-value">{{ p.subject || '(empty)' }}</span>
+            </div>
+
+            <div class="preview-meta" *ngIf="!isEmail()">
+                <span class="meta-label">Title</span>
+                <span class="meta-value">{{ p.title || '(empty)' }}</span>
+            </div>
+
+            <!-- The single scroll container for this card, both axes.
+                 Email renders in a sandboxed iframe so the real email layout
+                 cannot bleed styles into this page; the frame is sized to its
+                 content so it never scrolls internally and the scrollbars
+                 belong to this region. allow-same-origin allows measuring it,
+                 allow-scripts stays OFF so nothing can execute. -->
+            <div class="preview-content">
+
+                <div *ngIf="isEmail() && p.html_body" #previewHost class="preview-frame-host">
+                    <iframe #previewFrame class="preview-frame" [srcdoc]="p.html_body"
+                        title="Email preview" (load)="fitPreviewFrame(previewFrame, previewHost)"
+                        sandbox="allow-same-origin"></iframe>
+                </div>
+
+                <!-- In-app renders inline, matching how the client shows it. The title is
+                     NOT repeated here: the .preview-meta strip above already
+                     shows the title_template field, and the message body
+                     carries its own heading. -->
+                <div class="in-app-preview" *ngIf="!isEmail()">
+                    <div class="in-app-body" [innerHTML]="p.message || ''"></div>
+                </div>
+
+            </div>
+
+            <div class="preview-footer" *ngIf="p.missing_variables?.length">
+                <mat-icon>info</mat-icon>
+                <span>No sample value for: {{ p.missing_variables?.join(', ') }}</span>
+            </div>
+        </div>
+
+        <ng-template #noPreview>
+            <div class="preview-empty">
+                <mat-icon>preview</mat-icon>
+                <span>Start writing a message to see the preview.</span>
+            </div>
+        </ng-template>
+    </aside>
+</div>

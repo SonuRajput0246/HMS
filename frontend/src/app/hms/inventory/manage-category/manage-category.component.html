@@ -1,0 +1,100 @@
+<div class="inventory-form-page">
+
+    <div class="top-sub-nav-controls">
+        <button type="button" mat-raised-button color="primary" [routerLink]="['/' + invBase, 'list-category']">
+            <mat-icon>arrow_back</mat-icon> Back
+        </button>
+    </div>
+
+    <div class="in_up_form form-scroll">
+
+        <form [formGroup]="categoryForm" (ngSubmit)="insertUpdateCategory()" autocomplete="off">
+            <div class="form-shell manage-category-form">
+
+                <!-- ================= Category Details ================= -->
+                <section class="form-section">
+                    <header class="section-header">
+                        <span class="head-icon"><mat-icon>category</mat-icon></span>
+                        <div class="head-text">
+                            <h3>Category Details</h3>
+                            <p>Name and description used to group inventory items</p>
+                        </div>
+                    </header>
+
+                    <div class="section-grid">
+                        <mat-form-field appearance="outline" floatLabel="always">
+                            <mat-label>Category Name</mat-label>
+                            <input matInput type="text" formControlName="name" placeholder="Enter Category Name">
+                            <mat-error *ngIf="categoryForm.get('name')?.hasError('required')">
+                                Category Name is required
+                            </mat-error>
+                        </mat-form-field>
+
+                        <mat-form-field appearance="outline" floatLabel="always">
+                            <mat-label>Description</mat-label>
+                            <textarea matInput formControlName="description" cdkTextareaAutosize
+                                cdkAutosizeMinRows="1" cdkAutosizeMaxRows="4" maxlength="250"
+                                placeholder="Enter Description"></textarea>
+                            <mat-hint align="end">
+                                {{ categoryForm.get('description')?.value?.length || 0 }}/250
+                            </mat-hint>
+                        </mat-form-field>
+                    </div>
+                </section>
+
+                <!-- ================= Preferences & Status ================= -->
+                <section class="form-section">
+                    <header class="section-header">
+                        <span class="head-icon"><mat-icon>tune</mat-icon></span>
+                        <div class="head-text">
+                            <h3>Preferences &amp; Status</h3>
+                            <p>Whether this category can be assigned to items</p>
+                        </div>
+                    </header>
+
+                    <div class="toggle-grid">
+                        <div class="toggle-card">
+                            <span class="toggle-icon success"><mat-icon>verified_user</mat-icon></span>
+                            <div class="toggle-body">
+                                <strong>Active Status</strong>
+                                <small>Category is available for selection</small>
+                            </div>
+                            <mat-slide-toggle formControlName="is_active"></mat-slide-toggle>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+
+            <!-- Footer Actions -->
+            <div class="form-footer">
+                <div class="footer-note">
+                    <mat-icon>lock</mat-icon>
+                    <span>Category details are stored securely</span>
+                </div>
+
+                <div class="footer-buttons">
+                    <button mat-stroked-button type="button" class="btn-cancel" [routerLink]="['/' + invBase, 'list-category']">
+                        Cancel
+                    </button>
+                    <button mat-flat-button type="submit" class="btn-submit" [disabled]="isLoading">
+                        <span class="btn-content" *ngIf="!isLoading">
+                            <mat-icon>{{ isEditMode ? 'save' : 'add' }}</mat-icon>
+                            {{ isEditMode ? 'Update Category' : 'Add Category' }}
+                        </span>
+                        <span class="btn-content" *ngIf="isLoading">
+                            Please Wait
+                            <mat-progress-spinner diameter="18" mode="indeterminate" class="btn-spinner">
+                            </mat-progress-spinner>
+                        </span>
+                    </button>
+                </div>
+            </div>
+        </form>
+
+        <ng-container *ngIf="isPageLoad">
+            <app-page-loader></app-page-loader>
+        </ng-container>
+    </div>
+
+</div>

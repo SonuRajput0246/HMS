@@ -1,0 +1,381 @@
+<div class="pos-shell">
+
+    <!-- ================================================================
+         Till counters. Cashiers glance here between customers, so the
+         three numbers that drive the next action lead.
+         ================================================================ -->
+    <header class="pos-topbar">
+        <button mat-icon-button type="button" aria-label="Back to dashboard"
+                routerLink="/cms/dashboard">
+            <mat-icon>arrow_back</mat-icon>
+        </button>
+        <div class="pos-brand">
+            <span class="pos-brand-icon"><mat-icon>point_of_sale</mat-icon></span>
+            <div class="pos-brand-text">
+                <h2>Point of Sale</h2>
+                <p>Tap a table to open its bill</p>
+            </div>
+        </div>
+
+        <div class="pos-counters" *ngIf="summary as s">
+            <div class="pos-counter c-available">
+                <mat-icon>event_seat</mat-icon>
+                <span class="c-val">{{ s.tables.available }}</span>
+                <span class="c-lbl">Available</span>
+            </div>
+            <div class="pos-counter c-occupied">
+                <mat-icon>restaurant</mat-icon>
+                <span class="c-val">{{ s.tables.occupied }}</span>
+                <span class="c-lbl">Occupied</span>
+            </div>
+            <div class="pos-counter c-orders">
+                <mat-icon>receipt_long</mat-icon>
+                <span class="c-val">{{ s.open_orders }}</span>
+                <span class="c-lbl">Open orders</span>
+            </div>
+            <div class="pos-counter c-revenue">
+                <mat-icon>payments</mat-icon>
+                <span class="c-val">{{ s.today?.revenue | currencyInr }}</span>
+                <span class="c-lbl">Today's revenue</span>
+            </div>
+        </div>
+
+        <!-- Manual refresh. Required, not optional: auto-refresh is suspended
+             while a bill is open so the floor cannot reshuffle mid-transaction. -->
+        <button mat-stroked-button class="pos-refresh" (click)="refreshNow()"
+            [disabled]="isPolling || isPageLoad" matTooltip="Reload the floor and the till counters">
+            <mat-icon [class.spin]="isPolling">refresh</mat-icon>
+            Refresh
+        </button>
+    </header>
+
+    <div class="pos-body">
+
+        <!-- ============================================================
+             LEFT — the floor
+             ============================================================ -->
+        <section class="pos-floor">
+            <div class="floor-head">
+                <div class="floor-head-text">
+                    <h3>Floor</h3>
+                    <p>{{ floorView?.total_tables || 0 }} tables</p>
+                </div>
+                <!-- Only meaningful once a bill is open; otherwise the poll is
+                     already running and a button would just be noise. -->
+                <span class="live-dot" *ngIf="!order">
+                    <span class="dot"></span> Live
+                </span>
+                <span class="live-dot frozen" *ngIf="order">
+                    <mat-icon>pause</mat-icon> Paused while billing
+                </span>
+            </div>
+
+            <div class="floor-scroll">
+                <div class="zone-block" *ngFor="let zone of zones">
+                    <div class="zone-head">
+                        <mat-icon>layers</mat-icon>
+                        <span class="zone-name">{{ zone.zone_display_name }}</span>
+                        <span class="zone-count">{{ zone.tables.length }}</span>
+                    </div>
+
+                    <div class="table-grid">
+                        <button type="button" class="table-tile"
+                            *ngFor="let table of zone.tables"
+                            [ngClass]="'ts-' + (table.status || 'maintenance')"
+                            (click)="onTableTap(table)"
+                            [disabled]="isPageLoad || isWorking"
+                            [matTooltip]="tableLabel(table.status)">
+                            <span class="t-number">{{ table.table_number }}</span>
+                            <span class="t-name" *ngIf="table.table_name">{{ table.table_name }}</span>
+                            <span class="t-cap" *ngIf="table.capacity">
+                                <mat-icon>group</mat-icon>{{ table.capacity }}
+                            </span>
+                            <span class="t-status">{{ tableLabel(table.status) }}</span>
+
+                            <!-- The live bill, so tapping an occupied table
+                                 shows who is sitting there before it opens. -->
+                            <span class="t-order" *ngIf="table.active_order as live">
+                                <span class="t-order-no">{{ live.order_number }}</span>
+                                <span class="t-order-amt">{{ live.total_amount | currencyInr }}</span>
+                            </span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="floor-empty" *ngIf="!isPageLoad && zones.length === 0">
+                    <mat-icon>table_restaurant</mat-icon>
+                    <span>No tables configured yet.</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================
+             RIGHT — the order panel
+             ============================================================ -->
+        <aside class="pos-panel">
+
+            <!-- ---------- no bill open ---------- -->
+            <div class="panel-idle" *ngIf="!order">
+                <div class="idle-hero">
+                    <span class="idle-icon"><mat-icon>receipt_long</mat-icon></span>
+                    <h3>No bill open</h3>
+                    <p>Tap a table on the left, or start a takeaway below.</p>
+                </div>
+
+                <button mat-flat-button color="primary" class="walkin-btn" (click)="startWalkin()"
+                    [disabled]="isPageLoad">
+                    <mat-icon>local_cafe</mat-icon>
+                    Start a walk-in order
+                </button>
+
+                <div class="lookup-block">
+                    <h4>Guest order</h4>
+                    <p class="lookup-hint">Look the guest up by phone. A new number just needs a name.</p>
+
+                    <mat-form-field appearance="outline" class="lookup-field">
+                        <mat-label>Phone number</mat-label>
+                        <mat-icon matIconPrefix>phone</mat-icon>
+                        <input matInput type="tel" [(ngModel)]="lookupPhone" name="lookupPhone"
+                            placeholder="10-digit mobile" (keyup.enter)="onLookupCustomer()">
+                    </mat-form-field>
+
+                    <!-- Appears only on a lookup miss, so a regular's second
+                         visit is one field and one keypress. -->
+                    <mat-form-field appearance="outline" class="lookup-field"
+                        *ngIf="needsCustomerName">
+                        <mat-label>Guest name</mat-label>
+                        <mat-icon matIconPrefix>person</mat-icon>
+                        <input matInput [(ngModel)]="lookupName" name="lookupName" placeholder="Full name"
+                            (keyup.enter)="onCreateCustomerOrder()">
+                    </mat-form-field>
+
+                    <div class="lookup-actions">
+                        <button mat-raised-button color="primary" (click)="onLookupCustomer()"
+                            [disabled]="isPageLoad">
+                            <mat-icon>search</mat-icon> Find guest
+                        </button>
+                        <button mat-stroked-button *ngIf="needsCustomerName"
+                            (click)="onCreateCustomerOrder()" [disabled]="isPageLoad">
+                            Save &amp; open bill
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ---------- bill open ---------- -->
+            <ng-container *ngIf="order as o">
+
+                <header class="panel-head">
+                    <div class="panel-head-main">
+                        <span class="panel-ref">{{ o.reference_label }}</span>
+                        <span class="panel-order-no">{{ o.order_number }}</span>
+                    </div>
+                    <div class="panel-head-side">
+                        <span class="panel-status">{{ o.status }}</span>
+                        <button mat-icon-button class="panel-close" (click)="closeOrderPanel()"
+                            matTooltip="Put this bill aside and go back to the floor">
+                            <mat-icon>close</mat-icon>
+                        </button>
+                    </div>
+                </header>
+
+                <div class="panel-body">
+
+                    <!-- ---------- menu picker ---------- -->
+                    <div class="menu-block">
+                        <div class="cat-rail">
+                            <button type="button" class="cat-chip"
+                                [class.active]="activeSectionKey === 'all'"
+                                (click)="showAllSections()">
+                                Full menu
+                                <span class="cat-count">{{ menu?.recipe_count || 0 }}</span>
+                            </button>
+                            <button type="button" class="cat-chip"
+                                *ngFor="let section of sections"
+                                [class.active]="activeSectionKey === sectionKey(section)"
+                                (click)="onSelectSection(section)">
+                                {{ section.category_display_name }}
+                                <span class="cat-count">{{ section.recipes.length }}</span>
+                            </button>
+                        </div>
+
+                        <div class="menu-scroll">
+                            <div class="menu-title">{{ activeSectionTitle }}</div>
+                            <div class="menu-grid">
+                                <button type="button" class="menu-tile"
+                                    *ngFor="let recipe of visibleRecipes"
+                                    (click)="onAddRecipe(recipe)"
+                                    [disabled]="isWorking || isPageLoad"
+                                    [matTooltip]="recipe.description || recipe.name || ''">
+                                    <span class="m-name">{{ recipe.display_name || recipe.name }}</span>
+                                    <span class="m-price">{{ recipe.selling_price | currencyInr }}</span>
+                                    <span class="m-diet">
+                                        <!-- Dietary flags are the allergen
+                                             conversation; they have to be
+                                             readable at a glance, not a tooltip. -->
+                                        <mat-icon *ngIf="recipe.is_vegan" class="d-vegan"
+                                            matTooltip="Vegan">eco</mat-icon>
+                                        <mat-icon *ngIf="recipe.is_vegetarian && !recipe.is_vegan" class="d-veg"
+                                            matTooltip="Vegetarian">spa</mat-icon>
+                                        <mat-icon *ngIf="recipe.is_spicy" class="d-spicy"
+                                            matTooltip="Spicy">local_fire</mat-icon>
+                                        <mat-icon *ngIf="recipe.is_recommended" class="d-rec"
+                                            matTooltip="Recommended">star</mat-icon>
+                                    </span>
+                                </button>
+                            </div>
+                            <div class="menu-empty" *ngIf="visibleRecipes.length === 0">
+                                <mat-icon>no_meals</mat-icon>
+                                <span>Nothing available in this section right now.</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ---------- cart ---------- -->
+                    <div class="cart-block">
+                        <div class="cart-head">
+                            <h4>Bill</h4>
+                            <span class="cart-count">{{ cartCount }} item(s)</span>
+                        </div>
+
+                        <div class="cart-scroll">
+                            <div class="cart-line" *ngFor="let item of cartItems">
+                                <div class="line-main">
+                                    <span class="line-name">{{ item.item_name }}</span>
+                                    <span class="line-meta">
+                                        <span class="line-unit">{{ item.unit_price | currencyInr }} each</span>
+                                        <!-- The kitchen's own state, surfaced on
+                                             the till so nobody rings a dish they
+                                             have already voided. -->
+                                        <span class="line-prep"
+                                            [ngClass]="'ps-' + (item.prep_status || 'pending')">
+                                            {{ prepLabel(item.prep_status) }}
+                                        </span>
+                                    </span>
+                                </div>
+
+                                <div class="line-qty">
+                                    <!-- The stepper bottoms out at 1: the column
+                                         is CHECK (quantity > 0) and the API
+                                         rejects anything below 0.001. -->
+                                    <button mat-icon-button class="qty-btn"
+                                        (click)="onStepQuantity(item, -1)"
+                                        [disabled]="isWorking || item.prep_status === 'ready'">
+                                        <mat-icon>remove</mat-icon>
+                                    </button>
+                                    <span class="qty-val">{{ item.quantity }}</span>
+                                    <button mat-icon-button class="qty-btn"
+                                        (click)="onStepQuantity(item, 1)"
+                                        [disabled]="isWorking || item.prep_status === 'ready'">
+                                        <mat-icon>add</mat-icon>
+                                    </button>
+                                </div>
+
+                                <span class="line-total">{{ item.total_price | currencyInr }}</span>
+
+                                <button mat-icon-button class="line-remove"
+                                    (click)="onRemoveLine(item)"
+                                    [disabled]="isWorking || item.prep_status === 'ready'"
+                                    matTooltip="Remove from bill (recorded as a void)">
+                                    <mat-icon>delete_outline</mat-icon>
+                                </button>
+                            </div>
+
+                            <div class="cart-empty" *ngIf="cartItems.length === 0">
+                                <mat-icon>shopping_basket</mat-icon>
+                                <span>Tap a dish above to start the bill.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ---------- payment panel (inline, never a dialog) ---------- -->
+                <div class="pay-panel" *ngIf="showPayment">
+                    <div class="pay-head">
+                        <h4>Settle &amp; close</h4>
+                        <button mat-icon-button (click)="cancelPayment()" matTooltip="Back to the bill">
+                            <mat-icon>close</mat-icon>
+                        </button>
+                    </div>
+
+                    <div class="method-chips">
+                        <button type="button" class="method-chip" *ngFor="let method of PAYMENT_METHODS"
+                            [class.active]="payMethod === method" (click)="selectMethod(method)">
+                            <mat-icon>{{ methodIcon(method) }}</mat-icon>
+                            {{ methodLabel(method) }}
+                        </button>
+                    </div>
+
+                    <div class="pay-fields">
+                        <!-- Pre-filled with the DUE and never sent: the server
+                             takes order.due_amount() itself on close. It is here
+                             so the cashier reads the figure aloud. -->
+                        <mat-form-field appearance="outline" class="pay-field">
+                            <mat-label>Amount to collect</mat-label>
+                            <mat-icon matIconPrefix>₹</mat-icon>
+                            <input matInput type="number" [(ngModel)]="payAmount" name="payAmount"
+                                [disabled]="isWorking">
+                        </mat-form-field>
+
+                        <!-- Cash only. Purely local maths — the change figure
+                             is never transmitted, because the API rejects any
+                             amount above the outstanding balance. -->
+                        <mat-form-field appearance="outline" class="pay-field" *ngIf="payMethod === 'cash'">
+                            <mat-label>Cash tendered</mat-label>
+                            <mat-icon matIconPrefix>payments</mat-icon>
+                            <input matInput type="number" [(ngModel)]="cashTendered" name="cashTendered"
+                                [disabled]="isWorking" placeholder="optional">
+                        </mat-form-field>
+                    </div>
+
+                    <div class="change-row" *ngIf="payMethod === 'cash' && tenderedAmount > 0">
+                        <span>Change to return</span>
+                        <strong>{{ changeDue | currencyInr }}</strong>
+                    </div>
+
+                    <div class="kitchen-warn" *ngIf="kitchenOutstanding > 0">
+                        <mat-icon>warning</mat-icon>
+                        <span>{{ kitchenOutstanding }} item(s) are still in the kitchen.</span>
+                    </div>
+
+                    <div class="pay-actions">
+                        <button mat-stroked-button (click)="cancelPayment()" [disabled]="isWorking">Cancel</button>
+                        <button mat-flat-button color="primary" class="settle-btn"
+                            (click)="settleAndClose()" [disabled]="isWorking">
+                            <mat-icon>check_circle</mat-icon>
+                            Settle &amp; close — {{ dueAmount | currencyInr }}
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ---------- totals ---------- -->
+                <footer class="totals-bar">
+                    <div class="totals-rows">
+                        <div class="t-row"><span>Subtotal</span><span>{{ subtotal | currencyInr }}</span></div>
+                        <div class="t-row"><span>Tax</span><span>{{ tax | currencyInr }}</span></div>
+                        <div class="t-row" *ngIf="discount > 0">
+                            <span>Discount</span><span class="t-discount">−{{ discount | currencyInr }}</span>
+                        </div>
+                        <div class="t-row t-total"><span>Total</span><span>{{ total | currencyInr }}</span></div>
+                        <div class="t-row" *ngIf="paid > 0"><span>Paid</span><span>{{ paid | currencyInr }}</span></div>
+                    </div>
+
+                    <div class="due-block">
+                        <span class="due-label">Due</span>
+                        <span class="due-amount">{{ dueAmount | currencyInr }}</span>
+                    </div>
+
+                    <button mat-flat-button color="primary" class="pay-btn" (click)="openPayment()"
+                        [disabled]="isWorking || dueAmount <= 0">
+                        <mat-icon>payments</mat-icon>
+                        <span *ngIf="dueAmount > 0">Pay {{ dueAmount | currencyInr }}</span>
+                        <span *ngIf="dueAmount <= 0">Nothing due</span>
+                    </button>
+                </footer>
+
+            </ng-container>
+        </aside>
+    </div>
+</div>
+
+<app-page-loader *ngIf="isPageLoad"></app-page-loader>

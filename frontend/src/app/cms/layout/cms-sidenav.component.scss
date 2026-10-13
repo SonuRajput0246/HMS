@@ -1,0 +1,38 @@
+.cms-sidenav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 8px;
+  overflow-y: auto;
+}
+
+.cms-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-radius: 8px;
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.cms-menu-item.active {
+  background: rgba(0, 0, 0, 0.08);
+  font-weight: 600;
+}
+
+.cms-menu-icon {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  font-size: 20px;
+}
+
+.cms-menu-label {
+  flex: 1 1 auto;
+}
+
+.cms-sidenav-empty {
+  padding: 16px 8px;
+  opacity: 0.7;
+}

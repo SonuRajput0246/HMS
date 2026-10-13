@@ -1,0 +1,395 @@
+// ============================================================
+//  VIEW PROFILE — read-only profile display
+//  Brand: navy #003366 / teal #16b4a4
+//  Shows the profile; editing lives in ManageProfileComponent
+//  at /hms/profile/edit.
+// ============================================================
+
+$navy: #003366;
+$navy-light: #0a4387;
+$navy-soft: #eef3fa;
+$teal: #16b4a4;
+$teal-soft: #e2f6f3;
+$page-bg: #f2f6fc;
+$card-bg: #ffffff;
+$text: #1c2b3a;
+$text-muted: #64748b;
+$border: #e2e8f0;
+$danger: #dc2626;
+$danger-soft: #fee2e2;
+$radius-lg: 18px;
+$radius: 12px;
+
+// ------------------------------------------------------------
+//  Page wrapper
+// ------------------------------------------------------------
+.profile-page {
+  height: calc(100vh - 110px);
+  display: flex;
+  flex-direction: column;
+  padding: 10px 20px 16px;
+  gap: 10px;
+  box-sizing: border-box;
+  background:
+    radial-gradient(1200px 400px at 85% -10%, rgba(22, 180, 164, 0.10), transparent 60%),
+    radial-gradient(900px 380px at -10% -10%, rgba(10, 67, 135, 0.08), transparent 55%),
+    $page-bg;
+}
+
+// ------------------------------------------------------------
+//  Card
+// ------------------------------------------------------------
+.profile-card {
+  flex: 1;
+  min-height: 0;
+  align-self: center;
+  width: 100%;
+  max-width: 860px;
+  display: flex;
+  flex-direction: column;
+  background: $card-bg;
+  border: 1px solid $border;
+  border-radius: $radius-lg;
+  box-shadow: 0 6px 24px rgba(15, 42, 77, 0.06);
+  overflow: hidden;
+}
+
+// ------------------------------------------------------------
+//  Identity banner
+// ------------------------------------------------------------
+.profile-banner {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 22px 26px;
+  background: linear-gradient(135deg, $navy, $navy-light);
+  box-shadow: 0 4px 14px rgba(0, 51, 102, 0.18);
+}
+
+.avatar-wrap {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.avatar-img {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
+}
+
+.avatar-badge {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: $teal;
+  border: 2px solid $navy;
+
+  mat-icon {
+    font-size: 13px;
+    width: 13px;
+    height: 13px;
+    color: #fff;
+  }
+}
+
+.banner-text {
+  flex: 1;
+  min-width: 0;
+
+  h3 {
+    margin: 0;
+    font-size: 19px;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: 0.2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  p {
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.82);
+  }
+}
+
+.banner-action {
+  flex: 0 0 auto;
+}
+
+.btn-edit {
+  border-radius: 999px !important;
+  padding: 0 20px !important;
+  min-height: 40px;
+  color: #ffffff !important;
+  border-color: rgba(255, 255, 255, 0.55) !important;
+  background: rgba(255, 255, 255, 0.10) !important;
+  font-size: 13px;
+  font-weight: 600;
+  transition: background 0.2s ease, border-color 0.2s ease;
+
+  mat-icon {
+    font-size: 17px;
+    width: 17px;
+    height: 17px;
+    color: #ffffff;
+  }
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.20) !important;
+    border-color: #ffffff !important;
+  }
+}
+
+// ------------------------------------------------------------
+//  Section
+// ------------------------------------------------------------
+.form-section {
+  padding: 22px 26px 6px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+
+  .head-icon {
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
+    border-radius: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, $navy, $navy-light);
+    box-shadow: 0 4px 10px rgba(0, 51, 102, 0.25);
+
+    mat-icon {
+      color: #fff;
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+    }
+  }
+
+  .head-text {
+    h3 {
+      margin: 0;
+      font-size: 15.5px;
+      font-weight: 700;
+      color: $navy;
+      letter-spacing: 0.2px;
+    }
+
+    p {
+      margin: 2px 0 0;
+      font-size: 12.5px;
+      color: $text-muted;
+    }
+  }
+}
+
+// ------------------------------------------------------------
+//  Read-only detail grid
+// ------------------------------------------------------------
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px 18px;
+}
+
+.detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 13px 15px;
+  background: #f8fafd;
+  border: 1px solid $border;
+  border-radius: $radius;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+
+  &:hover {
+    border-color: #cbd8ea;
+    box-shadow: 0 4px 14px rgba(15, 42, 77, 0.06);
+  }
+}
+
+.detail-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  color: $text-muted;
+
+  mat-icon {
+    font-size: 15px;
+    width: 15px;
+    height: 15px;
+    color: $navy;
+  }
+}
+
+.detail-value {
+  font-size: 14.5px;
+  font-weight: 600;
+  color: $text;
+  line-height: 1.35;
+  word-break: break-word;
+
+  &.is-empty {
+    color: #a9b6c6;
+    font-weight: 500;
+  }
+
+  // role reads better as a small pill
+  &.is-pill {
+    align-self: flex-start;
+    padding: 2px 11px;
+    border-radius: 999px;
+    background: $teal-soft;
+    color: $teal;
+    font-size: 12px;
+    font-weight: 700;
+  }
+}
+
+.detail-tag {
+  align-self: flex-start;
+  margin-top: 2px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px dashed #cbd8ea;
+  background: #fff;
+  font-size: 10.5px;
+  font-weight: 500;
+  color: $text-muted;
+}
+
+// ------------------------------------------------------------
+//  Footer actions
+// ------------------------------------------------------------
+.profile-footer {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 16px 26px;
+  margin-top: 22px;
+  background: #fbfcfe;
+  border-top: 1px solid $border;
+
+  .footer-note {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: $text-muted;
+
+    mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+      color: $teal;
+    }
+  }
+
+  .footer-buttons {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+}
+
+.btn-cancel {
+  border-radius: 999px !important;
+  padding: 0 24px !important;
+  min-height: 42px;
+  color: $text-muted !important;
+  border-color: #d3dce8 !important;
+  font-size: 13.5px;
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: $danger !important;
+    color: $danger !important;
+    background: $danger-soft;
+  }
+}
+
+.btn-submit {
+  border-radius: 999px !important;
+  padding: 0 26px !important;
+  min-height: 42px;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  background: linear-gradient(135deg, $teal, #0f9d8c) !important;
+  color: #fff !important;
+  box-shadow: 0 6px 16px rgba(22, 180, 164, 0.35);
+  transition: all 0.2s ease;
+
+  .btn-content {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+
+    mat-icon {
+      font-size: 17px;
+      width: 17px;
+      height: 17px;
+    }
+  }
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 22px rgba(22, 180, 164, 0.45);
+  }
+}
+
+// ------------------------------------------------------------
+//  Responsive
+// ------------------------------------------------------------
+@media (max-width: 720px) {
+  .profile-banner {
+    flex-wrap: wrap;
+    padding: 18px;
+  }
+
+  .banner-action {
+    width: 100%;
+  }
+
+  .banner-text h3 {
+    font-size: 17px;
+    white-space: normal;
+  }
+
+  .form-section {
+    padding: 18px 18px 4px;
+  }
+
+  .profile-footer {
+    padding: 14px 18px;
+    justify-content: center;
+
+    .footer-note {
+      display: none;
+    }
+  }
+}

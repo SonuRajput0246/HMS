@@ -1,0 +1,273 @@
+// ============================================================
+//  TOP NAV — account chip + profile menu
+//  Brand: navy #003366 / teal #16b4a4 (sits on the navy toolbar,
+//  so the resting chip is a translucent white "ghost" chip).
+// ============================================================
+
+$navy: #003366;
+$navy-light: #0a4387;
+$navy-soft: #eef3fa;
+$teal: #16b4a4;
+$teal-soft: #e2f6f3;
+$text: #1c2b3a;
+$text-muted: #64748b;
+$border: #e2e8f0;
+$danger: #dc2626;
+$danger-soft: #fee2e2;
+
+.user_account {
+  display: flex;
+  align-items: center;
+  padding-right: 14px;
+}
+
+// ------------------------------------------------------------
+//  Account chip — avatar + name + caret
+// ------------------------------------------------------------
+.account_chip {
+  display: inline-flex !important;
+  align-items: center;
+  // gap: 9px;
+  height: 38px;
+  padding: 0 10px 0 5px !important;
+  border-radius: 999px !important;
+  background: rgba(255, 255, 255, 0.10) !important;
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
+  color: #ffffff !important;
+  transition: background 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.18) !important;
+    border-color: rgba(255, 255, 255, 0.38) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(22, 180, 164, 0.45);
+  }
+}
+
+// keep the Material state layer from washing the chip out
+::ng-deep .account_chip .mdc-button__ripple::before {
+  background-color: rgba(255, 255, 255, 0.14);
+}
+
+// ------------------------------------------------------------
+//  Critical: MatButton wraps all slotted content in
+//  `<span class="mdc-button__label">`, which Material styles as a
+//  plain `position: relative` inline span. So the avatar / name /
+//  caret are NOT flex items of .account_chip — they are inline
+//  siblings on a text baseline inside that label, which is what
+//  made the avatar sit up-right and the name drop below the
+//  caret. Make the label itself the flex row.
+// ------------------------------------------------------------
+::ng-deep .account_chip .mdc-button__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  // strip the inherited text line-height so the row centres on the
+  // 38px button box instead of a font baseline
+  line-height: normal;
+}
+
+// ----- avatar with online dot -----
+.chip-avatar {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  // no flex-grow/shrink: keeps the avatar at exactly 32px
+  align-self: center;
+}
+
+.avatar-img {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(255, 255, 255, 0.85);
+}
+
+.online-dot {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: $teal;
+  border: 2px solid $navy;
+}
+
+// ----- name -----
+.chip-text {
+  display: inline-flex;
+  align-items: center;
+  align-self: center;
+  min-width: 0;
+  // 28px avatar + gap + 18px caret + gaps must fit inside the 38px
+  // button height — let the name shrink instead of forcing growth
+  flex: 0 1 auto;
+  overflow: hidden;
+}
+
+.chip-name {
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  line-height: 1;
+  color: #ffffff;
+  max-width: 118px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chip-caret {
+  // mat-icon is inline-block with a line-height; pin it to the flex
+  // row's centre so it can never drift off the shared baseline
+  align-self: center;
+  flex: 0 0 auto;
+  color: rgba(255, 255, 255, 0.85) !important;
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  line-height: 18px;
+  margin-left: -2px;
+}
+
+// ------------------------------------------------------------
+//  Profile menu (rendered in the CDK overlay, so it must be
+//  reached with ::ng-deep + the panelClass)
+// ------------------------------------------------------------
+::ng-deep .account-menu {
+  .mat-mdc-menu-panel {
+    min-width: 216px;
+    max-width: 248px;
+    border-radius: 13px !important;
+    border: 1px solid #d5e0ee;
+    box-shadow: 0 14px 34px rgba(0, 51, 102, 0.20) !important;
+    overflow: hidden !important;
+    background: #ffffff;
+  }
+
+  .mat-mdc-menu-content {
+    padding: 0 !important;
+  }
+
+  mat-divider {
+    border-top-color: $border;
+  }
+}
+
+// ----- header block (avatar + name + hint) -----
+.profile-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 13px;
+  cursor: pointer;
+  background: linear-gradient(135deg, $navy, $navy-light);
+
+  &:hover {
+    background: linear-gradient(135deg, $navy-light, #0d5299);
+  }
+}
+
+.menu-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex: 0 0 34px;
+  border: 2px solid rgba(255, 255, 255, 0.85);
+}
+
+.profile-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.menu-username {
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: #ffffff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.menu-hint {
+  font-size: 10.5px;
+  line-height: 1.3;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+// ----- menu rows -----
+::ng-deep .account-menu .menu-row {
+  min-height: 38px;
+  border-radius: 0;
+
+  mat-icon {
+    color: $navy;
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    margin-right: 10px;
+  }
+
+  // left-align: the global `.menu-item` centering does not apply here,
+  // but the row text needs the same compact size as the rest of the app
+  .menu-row-text {
+    font-size: 12.5px;
+    font-weight: 500;
+    color: $text;
+    line-height: 1.3;
+  }
+
+  &:hover {
+    background: $navy-soft;
+
+    mat-icon,
+    .menu-row-text {
+      color: $navy;
+    }
+  }
+
+  &.danger-row {
+    mat-icon {
+      color: $danger;
+    }
+
+    .menu-row-text {
+      color: $danger;
+    }
+
+    &:hover {
+      background: $danger-soft;
+
+      mat-icon,
+      .menu-row-text {
+        color: $danger;
+      }
+    }
+  }
+}
+
+// ------------------------------------------------------------
+//  Responsive — drop the name on narrow toolbars
+// ------------------------------------------------------------
+@media (max-width: 900px) {
+  .chip-text {
+    display: none;
+  }
+
+  .account_chip {
+    padding: 0 6px !important;
+    gap: 4px;
+  }
+}

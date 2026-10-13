@@ -1,0 +1,507 @@
+<div class="rpt-shell">
+  <app-navigation-bar [navData]="navData"></app-navigation-bar>
+
+  <div class="rpt-body">
+
+    <!-- ============ SHARED RANGE TOOLBAR ============ -->
+    <div class="range-bar" [formGroup]="form">
+      <div class="range-left">
+        <mat-form-field appearance="outline" class="range-select">
+          <mat-label>Date Range</mat-label>
+          <mat-select formControlName="range">
+            <mat-option *ngFor="let p of reportPresets" [value]="p.key">{{ p.label }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <!-- The server rejects a half-filled window, so the fetch only fires
+             once BOTH custom dates are chosen. -->
+        <ng-container *ngIf="isCustom()">
+          <mat-form-field appearance="outline" class="range-date">
+            <mat-label>From</mat-label>
+            <input matInput [matDatepicker]="fromPicker" formControlName="from_date" (dateChange)="onCustomDateChange()">
+            <mat-datepicker-toggle matSuffix [for]="fromPicker"></mat-datepicker-toggle>
+            <mat-datepicker #fromPicker></mat-datepicker>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="range-date">
+            <mat-label>To</mat-label>
+            <input matInput [matDatepicker]="toPicker" formControlName="to_date" (dateChange)="onCustomDateChange()">
+            <mat-datepicker-toggle matSuffix [for]="toPicker"></mat-datepicker-toggle>
+            <mat-datepicker #toPicker></mat-datepicker>
+          </mat-form-field>
+        </ng-container>
+
+        <!-- Echo the window the SERVER resolved. "Today" under Asia/Kolkata
+             starts at 18:30 UTC the previous day, so the owner can verify what
+             the figure actually covers rather than trusting the label. -->
+        <div class="range-meta" *ngIf="rangeMeta">
+          <mat-icon>info_outline</mat-icon>
+          <span>
+            <strong>{{ rangeMeta.from_date | date:'dd MMM yyyy' }}</strong>
+            to <strong>{{ rangeMeta.to_date | date:'dd MMM yyyy' }}</strong>
+            &middot; {{ rangeMeta.day_count }} day{{ rangeMeta.day_count === 1 ? '' : 's' }}
+            &middot; {{ rangeMeta.timezone }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <mat-tab-group class="rpt-tabs" [selectedIndex]="activeTab" (selectedTabChange)="onTabChange($event.index)">
+      <mat-tab *ngFor="let t of reportTabs">
+        <ng-template mat-tab-label>
+          <span class="tab-label"><mat-icon>{{ t.icon }}</mat-icon>{{ t.label }}</span>
+        </ng-template>
+      </mat-tab>
+    </mat-tab-group>
+
+    <div class="rpt-content">
+
+      <!-- ============ TAB 1: SALES SUMMARY ============ -->
+      <div class="tab-pane" *ngIf="activeTab === 0 && salesSummary">
+        <div class="kpi-row">
+          <div class="kpi-card revenue">
+            <span class="kpi-label">Revenue</span>
+            <span class="kpi-value">{{ salesSummary.totals.revenue | currencyInr }}</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Orders</span>
+            <span class="kpi-value">{{ salesSummary.totals.order_count }}</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Avg. Ticket</span>
+            <span class="kpi-value">{{ salesSummary.totals.average_ticket | currencyInr }}</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Tax</span>
+            <span class="kpi-value">{{ salesSummary.totals.tax_amount | currencyInr }}</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Discount</span>
+            <span class="kpi-value">{{ salesSummary.totals.discount_amount | currencyInr }}</span>
+          </div>
+          <!-- Outstanding on SETTLED orders is always 0. Anything else means a
+               payment or close went wrong, so it is surfaced, not buried. -->
+          <div class="kpi-card warn" [class.alarm]="salesSummary.totals.outstanding !== '0.00'">
+            <span class="kpi-label">Outstanding</span>
+            <span class="kpi-value">{{ salesSummary.totals.outstanding | currencyInr }}</span>
+          </div>
+        </div>
+
+        <div class="panel-grid two">
+          <div class="panel">
+            <header class="panel-head">
+              <h3>Payment Methods</h3>
+              <button mat-stroked-button (click)="exportCsv(salesSummary.by_payment_method || [], 'payment_breakdown')">
+                <mat-icon>download</mat-icon> CSV
+              </button>
+            </header>
+
+            <div class="stacked-bar" *ngIf="salesSummary.by_payment_method?.length">
+              <div class="stack-seg"
+                   *ngFor="let m of salesSummary.by_payment_method; let i = index"
+                   [style.width.%]="+m.share_percent"
+                   [style.background]="['#003366','#16b4a4','#d97706','#2563eb','#64748b'][i % 5]"
+                   [title]="m.payment_method + ' ' + m.share_percent + '%'">
+              </div>
+            </div>
+
+            <table class="mini-table" *ngIf="salesSummary.by_payment_method?.length">
+              <thead>
+                <tr><th>Method</th><th class="r">Count</th><th class="r">Amount</th><th class="r">Share</th></tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let m of salesSummary.by_payment_method">
+                  <td class="c">{{ m.payment_method }}</td>
+                  <td class="r">{{ m.payment_count }}</td>
+                  <td class="r">{{ m.amount | currencyInr }}</td>
+                  <td class="r">{{ m.share_percent }}%</td>
+                </tr>
+              </tbody>
+            </table>
+            <p class="empty" *ngIf="!salesSummary.by_payment_method?.length">No payments in this period.</p>
+          </div>
+
+          <div class="panel">
+            <header class="panel-head"><h3>Order Types</h3></header>
+            <table class="mini-table" *ngIf="salesSummary.by_order_type?.length">
+              <thead>
+                <tr><th>Type</th><th class="r">Orders</th><th class="r">Revenue</th></tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let o of salesSummary.by_order_type">
+                  <td class="c">{{ o.order_type }}</td>
+                  <td class="r">{{ o.order_count }}</td>
+                  <td class="r">{{ o.revenue | currencyInr }}</td>
+                </tr>
+              </tbody>
+            </table>
+            <p class="empty" *ngIf="!salesSummary.by_order_type?.length">No orders in this period.</p>
+          </div>
+        </div>
+
+        <!-- Hourly bars per trading day, built from divs: no charting library
+             is in package.json and one is not warranted for this. -->
+        <div class="panel" *ngIf="salesSummary.hourly">
+          <header class="panel-head"><h3>Trade by Hour</h3></header>
+
+          <div class="day-chart" *ngFor="let entry of salesSummary.hourly | keyvalue">
+            <div class="day-label">{{ entry.key | date:'EEE dd MMM' }}</div>
+            <div class="hours">
+              <div class="hour-col" *ngFor="let h of entry.value"
+                   [title]="h.label + ' — ' + h.revenue + ' (' + h.order_count + ' orders)'">
+                <div class="hour-bar"
+                     [style.height.%]="barHeight(+h.revenue, hourlyMax(entry.value))"></div>
+              </div>
+            </div>
+            <div class="hours-axis">
+              <span>00</span><span>06</span><span>12</span><span>18</span><span>23</span>
+            </div>
+          </div>
+
+          <!-- A cafe closed all week would otherwise render 24 identical
+               baseline bars a day and imply steady trade. -->
+          <p class="empty" *ngIf="!hasAnyHourlyRevenue(salesSummary)">
+            No trade recorded in this period, so the hourly view is flat.
+          </p>
+        </div>
+      </div>
+
+      <!-- ============ TAB 2: ITEM SALES ============ -->
+      <div class="tab-pane" *ngIf="activeTab === 1 && itemSales">
+        <div class="inline-controls" [formGroup]="form">
+          <mat-form-field appearance="outline" class="ctrl">
+            <mat-label>Sort by</mat-label>
+            <mat-select formControlName="sort_by" (selectionChange)="onControlChange()">
+              <mat-option value="quantity">Quantity</mat-option>
+              <mat-option value="revenue">Revenue</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="ctrl-sm">
+            <mat-label>Limit</mat-label>
+            <input matInput type="number" formControlName="item_limit" (change)="onControlChange()">
+          </mat-form-field>
+
+          <mat-checkbox formControlName="include_dead_stock" (change)="onControlChange()">
+            Show unsold items
+          </mat-checkbox>
+
+          <span class="spacer"></span>
+          <button mat-stroked-button (click)="exportCsv(itemSales.items, 'item_sales')">
+            <mat-icon>download</mat-icon> Export CSV
+          </button>
+        </div>
+
+        <div class="panel">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Item</th><th>Category</th><th>Station</th>
+                <th class="r">Sold</th><th class="r">Revenue</th>
+                <th class="r">Orders</th><th class="r">Per Order</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let it of itemSales.items" [class.dead-row]="it.is_dead_stock">
+                <td class="c">
+                  <span class="cell-strong">{{ it.item_name }}</span>
+                  <span class="chip-dead" *ngIf="it.is_dead_stock">unsold</span>
+                </td>
+                <td>{{ it.category_display_name || 'Uncategorised' }}</td>
+                <td>{{ it.station }}</td>
+                <td class="r">{{ it.quantity_sold }}</td>
+                <td class="r">{{ it.revenue | currencyInr }}</td>
+                <td class="r">{{ it.order_count }}</td>
+                <td class="r">{{ it.quantity_per_order }}</td>
+              </tr>
+            </tbody>
+          </table>
+          <p class="empty" *ngIf="!itemSales.items?.length">Nothing sold in this period.</p>
+          <p class="foot-note" *ngIf="itemSales.truncated">
+            Showing {{ itemSales.returned }} of {{ itemSales.distinct_items_sold }} items — raise the limit for more.
+          </p>
+        </div>
+      </div>
+
+      <!-- ============ TAB 3: DAILY TREND ============ -->
+      <div class="tab-pane" *ngIf="activeTab === 2 && dailyTrend">
+        <div class="inline-controls" [formGroup]="form">
+          <mat-checkbox formControlName="include_zero_days" (change)="onControlChange()">
+            Include closed days
+          </mat-checkbox>
+          <span class="spacer"></span>
+          <button mat-stroked-button (click)="exportCsv(dailyTrend.series, 'daily_trend')">
+            <mat-icon>download</mat-icon> Export CSV
+          </button>
+        </div>
+
+        <div class="kpi-row">
+          <div class="kpi-card revenue">
+            <span class="kpi-label">Total Revenue</span>
+            <span class="kpi-value">{{ dailyTrend.total_revenue | currencyInr }}</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Trading Days</span>
+            <span class="kpi-value">{{ dailyTrend.trading_days }} / {{ dailyTrend.day_count }}</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Avg / Trading Day</span>
+            <span class="kpi-value">{{ dailyTrend.average_daily_revenue | currencyInr }}</span>
+          </div>
+          <div class="kpi-card" *ngIf="dailyTrend.best_day">
+            <span class="kpi-label">Best Day</span>
+            <span class="kpi-value">{{ dailyTrend.best_day.date | date:'dd MMM' }}</span>
+            <span class="kpi-sub">{{ dailyTrend.best_day.revenue | currencyInr }}</span>
+          </div>
+        </div>
+
+        <div class="panel">
+          <header class="panel-head"><h3>Revenue by Day</h3></header>
+          <!-- Zero days get a visible baseline stub rather than being dropped,
+               so a closure reads as a closure instead of a chart that draws a
+               straight line across it. -->
+          <div class="trend-chart">
+            <div class="trend-col" *ngFor="let d of dailyTrend.series"
+                 [title]="d.date + ' — ' + d.revenue + ' (' + d.order_count + ' orders)'">
+              <div class="trend-bar"
+                   [class.zero]="d.order_count === 0"
+                   [style.height.%]="barHeight(+d.revenue, trendMax)"></div>
+              <div class="trend-label">{{ d.date | date:'dd/MM' }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ TAB 4: VOID / LOSS ============ -->
+      <div class="tab-pane" *ngIf="activeTab === 3 && voidReport">
+        <div class="inline-controls" [formGroup]="form">
+          <mat-checkbox formControlName="group_by_staff" (change)="onControlChange()">
+            Group by staff
+          </mat-checkbox>
+          <mat-form-field appearance="outline" class="ctrl-sm">
+            <mat-label>Detail limit</mat-label>
+            <input matInput type="number" formControlName="void_limit" (change)="onControlChange()">
+          </mat-form-field>
+          <span class="spacer"></span>
+          <button mat-stroked-button (click)="exportCsv(voidReport.entries, 'void_detail')">
+            <mat-icon>download</mat-icon> Export CSV
+          </button>
+        </div>
+
+        <div class="kpi-row">
+          <div class="kpi-card danger">
+            <span class="kpi-label">Combined Loss</span>
+            <span class="kpi-value">{{ voidReport.combined_loss | currencyInr }}</span>
+          </div>
+          <div class="kpi-card warn">
+            <span class="kpi-label">Voided Value</span>
+            <span class="kpi-value">{{ voidReport.total_void_value | currencyInr }}</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Voided Lines</span>
+            <span class="kpi-value">{{ voidReport.total_void_lines }}</span>
+          </div>
+          <div class="kpi-card warn">
+            <span class="kpi-label">Cancelled Orders</span>
+            <span class="kpi-value">{{ voidReport.cancelled_orders }}</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Cancelled Value</span>
+            <span class="kpi-value">{{ voidReport.cancelled_value | currencyInr }}</span>
+          </div>
+        </div>
+
+        <!-- Loss prevention: the useful question is not "how much was voided"
+             but "who is voiding, and is it the whole order every time". -->
+        <div class="panel" *ngIf="voidReport.by_staff?.length">
+          <header class="panel-head"><h3>By Staff Member</h3></header>
+          <p class="panel-note">Who voided, how often, and what it was worth.</p>
+          <table class="data-table">
+            <thead><tr><th>Staff</th><th class="r">Lines</th><th class="r">Orders</th><th class="r">Value</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let s of voidReport.by_staff">
+                <td class="c"><span class="cell-strong">{{ s.voided_by_name }}</span></td>
+                <td class="r">{{ s.line_count }}</td>
+                <td class="r">{{ s.order_count }}</td>
+                <td class="r">{{ s.total_value | currencyInr }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="panel">
+          <header class="panel-head"><h3>Void Detail</h3></header>
+          <table class="data-table">
+            <thead>
+              <tr><th>Staff</th><th>Reason</th><th>Item</th><th class="r">Lines</th><th class="r">Value</th></tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let e of voidReport.entries">
+                <td>{{ e.voided_by_name }}</td>
+                <td>{{ e.void_reason }}</td>
+                <td class="c">{{ e.item_name }}</td>
+                <td class="r">{{ e.line_count }}</td>
+                <td class="r">{{ e.value | currencyInr }}</td>
+              </tr>
+            </tbody>
+          </table>
+          <p class="empty" *ngIf="!voidReport.entries?.length">Nothing was voided in this period — good.</p>
+        </div>
+      </div>
+
+      <!-- ============ TAB 5: KITCHEN ============ -->
+      <div class="tab-pane" *ngIf="activeTab === 4 && kitchenReport">
+        <!-- Negative durations mean the server detected a timestamp problem.
+             Showing the timings without this would present nonsense averages
+             as fact. -->
+        <div class="alert error" *ngIf="kitchenReport.data_quality_warning">
+          <mat-icon>error_outline</mat-icon>
+          <span>{{ kitchenReport.data_quality_warning }}</span>
+        </div>
+
+        <div class="inline-controls" [formGroup]="form">
+          <mat-checkbox formControlName="include_by_item" (change)="onControlChange()">
+            Breakdown by item
+          </mat-checkbox>
+          <span class="spacer"></span>
+          <button mat-stroked-button (click)="exportCsv(kitchenReport.by_station || [], 'kitchen_by_station')">
+            <mat-icon>download</mat-icon> Export CSV
+          </button>
+        </div>
+
+        <!-- The average is the GUEST'S wait and includes queue time. The
+             server sends this note; it is shown rather than relabelled
+             "cooking time", which would be a different and wrong number. -->
+        <div class="alert info">
+          <mat-icon>info_outline</mat-icon>
+          <span>{{ kitchenReport.note }}</span>
+        </div>
+
+        <div class="kpi-row">
+          <div class="kpi-card">
+            <span class="kpi-label">Lines Completed</span>
+            <span class="kpi-value">{{ kitchenReport.overall.lines_completed }}</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Avg. Wait</span>
+            <span class="kpi-value">{{ kitchenReport.overall.avg_minutes }} min</span>
+          </div>
+          <div class="kpi-card" *ngIf="kitchenReport.slowest_item">
+            <span class="kpi-label">Slowest Item</span>
+            <span class="kpi-value">{{ kitchenReport.slowest_item.item_name }}</span>
+            <span class="kpi-sub">{{ kitchenReport.slowest_item.avg_minutes }} min avg</span>
+          </div>
+        </div>
+
+        <div class="panel-grid two">
+          <div class="panel">
+            <header class="panel-head"><h3>By Station</h3></header>
+            <table class="data-table">
+              <thead><tr><th>Station</th><th class="r">Lines</th><th class="r">Avg. Wait</th></tr></thead>
+              <tbody>
+                <tr *ngFor="let s of kitchenReport.by_station">
+                  <td class="c">{{ s.station }}</td>
+                  <td class="r">{{ s.lines_completed }}</td>
+                  <td class="r">{{ s.avg_minutes }} min</td>
+                </tr>
+              </tbody>
+            </table>
+            <p class="empty" *ngIf="!kitchenReport.by_station?.length">No completed lines in this period.</p>
+          </div>
+
+          <div class="panel" *ngIf="kitchenReport.by_item?.length">
+            <header class="panel-head"><h3>Slowest Items</h3></header>
+            <table class="data-table">
+              <thead><tr><th>Item</th><th>Station</th><th class="r">Lines</th><th class="r">Avg.</th></tr></thead>
+              <tbody>
+                <tr *ngFor="let i of kitchenReport.by_item">
+                  <td class="c">{{ i.item_name }}</td>
+                  <td>{{ i.station }}</td>
+                  <td class="r">{{ i.lines_completed }}</td>
+                  <td class="r">{{ i.avg_minutes }} min</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ TAB 6: CUSTOMERS ============ -->
+      <div class="tab-pane" *ngIf="activeTab === 5 && customerReport">
+        <div class="inline-controls" [formGroup]="form">
+          <mat-form-field appearance="outline" class="ctrl-sm">
+            <mat-label>Top N</mat-label>
+            <input matInput type="number" formControlName="customer_limit" (change)="onControlChange()">
+          </mat-form-field>
+          <span class="spacer"></span>
+          <button mat-stroked-button (click)="exportCsv(customerReport.top_customers, 'top_customers')">
+            <mat-icon>download</mat-icon> Export CSV
+          </button>
+        </div>
+
+        <div class="kpi-row">
+          <div class="kpi-card">
+            <span class="kpi-label">Total Customers</span>
+            <span class="kpi-value">{{ customerReport.totals.total_customers }}</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">VIPs</span>
+            <span class="kpi-value">{{ customerReport.totals.vip_customers }}</span>
+          </div>
+          <div class="kpi-card revenue">
+            <span class="kpi-label">Lifetime Spend</span>
+            <span class="kpi-value">{{ customerReport.totals.lifetime_spend | currencyInr }}</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Avg. Lifetime Value</span>
+            <span class="kpi-value">{{ customerReport.totals.avg_lifetime_value | currencyInr }}</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Avg. per Visit</span>
+            <span class="kpi-value">{{ customerReport.totals.avg_spend_per_visit | currencyInr }}</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">New in Period</span>
+            <span class="kpi-value">{{ customerReport.new_customers_in_period }}</span>
+          </div>
+        </div>
+
+        <div class="panel">
+          <header class="panel-head"><h3>Top Customers</h3></header>
+          <!-- Ranked by LIFETIME spend with the period columns alongside, so a
+               currently-active regular can be told from a historical one. -->
+          <p class="panel-note">
+            Ranked by lifetime spend. Period columns cover the selected window only.
+          </p>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Customer</th><th>Code</th><th>Tier</th>
+                <th class="r">Visits</th><th class="r">Lifetime</th>
+                <th class="r">Period Orders</th><th class="r">Period Spend</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let c of customerReport.top_customers">
+                <td class="c">
+                  <span class="cell-strong">{{ c.name }}</span>
+                  <mat-icon *ngIf="c.is_vip" class="vip-icon">star</mat-icon>
+                </td>
+                <td class="code">{{ c.customer_code }}</td>
+                <td><span class="tier-pill" [ngClass]="c.tier.toLowerCase()">{{ c.tier }}</span></td>
+                <td class="r">{{ c.total_visits }}</td>
+                <td class="r">{{ c.lifetime_spend | currencyInr }}</td>
+                <td class="r">{{ c.period_order_count }}</td>
+                <td class="r">{{ c.period_spend | currencyInr }}</td>
+              </tr>
+            </tbody>
+          </table>
+          <p class="empty" *ngIf="!customerReport.top_customers?.length">No customers have visited yet.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <app-page-loader *ngIf="isPageLoad"></app-page-loader>
+</div>

@@ -1,0 +1,566 @@
+<app-navigation-bar [navData]="navData"></app-navigation-bar>
+
+<div class="tbl-list">
+
+    <mat-tab-group class="tbl-tabs" [(selectedIndex)]="selectedTabIndex"
+        (selectedTabChange)="onTabChange($event.index)">
+
+        <!-- ==========================================================
+             TAB 1 — TABLES
+             ========================================================== -->
+        <mat-tab>
+            <ng-template mat-tab-label>
+                <span class="tab-label">
+                    <mat-icon>table_restaurant</mat-icon>
+                    Tables
+                </span>
+            </ng-template>
+
+            <div class="tab-body">
+                <div class="table-card">
+
+                    <header class="table-header">
+                        <div class="table-title">
+                            <span class="head-icon"><mat-icon>table_restaurant</mat-icon></span>
+                            <div class="head-text">
+                                <h3>All Tables</h3>
+                                <p>Floor inventory — numbering, capacity and service status</p>
+                            </div>
+                        </div>
+
+                        <div class="filter-controls">
+                            <mat-form-field appearance="outline" floatLabel="always" class="custom-input">
+                                <mat-label>Search</mat-label>
+                                <mat-icon matIconPrefix class="search-prefix">search</mat-icon>
+                                <input matInput [(ngModel)]="gridSearch" placeholder="Table number"
+                                    (keyup)="applyFilter()">
+                            </mat-form-field>
+
+                            <mat-form-field appearance="outline" floatLabel="always" class="custom-input select-input">
+                                <mat-label>Zone</mat-label>
+                                <mat-select [(ngModel)]="filterZoneId" placeholder="All zones"
+                                    (selectionChange)="onZoneFilter()">
+                                    <mat-option [value]="null">All zones</mat-option>
+                                    <mat-option *ngFor="let zone of zoneList" [value]="zone.id">
+                                        {{ zone.name }}
+                                    </mat-option>
+                                </mat-select>
+                            </mat-form-field>
+
+                            <mat-form-field appearance="outline" floatLabel="always" class="custom-input select-input">
+                                <mat-label>Status</mat-label>
+                                <mat-select [(ngModel)]="filterStatus" placeholder="All statuses"
+                                    (selectionChange)="onStatusFilter()">
+                                    <!-- Every status is filterable, including
+                                         'occupied': seeing which tables are busy is a
+                                         read, and the order lifecycle -- not this
+                                         screen -- owns writing that state. -->
+                                    <mat-option [value]="null">All statuses</mat-option>
+                                    <mat-option *ngFor="let s of statusLabels | keyvalue" [value]="s.key">
+                                        {{ s.value }}
+                                    </mat-option>
+                                </mat-select>
+                            </mat-form-field>
+
+                            <div class="filter-action">
+                                <button mat-button color="warn" (click)="clearFilter()">
+                                    <mat-icon>filter_alt_off</mat-icon>
+                                    Clear Filters
+                                </button>
+                            </div>
+                        </div>
+                    </header>
+
+                    <div class="table-scroll">
+                        <ng-container *ngIf="!isPageLoad">
+                            <table mat-table [dataSource]="tableDataSource" class="cms-table">
+
+                                <ng-container matColumnDef="sr">
+                                    <th mat-header-cell *matHeaderCellDef style="width: 6%;"> Sr. No. </th>
+                                    <td mat-cell *matCellDef="let element; let i = index"> {{ getSrNo(i) }} </td>
+                                </ng-container>
+
+                                <ng-container matColumnDef="table_number">
+                                    <th mat-header-cell *matHeaderCellDef style="width: 12%;"> Table No. </th>
+                                    <td mat-cell *matCellDef="let element">
+                                        <span class="cell-strong">{{ element.table_number }}</span>
+                                    </td>
+                                </ng-container>
+
+                                <ng-container matColumnDef="table_name">
+                                    <th mat-header-cell *matHeaderCellDef style="width: 22%;"> Table Name </th>
+                                    <td mat-cell *matCellDef="let element">
+                                        {{ element.table_name || '—' }}
+                                    </td>
+                                </ng-container>
+
+                                <ng-container matColumnDef="zone_name">
+                                    <th mat-header-cell *matHeaderCellDef style="width: 14%;"> Zone </th>
+                                    <td mat-cell *matCellDef="let element">
+                                        {{ element.zone_name || zoneName(element.zone_id) }}
+                                    </td>
+                                </ng-container>
+
+                                <ng-container matColumnDef="capacity">
+                                    <th mat-header-cell *matHeaderCellDef style="text-align: center; width: 9%;"> Seats </th>
+                                    <td mat-cell *matCellDef="let element" style="text-align: center;">
+                                        {{ element.capacity }}
+                                    </td>
+                                </ng-container>
+
+                                <ng-container matColumnDef="status">
+                                    <th mat-header-cell *matHeaderCellDef style="width: 15%;"> Status </th>
+                                    <td mat-cell *matCellDef="let element">
+                                        <span class="status-pill" [ngClass]="statusClass(element.status)">
+                                            {{ statusLabel(element.status) }}
+                                        </span>
+                                    </td>
+                                </ng-container>
+
+                                <ng-container matColumnDef="is_active">
+                                    <th mat-header-cell *matHeaderCellDef style="text-align: center; width: 10%;"> In Service </th>
+                                    <td mat-cell *matCellDef="let element" style="text-align: center;">
+                                        <mat-slide-toggle [checked]="element.is_active" [disabled]="isBusy(element.id)"
+                                            (change)="onToggleActive(element, $event.checked)"
+                                            aria-label="Table in service"></mat-slide-toggle>
+                                    </td>
+                                </ng-container>
+
+                                <ng-container matColumnDef="actions">
+                                    <th mat-header-cell *matHeaderCellDef style="text-align: center; width: 10%;"> Action </th>
+                                    <td mat-cell *matCellDef="let element" style="text-align: center;">
+                                        <button class="action-btn" mat-icon-button [matMenuTriggerFor]="tableActionMenu"
+                                            (click)="$event.stopPropagation();">
+                                            <mat-icon>more_vert</mat-icon>
+                                        </button>
+                                        <mat-menu class="cms-actions-menu" #tableActionMenu="matMenu" xPosition="before"
+                                            overlapTrigger="true">
+                                            <button mat-menu-item class="menu-item" (click)="onEditTable(element)">
+                                                <mat-icon>edit</mat-icon> Edit
+                                            </button>
+                                            <button mat-menu-item class="menu-item" (click)="onChangeStatus(element)">
+                                                <mat-icon>sync_alt</mat-icon> Change Status
+                                            </button>
+                                            <button mat-menu-item class="menu-item delete-item" (click)="onDeleteTable(element)">
+                                                <mat-icon>delete</mat-icon> Delete
+                                            </button>
+                                        </mat-menu>
+                                    </td>
+                                </ng-container>
+
+                                <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></tr>
+                                <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+
+                                <tr mat-no-data-row *matNoDataRow>
+                                    <td class="no-data" [attr.colspan]="displayedColumns.length">
+                                        <mat-icon>table_restaurant</mat-icon>
+                                        <span>No tables found for the selected search.</span>
+                                    </td>
+                                </tr>
+                            </table>
+                        </ng-container>
+                    </div>
+
+                    <footer class="table-footer" *ngIf="!isPageLoad">
+                        <mat-paginator #tablePaginator [pageIndex]="currentPageIndex" [length]="pageDet.total_docs"
+                            [pageSize]="pageDet.limit" [pageSizeOptions]="[10, 20, 50, 100]"
+                            (page)="onPaginateChange($event)" showFirstLastButtons>
+                        </mat-paginator>
+                    </footer>
+                </div>
+            </div>
+        </mat-tab>
+
+        <!-- ==========================================================
+             TAB 2 — ZONES
+             ========================================================== -->
+        <mat-tab>
+            <ng-template mat-tab-label>
+                <span class="tab-label">
+                    <mat-icon>grid_view</mat-icon>
+                    Zones
+                </span>
+            </ng-template>
+
+            <div class="tab-body">
+                <div class="table-card">
+
+                    <header class="table-header">
+                        <div class="table-title">
+                            <span class="head-icon"><mat-icon>grid_view</mat-icon></span>
+                            <div class="head-text">
+                                <h3>All Zones</h3>
+                                <p>How the floor is grouped — deleting a zone leaves its tables unassigned</p>
+                            </div>
+                        </div>
+
+                        <div class="filter-controls">
+                            <mat-form-field appearance="outline" floatLabel="always" class="custom-input">
+                                <mat-label>Search</mat-label>
+                                <mat-icon matIconPrefix class="search-prefix">search</mat-icon>
+                                <input matInput [(ngModel)]="isZoneSearch" placeholder="Zone name"
+                                    (keyup)="applyZoneFilter()">
+                            </mat-form-field>
+                        </div>
+                    </header>
+
+                    <div class="table-scroll">
+                        <ng-container *ngIf="!isZoneLoad">
+                            <table mat-table [dataSource]="zoneDataSource" class="cms-table">
+
+                                <ng-container matColumnDef="sr">
+                                    <th mat-header-cell *matHeaderCellDef style="width: 6%;"> Sr. No. </th>
+                                    <td mat-cell *matCellDef="let element; let i = index"> {{ i + 1 }} </td>
+                                </ng-container>
+
+                                <ng-container matColumnDef="name">
+                                    <th mat-header-cell *matHeaderCellDef style="width: 16%;"> Zone Name </th>
+                                    <td mat-cell *matCellDef="let element">
+                                        <span class="cell-strong">{{ element.name }}</span>
+                                    </td>
+                                </ng-container>
+
+                                <ng-container matColumnDef="display_name">
+                                    <th mat-header-cell *matHeaderCellDef style="width: 20%;"> Display Name </th>
+                                    <td mat-cell *matCellDef="let element"> {{ element.display_name }} </td>
+                                </ng-container>
+
+                                <ng-container matColumnDef="description">
+                                    <th mat-header-cell *matHeaderCellDef style="width: 28%;"> Description </th>
+                                    <td mat-cell *matCellDef="let element"> {{ element.description || '—' }} </td>
+                                </ng-container>
+
+                                <ng-container matColumnDef="display_order">
+                                    <th mat-header-cell *matHeaderCellDef style="text-align: center; width: 10%;"> Order </th>
+                                    <td mat-cell *matCellDef="let element" style="text-align: center;">
+                                        {{ element.display_order ?? 0 }}
+                                    </td>
+                                </ng-container>
+
+                                <ng-container matColumnDef="table_count">
+                                    <th mat-header-cell *matHeaderCellDef style="text-align: center; width: 10%;"> Tables </th>
+                                    <td mat-cell *matCellDef="let element" style="text-align: center;">
+                                        <span class="count-chip">{{ element.table_count ?? '—' }}</span>
+                                    </td>
+                                </ng-container>
+
+                                <ng-container matColumnDef="is_active">
+                                    <th mat-header-cell *matHeaderCellDef style="text-align: center; width: 10%;"> Status </th>
+                                    <td mat-cell *matCellDef="let element" style="text-align: center;">
+                                        <span class="status-pill" [ngClass]="element.is_active ? 'st-active' : 'st-inactive'">
+                                            {{ element.is_active ? 'Active' : 'Inactive' }}
+                                        </span>
+                                    </td>
+                                </ng-container>
+
+                                <ng-container matColumnDef="actions">
+                                    <th mat-header-cell *matHeaderCellDef style="text-align: center; width: 10%;"> Action </th>
+                                    <td mat-cell *matCellDef="let element" style="text-align: center;">
+                                        <button class="action-btn" mat-icon-button [matMenuTriggerFor]="zoneActionMenu"
+                                            (click)="$event.stopPropagation();">
+                                            <mat-icon>more_vert</mat-icon>
+                                        </button>
+                                        <mat-menu class="cms-actions-menu" #zoneActionMenu="matMenu" xPosition="before"
+                                            overlapTrigger="true">
+                                            <button mat-menu-item class="menu-item" (click)="onEditZone(element)">
+                                                <mat-icon>edit</mat-icon> Edit
+                                            </button>
+                                            <button mat-menu-item class="menu-item delete-item" (click)="onDeleteZone(element)">
+                                                <mat-icon>delete</mat-icon> Delete
+                                            </button>
+                                        </mat-menu>
+                                    </td>
+                                </ng-container>
+
+                                <tr mat-header-row *matHeaderRowDef="zoneColumns; sticky: true"></tr>
+                                <tr mat-row *matRowDef="let row; columns: zoneColumns;"></tr>
+
+                                <tr mat-no-data-row *matNoDataRow>
+                                    <td class="no-data" [attr.colspan]="zoneColumns.length">
+                                        <mat-icon>grid_view</mat-icon>
+                                        <span>No zones found. Add one so tables can be grouped on the floor.</span>
+                                    </td>
+                                </tr>
+                            </table>
+                        </ng-container>
+                    </div>
+
+                    <div class="no-pager-note" *ngIf="!isZoneLoad">
+                        <mat-icon>info</mat-icon>
+                        <span>Zones are reference data — the whole set is shown at once, no paging.</span>
+                    </div>
+                </div>
+            </div>
+        </mat-tab>
+
+    </mat-tab-group>
+
+    <!-- CTAs float on the shell's toolbar row rather than sitting inside the
+         card, so the table header never competes with them for width. -->
+    <div class="top-sub-nav-controls tbl-cta" *ngIf="selectedTabIndex === 0">
+        <button type="button" mat-raised-button color="primary" (click)="onAddTable()">
+            <mat-icon>add</mat-icon> Add Table
+        </button>
+    </div>
+
+    <div class="top-sub-nav-controls tbl-cta" *ngIf="selectedTabIndex === 1">
+        <button type="button" mat-raised-button color="primary" (click)="onAddZone()">
+            <mat-icon>add</mat-icon> Add Zone
+        </button>
+    </div>
+</div>
+
+<app-page-loader *ngIf="isPageLoad"></app-page-loader>
+
+
+<!-- ==============================================================
+     DIALOG — Add / Edit Table
+     ============================================================== -->
+<ng-template #tableFormTpl let-dialogRef>
+    <div class="tbl-dialog">
+        <h2 mat-dialog-title class="tbl-dialog-title">
+            <mat-icon>table_restaurant</mat-icon>
+            {{ editingTable ? 'Edit Table' : 'Add Table' }}
+        </h2>
+
+        <mat-dialog-content class="tbl-dialog-body">
+            <form [formGroup]="tableForm" autocomplete="off">
+
+                <div class="section-grid">
+                    <mat-form-field appearance="outline" floatLabel="always">
+                        <mat-label>Table Number</mat-label>
+                        <input matInput type="text" formControlName="table_number" placeholder="e.g. T-01">
+                        <mat-hint>The floor label a waiter reads out</mat-hint>
+                        <mat-error *ngIf="tableForm.get('table_number')?.hasError('required')">
+                            Table Number is required
+                        </mat-error>
+                        <mat-error *ngIf="tableForm.get('table_number')?.hasError('maxlength')">
+                            Max 20 characters
+                        </mat-error>
+                    </mat-form-field>
+
+                    <mat-form-field appearance="outline" floatLabel="always">
+                        <mat-label>Table Name</mat-label>
+                        <input matInput type="text" formControlName="table_name" placeholder="e.g. Window 4">
+                        <mat-error *ngIf="tableForm.get('table_name')?.hasError('maxlength')">
+                            Max 50 characters
+                        </mat-error>
+                    </mat-form-field>
+
+                    <mat-form-field appearance="outline" floatLabel="always">
+                        <mat-label>Capacity</mat-label>
+                        <input matInput type="number" formControlName="capacity" min="1" max="50" step="1">
+                        <mat-error *ngIf="tableForm.get('capacity')?.hasError('required')">
+                            Capacity is required
+                        </mat-error>
+                        <mat-error *ngIf="tableForm.get('capacity')?.hasError('min') || tableForm.get('capacity')?.hasError('max')">
+                            Seats must be between 1 and 50
+                        </mat-error>
+                    </mat-form-field>
+
+                    <mat-form-field appearance="outline" floatLabel="always">
+                        <mat-label>Zone</mat-label>
+                        <mat-select formControlName="zone_id" placeholder="Unassigned">
+                            <mat-option [value]="null">Unassigned</mat-option>
+                            <mat-option *ngFor="let zone of zoneList" [value]="zone.id">
+                                {{ zone.name }} — {{ zone.display_name }}
+                            </mat-option>
+                        </mat-select>
+                    </mat-form-field>
+
+                    <mat-form-field appearance="outline" floatLabel="always">
+                        <mat-label>Shape</mat-label>
+                        <mat-select formControlName="shape">
+                            <mat-option *ngFor="let shape of tableShapes" [value]="shape">
+                                {{ shape | titlecase }}
+                            </mat-option>
+                        </mat-select>
+                    </mat-form-field>
+                </div>
+
+                <div class="toggle-grid">
+                    <div class="toggle-card">
+                        <span class="toggle-icon"><mat-icon>merge</mat-icon></span>
+                        <div class="toggle-body">
+                            <strong>Combinable</strong>
+                            <small>May be joined with a neighbour for a large party</small>
+                        </div>
+                        <mat-slide-toggle formControlName="is_combinable"></mat-slide-toggle>
+                    </div>
+
+                    <div class="toggle-card">
+                        <span class="toggle-icon success"><mat-icon>verified_user</mat-icon></span>
+                        <div class="toggle-body">
+                            <strong>In Service</strong>
+                            <small>Offered to the POS as a seatable table</small>
+                        </div>
+                        <mat-slide-toggle formControlName="is_active"></mat-slide-toggle>
+                    </div>
+                </div>
+
+                <!-- The status is not on this form, and the absence is a
+                     decision, not an oversight. See SETTABLE_STATUSES in the
+                     component: occupancy belongs to the order lifecycle. -->
+                <div class="inline-note">
+                    <mat-icon>info</mat-icon>
+                    <span>
+                        Status is not edited here. Use <strong>Change Status</strong> on the row —
+                        <em>Occupied</em> is set by the POS when an order is opened and clears itself
+                        when that order is closed.
+                    </span>
+                </div>
+            </form>
+        </mat-dialog-content>
+
+        <mat-dialog-actions align="end" class="tbl-dialog-actions">
+            <button mat-stroked-button type="button" class="btn-cancel" [mat-dialog-close]="undefined">Cancel</button>
+            <button mat-flat-button type="button" color="primary" class="btn-submit" [disabled]="isSaving"
+                (click)="saveTable(dialogRef)">
+                <mat-progress-spinner *ngIf="isSaving" diameter="18" mode="indeterminate"></mat-progress-spinner>
+                <mat-icon *ngIf="!isSaving">{{ editingTable ? 'save' : 'add' }}</mat-icon>
+                {{ editingTable ? 'Update Table' : 'Add Table' }}
+            </button>
+        </mat-dialog-actions>
+    </div>
+</ng-template>
+
+
+<!-- ==============================================================
+     DIALOG — Change Status
+     ============================================================== -->
+<ng-template #statusFormTpl let-dialogRef>
+    <div class="tbl-dialog">
+        <h2 mat-dialog-title class="tbl-dialog-title">
+            <mat-icon>sync_alt</mat-icon>
+            Change Status — Table {{ editingTable?.table_number }}
+        </h2>
+
+        <mat-dialog-content class="tbl-dialog-body">
+            <form [formGroup]="statusForm" autocomplete="off">
+
+                <mat-radio-group class="status-choices" formControlName="status">
+                    <mat-radio-button *ngFor="let s of settableStatuses" [value]="s"
+                        class="status-choice">
+                        <span class="status-pill" [ngClass]="statusClass(s)">{{ statusLabel(s) }}</span>
+                    </mat-radio-button>
+                </mat-radio-group>
+                <mat-error class="radio-error" *ngIf="statusForm.get('status')?.hasError('required')">
+                    Pick a status
+                </mat-error>
+
+                <mat-form-field appearance="outline" floatLabel="always" class="full-width">
+                    <mat-label>Remarks (optional)</mat-label>
+                    <textarea matInput rows="2" formControlName="remarks"
+                        placeholder="Why this table is out of service"></textarea>
+                    <mat-hint>Kept with the status change for the audit trail</mat-hint>
+                    <mat-error *ngIf="statusForm.get('remarks')?.hasError('maxlength')">
+                        Max 255 characters
+                    </mat-error>
+                </mat-form-field>
+
+                <div class="inline-note warn-note">
+                    <mat-icon>lock</mat-icon>
+                    <span>
+                        <strong>Occupied</strong> is not offered on purpose. It is owned by the order
+                        lifecycle — a table becomes occupied when an order is opened against it and
+                        frees itself when that order is paid and closed. Setting it by hand would leave
+                        the POS refusing to seat a guest at a table it thinks is already taken.
+                    </span>
+                </div>
+
+                <div class="inline-note" *ngIf="editingTable?.status === 'occupied'">
+                    <mat-icon>info</mat-icon>
+                    <span>
+                        This table currently shows <strong>Occupied</strong>, which means it has an
+                        open order. Releasing it will be refused by the server until that order is
+                        settled — you will see that message rather than a silent failure.
+                    </span>
+                </div>
+            </form>
+        </mat-dialog-content>
+
+        <mat-dialog-actions align="end" class="tbl-dialog-actions">
+            <button mat-stroked-button type="button" class="btn-cancel" [mat-dialog-close]="undefined">Cancel</button>
+            <button mat-flat-button type="button" color="primary" class="btn-submit" [disabled]="isSaving"
+                (click)="saveStatus(dialogRef)">
+                <mat-progress-spinner *ngIf="isSaving" diameter="18" mode="indeterminate"></mat-progress-spinner>
+                <mat-icon *ngIf="!isSaving">sync_alt</mat-icon>
+                Update Status
+            </button>
+        </mat-dialog-actions>
+    </div>
+</ng-template>
+
+
+<!-- ==============================================================
+     DIALOG — Add / Edit Zone
+     ============================================================== -->
+<ng-template #zoneFormTpl let-dialogRef>
+    <div class="tbl-dialog">
+        <h2 mat-dialog-title class="tbl-dialog-title">
+            <mat-icon>grid_view</mat-icon>
+            {{ editingZone ? 'Edit Zone' : 'Add Zone' }}
+        </h2>
+
+        <mat-dialog-content class="tbl-dialog-body">
+            <form [formGroup]="zoneForm" autocomplete="off">
+
+                <div class="section-grid">
+                    <mat-form-field appearance="outline" floatLabel="always">
+                        <mat-label>Zone Name</mat-label>
+                        <input matInput type="text" formControlName="name" placeholder="e.g. patio">
+                        <mat-hint>Lowercase key used by reports — avoid spaces</mat-hint>
+                        <mat-error *ngIf="zoneForm.get('name')?.hasError('required')">Zone Name is required</mat-error>
+                        <mat-error *ngIf="zoneForm.get('name')?.hasError('maxlength')">Max 50 characters</mat-error>
+                    </mat-form-field>
+
+                    <mat-form-field appearance="outline" floatLabel="always">
+                        <mat-label>Display Name</mat-label>
+                        <input matInput type="text" formControlName="display_name" placeholder="e.g. Garden Patio">
+                        <mat-error *ngIf="zoneForm.get('display_name')?.hasError('required')">
+                            Display Name is required
+                        </mat-error>
+                        <mat-error *ngIf="zoneForm.get('display_name')?.hasError('maxlength')">Max 50 characters</mat-error>
+                    </mat-form-field>
+
+                    <mat-form-field appearance="outline" floatLabel="always">
+                        <mat-label>Display Order</mat-label>
+                        <input matInput type="number" formControlName="display_order" min="0" step="1">
+                        <mat-hint>Lower numbers appear first on the floor</mat-hint>
+                        <mat-error *ngIf="zoneForm.get('display_order')?.hasError('min')">
+                            Cannot be negative
+                        </mat-error>
+                    </mat-form-field>
+
+                    <mat-form-field appearance="outline" floatLabel="always" class="full-width">
+                        <mat-label>Description</mat-label>
+                        <textarea matInput rows="2" formControlName="description"
+                            placeholder="e.g. Outdoors, covers 20, closed in monsoon"></textarea>
+                        <mat-error *ngIf="zoneForm.get('description')?.hasError('maxlength')">Max 255 characters</mat-error>
+                    </mat-form-field>
+                </div>
+
+                <div class="toggle-grid">
+                    <div class="toggle-card">
+                        <span class="toggle-icon success"><mat-icon>verified_user</mat-icon></span>
+                        <div class="toggle-body">
+                            <strong>Active</strong>
+                            <small>Offered in the "pick a zone" list</small>
+                        </div>
+                        <mat-slide-toggle formControlName="is_active"></mat-slide-toggle>
+                    </div>
+                </div>
+            </form>
+        </mat-dialog-content>
+
+        <mat-dialog-actions align="end" class="tbl-dialog-actions">
+            <button mat-stroked-button type="button" class="btn-cancel" [mat-dialog-close]="undefined">Cancel</button>
+            <button mat-flat-button type="button" color="primary" class="btn-submit" [disabled]="isSaving"
+                (click)="saveZone(dialogRef)">
+                <mat-progress-spinner *ngIf="isSaving" diameter="18" mode="indeterminate"></mat-progress-spinner>
+                <mat-icon *ngIf="!isSaving">{{ editingZone ? 'save' : 'add' }}</mat-icon>
+                {{ editingZone ? 'Update Zone' : 'Add Zone' }}
+            </button>
+        </mat-dialog-actions>
+    </div>
+</ng-template>

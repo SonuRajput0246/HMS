@@ -1,0 +1,55 @@
+<div class="user_account">
+    <button mat-button class="account_chip" [matMenuTriggerFor]="profile" aria-label="Account menu">
+        <span class="chip-avatar">
+            <img src="assets/images/profile/Avtar_Profile2.jfif" alt="Profile" class="avatar-img" />
+            <span class="online-dot" aria-hidden="true"></span>
+        </span>
+
+        <span class="chip-text">
+            <span class="chip-name">{{ (userName || 'Account') | titlecase }}</span>
+        </span>
+
+        <mat-icon class="chip-caret">expand_more</mat-icon>
+    </button>
+
+    <!-- `panelClass` (NOT `class`): the panel lives in the CDK overlay and
+         only panelClass is forwarded onto .mat-mdc-menu-panel by MatMenu. -->
+    <mat-menu #profile="matMenu" panelClass="account-menu" xPosition="before">
+
+        <!-- Profile header (avatar + name) -->
+        <div class="profile-header" (click)="$event.stopPropagation()" routerLink="/hms/profile">
+            <img src="assets/images/profile/Avtar_Profile2.jfif" alt="Profile" class="menu-avatar" />
+            <span class="profile-meta">
+                <span class="menu-username">{{ (userName || 'Account') | titlecase }}</span>
+                <span class="menu-hint">View profile</span>
+            </span>
+        </div>
+
+        <mat-divider></mat-divider>
+
+        <button mat-menu-item routerLink="/hms/profile" class="menu-row">
+            <mat-icon>person</mat-icon>
+            <span class="menu-row-text">My Profile</span>
+        </button>
+
+        <button mat-menu-item routerLink="/hms/settings" class="menu-row">
+            <mat-icon>settings</mat-icon>
+            <span class="menu-row-text">Settings &amp; Security</span>
+        </button>
+
+        <button mat-menu-item class="menu-row">
+            <mat-icon>help_outline</mat-icon>
+            <span class="menu-row-text">Help &amp; Support</span>
+        </button>
+
+        <mat-divider></mat-divider>
+
+        <button mat-menu-item (click)="logoutUser()" class="menu-row danger-row">
+            <mat-icon>logout</mat-icon>
+            <span class="menu-row-text">Sign Out</span>
+        </button>
+
+    </mat-menu>
+</div>
+
+<app-page-loader *ngIf="isPageLoad"></app-page-loader>

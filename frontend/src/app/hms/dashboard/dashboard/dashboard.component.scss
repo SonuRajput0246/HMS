@@ -1,0 +1,120 @@
+.dashboard-grid {
+  margin: 20px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+/* Base Card */
+.stat-card {
+  color: #fff;
+  border-radius: 14px;
+  padding: 10px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.18);
+}
+
+.stat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.stat-label {
+  font-size: 14px;
+  font-weight: 500;
+  opacity: 0.85;
+  letter-spacing: 0.4px;
+}
+
+.stat-value {
+  font-size: 36px;
+  font-weight: 700;
+  margin: 16px 0 20px;
+  display: flex;
+  justify-content: end;
+}
+
+
+/* Individual Card Colors */
+.users-card {
+  background: linear-gradient(135deg, #ec407a, #d81b60);
+}
+
+.revenue-card {
+  background: linear-gradient(135deg, #42a5f5, #1e88e5);
+}
+
+.orders-card {
+  background: linear-gradient(135deg, #66bb6a, #388e3c);
+}
+
+.alerts-card {
+  background: linear-gradient(135deg, #ffa726, #f57c00);
+}
+
+// Future mat card color
+.expired-card {
+  background: linear-gradient(135deg, #ef5350, #c62828);
+}
+
+.reports-card {
+  background: linear-gradient(135deg, #ab47bc, #6a1b9a);
+}
+
+
+
+.clickable-card {
+  cursor: pointer;
+}
+
+/* Hover & active feedback */
+.clickable-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.22);
+}
+
+.clickable-card:active {
+  transform: scale(0.98);
+}
+
+/* Optional: subtle overlay effect */
+.clickable-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.05);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.clickable-card:hover::after {
+  opacity: 1;
+}
+
+.stat-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stat-icon mat-icon {
+  font-size: 24px;
+  color: #fff;
+}
+
+
+.clickable-card:hover .stat-icon {
+  transform: scale(1.1);
+  transition: transform 0.2s ease;
+}

@@ -1,0 +1,518 @@
+// ============================================================
+//  MANAGE INVENTORY (Add / Update) — styled HMS form
+//  Brand: navy #003366 / teal #16b4a4
+//  Rendered inside the inventory shell, so this component only
+//  supplies the flex column + the form card.
+// ============================================================
+
+$navy: #003366;
+$navy-light: #0a4387;
+$navy-soft: #eef3fa;
+$teal: #16b4a4;
+$teal-soft: #e2f6f3;
+$card-bg: #ffffff;
+$text: #1c2b3a;
+$text-muted: #64748b;
+$border: #e2e8f0;
+$danger: #dc2626;
+$danger-soft: #fee2e2;
+$gold: #b7791f;
+$gold-soft: #fdf3dc;
+$green: #15803d;
+$green-soft: #dcfce7;
+$radius-lg: 18px;
+$radius: 12px;
+
+// ------------------------------------------------------------
+//  The routed component's host element IS the flex item of the
+//  shell's .tab-body, so it has to stretch — otherwise the inner
+//  `flex: 1` has no effect and the form sizes to its content.
+// ------------------------------------------------------------
+:host {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.inventory-form-page {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+// ------------------------------------------------------------
+//  Form area
+// ------------------------------------------------------------
+.form-scroll {
+  flex: 1;
+  height: auto;          // override global .in_up_form fixed height — flex handles it
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  margin: 0 -4px;
+  padding: 0 4px 8px;
+  position: relative;
+
+  // slim scrollbar
+  scrollbar-width: thin;
+  scrollbar-color: #c3d2e4 transparent;
+
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: #c3d2e4;
+    border-radius: 8px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+.form-shell {
+  background: $card-bg;
+  border-radius: $radius-lg;
+  border: 1px solid $border;
+  box-shadow: 0 6px 24px rgba(15, 42, 77, 0.06);
+  padding: 22px 26px 26px;
+  margin-top: 12px;
+  margin-bottom: 16px;
+
+  > .form-section + .form-section {
+    margin-top: 26px;
+    padding-top: 22px;
+    border-top: 1px dashed #dfe7f1;
+  }
+}
+
+// ------------------------------------------------------------
+//  Section header
+// ------------------------------------------------------------
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+
+  .head-icon {
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
+    border-radius: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, $navy, $navy-light);
+    box-shadow: 0 4px 10px rgba(0, 51, 102, 0.25);
+
+    mat-icon {
+      color: #fff;
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+    }
+  }
+
+  .head-text {
+    h3 {
+      margin: 0;
+      font-size: 15.5px;
+      font-weight: 700;
+      color: $navy;
+      letter-spacing: 0.2px;
+    }
+
+    p {
+      margin: 2px 0 0;
+      font-size: 12.5px;
+      color: $text-muted;
+    }
+  }
+}
+
+// ------------------------------------------------------------
+//  Field grid
+// ------------------------------------------------------------
+.section-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px 18px;
+
+  .field-span-2 {
+    grid-column: span 2;
+  }
+}
+
+// ------------------------------------------------------------
+//  Material outlined field refinement
+// ------------------------------------------------------------
+::ng-deep .manage-inventory-form .mat-mdc-form-field {
+  // Shorten the field: Material reads these two tokens to size the infix
+  // (height, vertical padding) and to position the floating label.
+  --mat-form-field-container-height: 48px;
+  --mat-form-field-container-vertical-padding: 12px;
+  font-size: 13px;
+}
+
+::ng-deep .manage-inventory-form .mat-mdc-text-field-wrapper {
+  background: #f8fafd;
+  border-radius: 12px !important;
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+::ng-deep .manage-inventory-form .mat-mdc-form-field-flex {
+  align-items: center;
+}
+
+// focused & invalid states live on the MCD text-field root (the wrapper)
+::ng-deep .manage-inventory-form .mat-mdc-text-field-wrapper.mdc-text-field--focused {
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(0, 51, 102, 0.12);
+}
+::ng-deep .manage-inventory-form .mat-mdc-text-field-wrapper.mdc-text-field--invalid {
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.10);
+}
+
+// outline shape — keep rounded on all sides
+::ng-deep .manage-inventory-form .mdc-notched-outline__leading {
+  border-radius: 12px 0 0 12px !important;
+}
+::ng-deep .manage-inventory-form .mdc-notched-outline__trailing {
+  border-radius: 0 12px 12px 0 !important;
+}
+::ng-deep .manage-inventory-form .mdc-notched-outline__notch {
+  border-right: none !important;
+}
+
+// resting outline color
+::ng-deep .manage-inventory-form .mdc-notched-outline > * {
+  border-color: #dbe4f0 !important;
+}
+
+// focused state — outline turns navy (unless invalid)
+::ng-deep .manage-inventory-form .mat-mdc-text-field-wrapper.mdc-text-field--focused:not(.mdc-text-field--invalid) .mdc-notched-outline > * {
+  border-color: $navy !important;
+  border-width: 1.5px !important;
+}
+::ng-deep .manage-inventory-form .mat-mdc-text-field-wrapper.mdc-text-field--invalid .mdc-notched-outline > * {
+  border-color: $danger !important;
+}
+
+// floating label color
+::ng-deep .manage-inventory-form .mdc-floating-label {
+  color: #7d8ea3;
+  font-size: 14px;
+}
+::ng-deep .manage-inventory-form .mdc-floating-label--float-above {
+  color: $navy !important;
+  font-size: 14px !important;
+  font-weight: 600;
+}
+::ng-deep .manage-inventory-form .mat-mdc-text-field--invalid .mdc-floating-label--float-above {
+  color: $danger !important;
+}
+
+// input text & caret
+::ng-deep .manage-inventory-form .mat-mdc-input-element,
+::ng-deep .manage-inventory-form .mat-mdc-select-value-text {
+  font-size: 14px !important;
+  color: $text !important;
+  font-weight: 500;
+  caret-color: $navy;
+}
+
+// number inputs: hide the native spinners (quantity is typed / validated)
+::ng-deep .manage-inventory-form input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+
+  &::-webkit-outer-spin-button,
+  &::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+}
+
+// select arrow & suffix colors
+::ng-deep .manage-inventory-form .mat-mdc-select-arrow {
+  color: $navy;
+}
+::ng-deep .manage-inventory-form .mdc-line-ripple::before,
+::ng-deep .manage-inventory-form .mdc-line-ripple::after {
+  display: none;
+}
+
+// error message
+::ng-deep .manage-inventory-form .mat-mdc-form-field-error {
+  font-size: 11.5px;
+  font-weight: 500;
+}
+
+// hint
+::ng-deep .manage-inventory-form .mat-mdc-form-field-hint {
+  font-size: 11.5px;
+  color: #94a3b8;
+}
+
+// ------------------------------------------------------------
+//  Mat-select dropdown panel (rendered in a CDK overlay, so it
+//  lives outside the component — scoped with panelClass)
+// ------------------------------------------------------------
+::ng-deep .cdk-overlay-container div.manage-inventory-select-panel.mat-mdc-select-panel {
+  --mat-select-panel-background-color: #ffffff;
+  background-color: #ffffff;
+  border: 1px solid #d5e0ee;
+  border-radius: 12px;
+  padding: 6px;
+  box-shadow: 0 12px 30px rgba(0, 51, 102, 0.18);
+  overflow-y: auto;
+}
+
+::ng-deep .manage-inventory-select-panel .mat-mdc-option {
+  min-height: 36px;
+  padding: 0 12px;
+  margin: 1px 0;
+  border-radius: 9px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: $text;
+
+  // real mouse hover — the only "selected-looking" highlight
+  &:hover:not(.mat-mdc-option-disabled) {
+    background: $navy-soft;
+    color: $navy;
+  }
+
+  // keyboard "active" option: keep it invisible so it never looks pre-hovered
+  &.mat-mdc-option-active:not(:hover) {
+    background: transparent;
+    color: $text;
+  }
+
+  // selected option: teal accent + text instead of a checkbox
+  &.mat-mdc-option-selected:not(.mat-mdc-option-disabled) {
+    background: $teal-soft;
+    color: $teal;
+    box-shadow: inset 3px 0 0 $teal;
+
+    .mdc-list-item__primary-text {
+      font-weight: 700;
+    }
+  }
+
+  // no checkbox at all (keeps single-select look)
+  .mat-pseudo-checkbox {
+    display: none;
+  }
+}
+
+// spinner inside loading label
+.label-loader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #7d8ea3;
+}
+
+// ------------------------------------------------------------
+//  Toggle cards
+// ------------------------------------------------------------
+.toggle-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+
+  .toggle-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 13px 15px;
+    background: #fbfcfe;
+    border: 1px solid $border;
+    border-radius: 14px;
+    transition: all 0.2s ease;
+
+    &:hover {
+      border-color: #cbd8ea;
+      background: #fff;
+      box-shadow: 0 4px 14px rgba(15, 42, 77, 0.06);
+    }
+
+    .toggle-icon {
+      width: 38px;
+      height: 38px;
+      flex: 0 0 38px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      mat-icon {
+        font-size: 19px;
+        width: 19px;
+        height: 19px;
+      }
+
+      &.vip {
+        background: $gold-soft;
+        mat-icon { color: $gold; }
+      }
+      &.danger {
+        background: $danger-soft;
+        mat-icon { color: $danger; }
+      }
+      &.success {
+        background: $green-soft;
+        mat-icon { color: $green; }
+      }
+    }
+
+    .toggle-body {
+      flex: 1;
+      min-width: 0;
+
+      strong {
+        display: block;
+        font-size: 13.5px;
+        color: $text;
+        font-weight: 600;
+      }
+
+      small {
+        display: block;
+        font-size: 11.5px;
+        color: $text-muted;
+        margin-top: 1px;
+      }
+    }
+  }
+}
+
+// slide toggle brand colors
+::ng-deep .toggle-card mat-slide-toggle {
+  --mdc-switch-selected-handle-color: #ffffff;
+  --mdc-switch-selected-track-color: $teal;
+  --mdc-switch-selected-pressed-track-color: $teal;
+  --mdc-switch-selected-hover-track-color: $teal;
+  --mdc-switch-selected-focus-track-color: $teal;
+  --mdc-switch-unselected-track-color: #cfd9e6;
+  --mdc-switch-unselected-handle-color: #ffffff;
+}
+
+// ------------------------------------------------------------
+//  Footer actions
+// ------------------------------------------------------------
+.form-footer {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 14px 6px 10px;
+  margin: -6px -4px 0;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(8px);
+  border-top: 1px solid $border;
+  border-radius: 0 0 $radius-lg $radius-lg;
+
+  .footer-note {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: $text-muted;
+
+    mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+      color: $teal;
+    }
+  }
+
+  .footer-buttons {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    .btn-cancel {
+      border-radius: 999px;
+      padding: 0 26px;
+      min-height: 42px;
+      color: $text-muted;
+      border-color: #d3dce8;
+      transition: all 0.2s ease;
+
+      &:hover {
+        border-color: $danger;
+        color: $danger;
+        background: $danger-soft;
+      }
+    }
+
+    .btn-submit {
+      border-radius: 999px;
+      padding: 0 28px;
+      min-height: 42px;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+      background: linear-gradient(135deg, $teal, #0f9d8c) !important;
+      color: #fff !important;
+      box-shadow: 0 6px 16px rgba(22, 180, 164, 0.35);
+      transition: all 0.2s ease;
+
+      .btn-content {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+
+        mat-icon {
+          font-size: 18px;
+          width: 18px;
+          height: 18px;
+        }
+      }
+
+      &:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 22px rgba(22, 180, 164, 0.45);
+      }
+
+      &:disabled {
+        opacity: 0.75;
+      }
+    }
+  }
+}
+
+::ng-deep .btn-submit .btn-spinner circle {
+  stroke: #ffffff;
+}
+
+// ------------------------------------------------------------
+//  Responsive
+// ------------------------------------------------------------
+@media (max-width: 820px) {
+  .section-grid .field-span-2 {
+    grid-column: span 1;
+  }
+
+  .form-shell {
+    padding: 18px 18px 22px;
+  }
+
+  .form-footer {
+    justify-content: center;
+
+    .footer-note {
+      display: none;
+    }
+  }
+}

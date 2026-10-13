@@ -1,0 +1,95 @@
+<div class="dlg order-detail-dialog">
+  <header class="dlg-head">
+    <div class="dlg-title">
+      <h2>{{ data.order_number }}</h2>
+      <p>{{ data.reference_label }} &middot; {{ data.order_type }}</p>
+    </div>
+    <button mat-icon-button (click)="close()"><mat-icon>close</mat-icon></button>
+  </header>
+
+  <div class="dlg-body">
+    <!-- Header facts -->
+    <div class="meta-grid">
+      <div class="meta">
+        <span class="meta-label">Status</span>
+        <span class="chip" [ngClass]="'st-' + data.status">{{ data.status }}</span>
+      </div>
+      <div class="meta">
+        <span class="meta-label">Payment</span>
+        <span class="chip" [ngClass]="'pay-' + data.payment_status">{{ data.payment_status }}</span>
+      </div>
+      <div class="meta">
+        <span class="meta-label">Ordered</span>
+        <span class="meta-value">{{ data.ordered_at | date:'dd/MM/yyyy HH:mm' }}</span>
+      </div>
+      <div class="meta" *ngIf="data.table">
+        <span class="meta-label">Table</span>
+        <span class="meta-value">{{ data.table.table_number }}</span>
+      </div>
+      <div class="meta" *ngIf="data.customer">
+        <span class="meta-label">Customer</span>
+        <span class="meta-value">{{ data.customer.name }}</span>
+      </div>
+      <div class="meta" *ngIf="data.kitchen_notes">
+        <span class="meta-label">Kitchen Notes</span>
+        <span class="meta-value">{{ data.kitchen_notes }}</span>
+      </div>
+    </div>
+
+    <!-- Lines -->
+    <h3 class="section">Items</h3>
+    <table class="lines">
+      <thead>
+        <tr><th>Item</th><th>Notes</th><th class="r">Qty</th><th class="r">Rate</th><th class="r">Amount</th></tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let i of data.items">
+          <td class="c">{{ i.item_name }}</td>
+          <td class="notes">
+            <span *ngIf="i.cooking_instructions">{{ i.cooking_instructions }}</span>
+            <span *ngIf="i.spice_level" class="spice">{{ i.spice_level }}</span>
+          </td>
+          <td class="r">{{ i.quantity }}</td>
+          <td class="r">{{ i.unit_price | currencyInr }}</td>
+          <td class="r">{{ i.total_price | currencyInr }}</td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="empty" *ngIf="!data.items?.length">No items on this order.</p>
+
+    <!-- Payments -->
+    <h3 class="section" *ngIf="data.payments?.length">Payments</h3>
+    <table class="lines" *ngIf="data.payments?.length">
+      <thead>
+        <tr><th>Method</th><th>Payer</th><th>Ref</th><th class="r">Amount</th></tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let p of data.payments">
+          <td class="c">{{ p.payment_method }}</td>
+          <td>{{ p.split_payer_name || '-' }}</td>
+          <td class="ref">{{ p.transaction_ref || '-' }}</td>
+          <td class="r">{{ p.amount | currencyInr }}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Totals -->
+    <div class="totals">
+      <div class="tot-row"><span>Subtotal</span><span>{{ data.subtotal | currencyInr }}</span></div>
+      <div class="tot-row"><span>Tax</span><span>{{ data.tax_amount | currencyInr }}</span></div>
+      <div class="tot-row"><span>Discount</span><span>{{ data.discount_amount | currencyInr }}</span></div>
+      <div class="tot-row grand"><span>Total</span><span>{{ data.total_amount | currencyInr }}</span></div>
+      <div class="tot-row paid"><span>Paid</span><span>{{ data.paid_amount | currencyInr }}</span></div>
+      <div class="tot-row due" *ngIf="data.due_amount !== '0.00'">
+        <span>Due</span><span>{{ data.due_amount | currencyInr }}</span>
+      </div>
+    </div>
+  </div>
+
+  <footer class="dlg-foot">
+    <button mat-stroked-button (click)="close()">Close</button>
+    <button mat-raised-button color="primary" (click)="printBill()">
+      <mat-icon>print</mat-icon> Print Bill
+    </button>
+  </footer>
+</div>

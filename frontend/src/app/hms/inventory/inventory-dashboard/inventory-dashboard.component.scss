@@ -1,0 +1,151 @@
+// ============================================================
+//  INVENTORY SHELL — Categories / Inventory tabbed host
+//  Brand: navy #003366 / teal #16b4a4
+//  Owns the page background, padding and vertical budget so the
+//  routed children only render their table-card / form-shell.
+// ============================================================
+
+$navy: #003366;
+$navy-light: #0a4387;
+$navy-soft: #eef3fa;
+$teal: #16b4a4;
+$page-bg: #f2f6fc;
+$card-bg: #ffffff;
+$border: #e2e8f0;
+$text: #1c2b3a;
+$text-muted: #64748b;
+$radius: 14px;
+
+// ------------------------------------------------------------
+//  Page shell — same background recipe as the other list pages
+// ------------------------------------------------------------
+.inventory-shell {
+  height: calc(100vh - 110px);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 20px 16px;
+  box-sizing: border-box;
+  background:
+    radial-gradient(1200px 400px at 85% -10%, rgba(22, 180, 164, 0.10), transparent 60%),
+    radial-gradient(900px 380px at -10% -10%, rgba(10, 67, 135, 0.08), transparent 55%),
+    $page-bg;
+}
+
+// ------------------------------------------------------------
+//  Tab bar — pill tabs inside a white card
+// ------------------------------------------------------------
+.inventory-tabs {
+  flex: 0 0 auto;
+  background: $card-bg;
+  border: 1px solid $border;
+  border-radius: $radius;
+  box-shadow: 0 4px 16px rgba(15, 42, 77, 0.05);
+  padding: 5px;
+  overflow: visible; // keep the focus ring from being clipped
+
+  // Material colours the tab label text through these custom
+  // properties, NOT through inheritance from a wrapper — it sets
+  // `color` straight on `.mdc-tab__text-label` for the active,
+  // hover and focus states. Overriding the variables is the only way
+  // to win, otherwise the theme's default indigo (#3f51b5) shows
+  // through once a tab is hovered/activated.
+  --mat-tab-header-active-label-text-color: #ffffff;
+  --mat-tab-header-active-hover-label-text-color: #ffffff;
+  --mat-tab-header-active-focus-label-text-color: #ffffff;
+  --mat-tab-header-inactive-label-text-color: #{$text-muted};
+  --mat-tab-header-inactive-hover-label-text-color: #{$navy};
+  --mat-tab-header-inactive-focus-label-text-color: #{$navy};
+  --mat-tab-header-active-ripple-color: rgba(255, 255, 255, 0.22);
+  --mat-tab-header-inactive-ripple-color: rgba(0, 51, 102, 0.08);
+}
+
+// the tabs carry no body content (routing drives the view), so the
+// tab body must not reserve any height
+::ng-deep .inventory-tabs .mat-mdc-tab-body-wrapper {
+  display: none;
+}
+
+::ng-deep .inventory-tabs .mat-mdc-tab {
+  min-width: 0;
+  height: 38px;
+  padding: 0 18px;
+  border-radius: 10px;
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+
+  .mdc-tab__text-label {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+  }
+
+  // the active state is carried by the pill background instead
+  .mdc-tab-indicator {
+    display: none;
+  }
+}
+
+::ng-deep .inventory-tabs .mat-mdc-tab.mdc-tab--active {
+  background: linear-gradient(135deg, $navy, $navy-light);
+  box-shadow: 0 4px 12px rgba(0, 51, 102, 0.25);
+}
+
+::ng-deep .inventory-tabs .mat-mdc-tab:not(.mdc-tab--active):hover {
+  background: $navy-soft;
+}
+
+// tab label content (icon + text)
+.tab-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  // colour the text directly too — the custom properties above cover
+  // Material's own states, this guarantees the resting appearance
+  color: $text-muted;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    color: $navy;
+  }
+}
+
+// active tab: white icon + white text
+::ng-deep .inventory-tabs .mat-mdc-tab.mdc-tab--active .tab-label {
+  color: #ffffff;
+
+  mat-icon {
+    color: #ffffff;
+  }
+}
+
+// header padding comes from the card, not Material
+::ng-deep .inventory-tabs .mat-mdc-tab-header {
+  border-bottom: none;
+}
+
+::ng-deep .inventory-tabs .mdc-tab {
+  min-width: 0;
+  padding: 0;
+}
+
+// ------------------------------------------------------------
+//  Routed child area — one flex child fills the remaining space
+// ------------------------------------------------------------
+.tab-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+// ------------------------------------------------------------
+//  Responsive
+// ------------------------------------------------------------
+@media (max-width: 1000px) {
+  .inventory-shell {
+    padding: 8px 14px 14px;
+  }
+}

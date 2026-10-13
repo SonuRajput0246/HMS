@@ -1,0 +1,551 @@
+// ============================================================
+//  DELETE ACCOUNT — styled HMS form
+//  Brand: navy #003366 / teal #16b4a4
+//  Irreversible, so this page stays red throughout — the
+//  counterpart to the amber deactivate-account page.
+// ============================================================
+
+$navy: #003366;
+$navy-light: #0a4387;
+$navy-soft: #eef3fa;
+$teal: #16b4a4;
+$teal-soft: #e2f6f3;
+$page-bg: #f2f6fc;
+$card-bg: #ffffff;
+$text: #1c2b3a;
+$text-muted: #64748b;
+$border: #e2e8f0;
+$danger: #dc2626;
+$danger-dark: #b91c1c;
+$danger-soft: #fee2e2;
+$radius-lg: 18px;
+$radius: 12px;
+
+// ------------------------------------------------------------
+//  Page wrapper
+// ------------------------------------------------------------
+.delete-page {
+  height: calc(100vh - 110px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 20px 16px;
+  gap: 10px;
+  box-sizing: border-box;
+  overflow-y: auto;
+  background:
+    radial-gradient(1200px 400px at 85% -10%, rgba(22, 180, 164, 0.10), transparent 60%),
+    radial-gradient(900px 380px at -10% -10%, rgba(10, 67, 135, 0.08), transparent 55%),
+    $page-bg;
+}
+
+.delete-card {
+  width: 100%;
+  max-width: 720px;
+  // This card is a flex item in a fixed-height column, so it would be
+  // squeezed below its content height and — because of overflow:hidden —
+  // clip the Security confirmation field off the bottom. Keep its natural
+  // height and let .delete-page scroll instead.
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: $card-bg;
+  border: 1px solid $border;
+  border-radius: $radius-lg;
+  box-shadow: 0 6px 24px rgba(15, 42, 77, 0.06);
+  overflow: hidden;
+}
+
+// ------------------------------------------------------------
+//  Header
+// ------------------------------------------------------------
+.delete-header {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 20px 24px;
+  background: linear-gradient(135deg, $danger, $danger-dark);
+
+  .head-icon {
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.16);
+    border: 1px solid rgba(255, 255, 255, 0.32);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.20);
+
+    mat-icon {
+      color: #fff;
+      font-size: 22px;
+      width: 22px;
+      height: 22px;
+    }
+  }
+
+  .head-text {
+    min-width: 0;
+
+    h3 {
+      margin: 0;
+      font-size: 16.5px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: 0.2px;
+    }
+
+    p {
+      margin: 3px 0 0;
+      font-size: 12.5px;
+      color: rgba(255, 255, 255, 0.86);
+    }
+  }
+}
+
+.card-body {
+  padding: 22px 24px 6px;
+}
+
+// ------------------------------------------------------------
+//  "What happens" block
+// ------------------------------------------------------------
+.info-block {
+  padding: 16px 18px;
+  margin-bottom: 24px;
+  background: $danger-soft;
+  border: 1px solid #f8cfcf;
+  border-radius: 14px;
+}
+
+.block-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: $danger-dark;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    color: $danger;
+  }
+}
+
+.info-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 5px 0;
+    font-size: 13px;
+    line-height: 1.45;
+    color: $text;
+  }
+
+  // red cross instead of a bullet — these are losses, not facts
+  .mark {
+    flex: 0 0 auto;
+    width: 18px;
+    height: 18px;
+    font-size: 18px;
+    line-height: 18px;
+    text-align: center;
+    border-radius: 50%;
+    color: $danger;
+  }
+}
+
+// ------------------------------------------------------------
+//  Sections
+// ------------------------------------------------------------
+.form-section + .form-section {
+  margin-top: 24px;
+  padding-top: 22px;
+  border-top: 1px dashed #dfe7f1;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+
+  .head-icon {
+    width: 38px;
+    height: 38px;
+    flex: 0 0 38px;
+    border-radius: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, $navy, $navy-light);
+    box-shadow: 0 4px 10px rgba(0, 51, 102, 0.25);
+
+    mat-icon {
+      color: #fff;
+      font-size: 19px;
+      width: 19px;
+      height: 19px;
+    }
+
+    // the confirmation step is the last gate — flag it red
+    &.is-danger {
+      background: linear-gradient(135deg, $danger, $danger-dark);
+      box-shadow: 0 4px 10px rgba(220, 38, 38, 0.28);
+    }
+  }
+
+  .head-text {
+    min-width: 0;
+
+    h3 {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0;
+      font-size: 15px;
+      font-weight: 700;
+      color: $navy;
+      letter-spacing: 0.2px;
+    }
+
+    p {
+      margin: 2px 0 0;
+      font-size: 12.5px;
+      color: $text-muted;
+    }
+  }
+}
+
+.optional {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: $navy-soft;
+  border: 1px solid #dbe4f0;
+  color: $text-muted;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.required {
+  color: $danger;
+  font-weight: 700;
+}
+
+.section-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+// ------------------------------------------------------------
+//  Material outlined field refinement
+// ------------------------------------------------------------
+::ng-deep .delete-card .mat-mdc-form-field {
+  --mat-form-field-container-height: 48px;
+  --mat-form-field-container-vertical-padding: 12px;
+  font-size: 13px;
+}
+
+::ng-deep .delete-card .mat-mdc-text-field-wrapper {
+  background: #f8fafd;
+  border-radius: 12px !important;
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+::ng-deep .delete-card .mat-mdc-form-field-flex {
+  align-items: center;
+}
+
+::ng-deep .delete-card .mat-mdc-text-field-wrapper.mdc-text-field--focused {
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(0, 51, 102, 0.12);
+}
+::ng-deep .delete-card .mat-mdc-text-field-wrapper.mdc-text-field--invalid {
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.10);
+}
+
+::ng-deep .delete-card .mdc-notched-outline__leading {
+  border-radius: 12px 0 0 12px !important;
+}
+::ng-deep .delete-card .mdc-notched-outline__trailing {
+  border-radius: 0 12px 12px 0 !important;
+}
+::ng-deep .delete-card .mdc-notched-outline__notch {
+  border-right: none !important;
+}
+::ng-deep .delete-card .mdc-notched-outline > * {
+  border-color: #dbe4f0 !important;
+}
+::ng-deep .delete-card .mat-mdc-text-field-wrapper.mdc-text-field--focused:not(.mdc-text-field--invalid) .mdc-notched-outline > * {
+  border-color: $navy !important;
+  border-width: 1.5px !important;
+}
+::ng-deep .delete-card .mat-mdc-text-field-wrapper.mdc-text-field--invalid .mdc-notched-outline > * {
+  border-color: $danger !important;
+}
+
+::ng-deep .delete-card .mdc-floating-label {
+  color: #7d8ea3;
+  font-size: 14px;
+}
+::ng-deep .delete-card .mdc-floating-label--float-above {
+  color: $navy !important;
+  font-size: 14px !important;
+  font-weight: 600;
+}
+::ng-deep .delete-card .mat-mdc-text-field--invalid .mdc-floating-label--float-above {
+  color: $danger !important;
+}
+
+::ng-deep .delete-card .mat-mdc-input-element,
+::ng-deep .delete-card .mat-mdc-select-value-text {
+  font-size: 14px !important;
+  color: $text !important;
+  font-weight: 500;
+  caret-color: $navy;
+}
+
+// password input — tracked so secrets are verifiable character-by-character
+::ng-deep .delete-card input[type="password"] {
+  letter-spacing: 1.5px;
+}
+
+::ng-deep .delete-card .mat-mdc-select-arrow {
+  color: $navy;
+}
+
+::ng-deep .delete-card .field-icon {
+  color: $navy;
+  padding: 0 4px 0 12px;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+}
+
+::ng-deep .delete-card .mat-mdc-form-field-icon-suffix .mat-mdc-icon-button {
+  color: $navy;
+
+  &:hover {
+    background: $navy-soft;
+  }
+}
+
+::ng-deep .delete-card .mdc-line-ripple::before,
+::ng-deep .delete-card .mdc-line-ripple::after {
+  display: none;
+}
+
+::ng-deep .delete-card .mat-mdc-form-field-hint {
+  font-size: 11.5px;
+  color: #94a3b8;
+}
+
+::ng-deep .delete-card .mat-mdc-form-field-error {
+  font-size: 11.5px;
+  font-weight: 500;
+}
+
+// textareas keep their natural multi-line height
+::ng-deep .delete-card textarea.mat-mdc-input-element {
+  resize: none;
+  line-height: 1.5;
+}
+
+// ------------------------------------------------------------
+//  Mat-select panel (CDK overlay — reached via panelClass)
+// ------------------------------------------------------------
+// ------------------------------------------------------------
+//  Enum loading label (spinner shown while the options load)
+// ------------------------------------------------------------
+.label-loader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #7d8ea3;
+}
+
+::ng-deep .cdk-overlay-container div.delete-select-panel.mat-mdc-select-panel {
+  --mat-select-panel-background-color: #ffffff;
+  background-color: #ffffff;
+  border: 1px solid #d5e0ee;
+  border-radius: 12px;
+  padding: 6px;
+  box-shadow: 0 12px 30px rgba(0, 51, 102, 0.18);
+  overflow-y: auto;
+}
+
+::ng-deep .delete-select-panel .mat-mdc-option {
+  min-height: 36px;
+  padding: 0 12px;
+  margin: 1px 0;
+  border-radius: 9px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: $text;
+
+  &:hover:not(.mat-mdc-option-disabled) {
+    background: $navy-soft;
+    color: $navy;
+  }
+
+  &.mat-mdc-option-active:not(:hover) {
+    background: transparent;
+    color: $text;
+  }
+
+  &.mat-mdc-option-selected:not(.mat-mdc-option-disabled) {
+    background: $teal-soft;
+    color: $teal;
+    box-shadow: inset 3px 0 0 $teal;
+
+    .mdc-list-item__primary-text {
+      font-weight: 700;
+    }
+  }
+
+  .mat-pseudo-checkbox {
+    display: none;
+  }
+}
+
+// ------------------------------------------------------------
+//  Action bar
+// ------------------------------------------------------------
+.action-bar {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 15px 24px;
+  background: #fbfcfe;
+  border-top: 1px solid $border;
+}
+
+.action-left {
+  min-width: 0;
+
+  strong {
+    display: block;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: $danger-dark;
+  }
+
+  span {
+    display: block;
+    font-size: 12px;
+    color: $text-muted;
+    margin-top: 2px;
+  }
+}
+
+.action-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.btn-cancel {
+  border-radius: 999px !important;
+  padding: 0 24px !important;
+  min-height: 42px;
+  color: $text-muted !important;
+  border-color: #d3dce8 !important;
+  background: #ffffff !important;
+  font-size: 13.5px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: $navy !important;
+    color: $navy !important;
+    background: $navy-soft;
+  }
+}
+
+.btn-danger {
+  border-radius: 999px !important;
+  padding: 0 26px !important;
+  min-height: 42px;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  background: linear-gradient(135deg, $danger, $danger-dark) !important;
+  color: #fff !important;
+  box-shadow: 0 6px 16px rgba(220, 38, 38, 0.32);
+  transition: all 0.2s ease;
+
+  .btn-content {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+
+    mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
+  }
+
+  &:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 22px rgba(220, 38, 38, 0.42);
+  }
+
+  &:disabled {
+    opacity: 0.7;
+  }
+}
+
+::ng-deep .btn-danger .btn-spinner circle {
+  stroke: #ffffff;
+}
+
+// ------------------------------------------------------------
+//  Responsive
+// ------------------------------------------------------------
+@media (max-width: 720px) {
+  .delete-page {
+    padding: 8px 14px 14px;
+  }
+
+  .delete-header,
+  .card-body {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .action-bar {
+    padding: 13px 16px;
+    flex-direction: column;
+    align-items: stretch;
+
+    .action-right {
+      width: 100%;
+
+      button {
+        flex: 1;
+      }
+    }
+  }
+}

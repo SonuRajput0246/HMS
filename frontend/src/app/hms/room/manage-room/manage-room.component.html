@@ -1,0 +1,155 @@
+<app-navigation-bar [navData]="navData"></app-navigation-bar>
+
+<div class="top-sub-nav-controls">
+    <button type="button" mat-raised-button color="primary" routerLink="/hms/rooms">
+        <mat-icon>arrow_back</mat-icon> Back
+    </button>
+</div>
+
+<div class="manage-room-page">
+
+    <div class="in_up_form form-scroll">
+
+        <form [formGroup]="roomForm" (ngSubmit)="insertUpdateRoom()" autocomplete="off">
+            <div class="form-shell manage-room-form">
+
+                <!-- ================= Room Information ================= -->
+                <section class="form-section">
+                    <header class="section-header">
+                        <span class="head-icon"><mat-icon>meeting_room</mat-icon></span>
+                        <div class="head-text">
+                            <h3>Room Information</h3>
+                            <p>Basic room details and type</p>
+                        </div>
+                    </header>
+
+                    <div class="section-grid">
+                        <mat-form-field appearance="outline" floatLabel="always">
+                            <mat-label>Room Number</mat-label>
+                            <input matInput type="text" formControlName="room_number" placeholder="Enter Room Number">
+                            <mat-error *ngIf="roomForm.get('room_number')?.hasError('required')">
+                                Room Number is required
+                            </mat-error>
+                        </mat-form-field>
+
+                        <mat-form-field appearance="outline"
+                            [floatLabel]="isRoomTypeLoading ? 'auto' : 'always'" [hideRequiredMarker]="isRoomTypeLoading">
+                            <mat-label>
+                                <span class="label-loader" *ngIf="isRoomTypeLoading; else roleLabel">
+                                    <span>Loading...</span>
+                                    <mat-spinner diameter="16"></mat-spinner>
+                                </span>
+                                <ng-template #roleLabel>Room Type</ng-template>
+                            </mat-label>
+                            <mat-select formControlName="room_type_id" placeholder="Choose Room Type" [disabled]="isRoomTypeLoading"
+                                panelClass="manage-room-select-panel">
+                                <mat-option *ngFor="let item of roomTypesList" [value]="item.id">
+                                    {{ item.name }}
+                                </mat-option>
+                            </mat-select>
+                            <mat-error *ngIf="roomForm.get('room_type_id')?.hasError('required')">
+                                Room Type is required
+                            </mat-error>
+                        </mat-form-field>
+
+                        <mat-form-field appearance="outline" floatLabel="always">
+                            <mat-label>Floor Number</mat-label>
+                            <input matInput formControlName="floor_number" inputmode="numeric"
+                                (keypress)="allowOnlyNumbers($event)" placeholder="Enter Floor Number">
+                            <mat-error *ngIf="roomForm.get('floor_number')?.hasError('required')">
+                                Floor Number is required
+                            </mat-error>
+                        </mat-form-field>
+
+                        <mat-form-field appearance="outline"
+                            [floatLabel]="isRoomStatusLoading ? 'auto' : 'always'" [hideRequiredMarker]="isRoomStatusLoading">
+                            <mat-label>
+                                <span class="label-loader" *ngIf="isRoomStatusLoading; else statusLabel">
+                                    <span>Loading...</span>
+                                    <mat-spinner diameter="16"></mat-spinner>
+                                </span>
+                                <ng-template #statusLabel>Room Status</ng-template>
+                            </mat-label>
+                            <mat-select formControlName="room_status" placeholder="Choose Room Status"
+                                [disabled]="isRoomStatusLoading" panelClass="manage-room-select-panel">
+                                <mat-option *ngFor="let item of roomStatusList" [value]="item.option_key">
+                                    {{ item.option_label }}
+                                </mat-option>
+                            </mat-select>
+                            <mat-error *ngIf="roomForm.get('room_status')?.hasError('required')">
+                                Room status is required
+                            </mat-error>
+                        </mat-form-field>
+
+                        <mat-form-field appearance="outline" floatLabel="always">
+                            <mat-label>View</mat-label>
+                            <input matInput type="text" formControlName="view" placeholder="Enter View">
+                            <mat-error *ngIf="roomForm.get('view')?.hasError('required')">
+                                View is required
+                            </mat-error>
+                        </mat-form-field>
+
+                        <mat-form-field appearance="outline" floatLabel="always" class="field-span-2">
+                            <mat-label>Notes</mat-label>
+                            <textarea matInput formControlName="notes" rows="1" maxlength="250"
+                                placeholder="Enter Notes"></textarea>
+                        </mat-form-field>
+                    </div>
+                </section>
+
+                <!-- ================= Status ================= -->
+                <section class="form-section">
+                    <header class="section-header">
+                        <span class="head-icon"><mat-icon>tune</mat-icon></span>
+                        <div class="head-text">
+                            <h3>Status</h3>
+                            <p>Whether this room is active</p>
+                        </div>
+                    </header>
+
+                    <div class="toggle-grid">
+                        <div class="toggle-card">
+                            <span class="toggle-icon success"><mat-icon>check_circle</mat-icon></span>
+                            <div class="toggle-body">
+                                <strong>Active Status</strong>
+                                <small>Room is available for booking</small>
+                            </div>
+                            <mat-slide-toggle formControlName="is_active"></mat-slide-toggle>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+
+            <!-- Footer Actions -->
+            <div class="form-footer">
+                <div class="footer-note">
+                    <mat-icon>info</mat-icon>
+                    <span>Room details can be updated anytime</span>
+                </div>
+
+                <div class="footer-buttons">
+                    <button mat-stroked-button type="button" class="btn-cancel" routerLink="/hms/rooms">
+                        Cancel
+                    </button>
+                    <button mat-flat-button type="submit" class="btn-submit" [disabled]="isLoading">
+                        <span class="btn-content" *ngIf="!isLoading">
+                            <mat-icon>{{ roomObj.id > 0 ? 'save' : 'add' }}</mat-icon>
+                            {{ roomObj.id > 0 ? 'Update Room' : 'Add Room' }}
+                        </span>
+                        <span class="btn-content" *ngIf="isLoading">
+                            Please Wait
+                            <mat-progress-spinner diameter="18" mode="indeterminate" class="btn-spinner">
+                            </mat-progress-spinner>
+                        </span>
+                    </button>
+                </div>
+            </div>
+        </form>
+
+        <ng-container *ngIf="isPageLoad">
+            <app-page-loader></app-page-loader>
+        </ng-container>
+    </div>
+
+</div>

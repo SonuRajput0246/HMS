@@ -1,0 +1,166 @@
+<app-navigation-bar [navData]="navData"></app-navigation-bar>
+
+<div class="top-sub-nav-controls">
+    <button type="button" mat-raised-button color="primary" routerLink="/hms/reservations/available-rooms">
+        <mat-icon>add</mat-icon> Reserve Room
+    </button>
+</div>
+
+<div class="reservations-page">
+
+    <!-- Table card — same structure as select-guest: fixed header, only body scrolls, fixed paginator -->
+    <div class="table-card">
+
+        <header class="table-header">
+            <div class="table-title">
+                <span class="head-icon"><mat-icon>event_note</mat-icon></span>
+                <div class="head-text">
+                    <h3>All Reservations</h3>
+                    <p>Every reservation record across the hotel</p>
+                </div>
+            </div>
+
+            <div class="filter-controls">
+                <mat-form-field appearance="outline" floatLabel="always" class="custom-input" matTooltip="MM/DD/YYYY – MM/DD/YYYY"
+                    matTooltipPosition="above" matTooltipClass="compact-tooltip">
+                    <mat-label>Enter a date range</mat-label>
+                    <mat-date-range-input [rangePicker]="picker">
+                        <input matStartDate placeholder="Start date" [(ngModel)]="requestData.from_date"
+                            (dateChange)="applyFilter()">
+                        <input matEndDate placeholder="End date" [(ngModel)]="requestData.to_date" (dateChange)="applyFilter()">
+                    </mat-date-range-input>
+                    <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
+                    <mat-date-range-picker #picker panelClass="reservation-range-picker"></mat-date-range-picker>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline" floatLabel="always" class="custom-input">
+                    <mat-label>Room Number</mat-label>
+                    <input matInput [(ngModel)]="requestData.search_room_number_value" placeholder="Enter room number" (keyup)="applyFilter()">
+                </mat-form-field>
+
+                <mat-form-field appearance="outline" class="custom-input"
+                    [floatLabel]="isStatusLoading ? 'auto' : 'always'" [hideRequiredMarker]="isStatusLoading">
+                    <mat-label>
+                        <span class="label-loader" *ngIf="isStatusLoading; else statusFilterLabel">
+                            <span>Loading...</span>
+                            <mat-spinner diameter="16"></mat-spinner>
+                        </span>
+                        <ng-template #statusFilterLabel>Status</ng-template>
+                    </mat-label>
+                    <mat-select [(ngModel)]="requestData.reservation_status" (selectionChange)="applyFilter()"
+                        [disabled]="isStatusLoading" panelClass="compact-select-panel">
+                        <mat-option value="">All</mat-option>
+                        <mat-option *ngFor="let item of statusList" [value]="item.option_key">
+                            {{ item.option_label }}
+                        </mat-option>
+                    </mat-select>
+                </mat-form-field>
+
+                <div class="filter-action">
+                    <button mat-button color="warn" (click)="clearFilter()">
+                        <mat-icon>filter_alt_off</mat-icon> Clear Filters
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <div class="table-scroll">
+            <ng-container *ngIf="!isPageLoad">
+                <table mat-table [dataSource]="dataSource" class="reservations-table">
+
+                    <ng-container matColumnDef="sr">
+                        <th mat-header-cell *matHeaderCellDef style="width: 4%;"> Sr. No. </th>
+                        <td mat-cell *matCellDef="let element;let i=index"> {{
+                            (requestData.page_size!*(requestData.page_number!-1)) + (i+1)}} </td>
+                    </ng-container>
+
+                    <ng-container matColumnDef="reservationNumber">
+                        <th mat-header-cell *matHeaderCellDef style="width: 13%;"> Reservation No. </th>
+                        <td mat-cell *matCellDef="let element">{{element.reservation_number}}</td>
+                    </ng-container>
+
+                    <ng-container matColumnDef="roomNumber">
+                        <th mat-header-cell *matHeaderCellDef style="width: 6%;"> Room No. </th>
+                        <td mat-cell *matCellDef="let element"> {{element.room_number}} </td>
+                    </ng-container>
+                    <ng-container matColumnDef="checkInDate">
+                        <th mat-header-cell *matHeaderCellDef style="width: 9%;"> Check In Date </th>
+                        <td mat-cell *matCellDef="let element">{{ element.check_in_date | date:'dd MMM yyyy' }}</td>
+                    </ng-container>
+
+                    <ng-container matColumnDef="checkOutDate">
+                        <th mat-header-cell *matHeaderCellDef style="width: 9%;"> Check Out Date </th>
+                        <td mat-cell *matCellDef="let element">{{element.check_out_date | date:'dd MMM yyyy' }}</td>
+                    </ng-container>
+
+                    <ng-container matColumnDef="totalNights">
+                        <th mat-header-cell *matHeaderCellDef style="width: 4%;"> Nights </th>
+                        <td mat-cell *matCellDef="let element">{{element.total_nights}}</td>
+                    </ng-container>
+
+                    <ng-container matColumnDef="totalAmount">
+                        <th mat-header-cell *matHeaderCellDef style="width: 8%;"> Total Amount </th>
+                        <td mat-cell *matCellDef="let element">
+                            <span class="amount-cell">{{element.total_amount}}</span>
+                        </td>
+                    </ng-container>
+
+                    <ng-container matColumnDef="status">
+                        <th mat-header-cell *matHeaderCellDef style="text-align: center; width: 10%;"> Reservation Status </th>
+                        <td mat-cell *matCellDef="let element" style="text-align: center;">
+                            <span class="status-pill" [ngClass]="'st-' + element.reservation_status">{{ element.reservation_status | snakeToTitle }}</span>
+                        </td>
+                    </ng-container>
+                    <ng-container matColumnDef="createdBy">
+                        <th mat-header-cell *matHeaderCellDef style="width: 8%;"> Created By </th>
+                        <td mat-cell *matCellDef="let element">{{element.created_by}}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="createdAt">
+                        <th mat-header-cell *matHeaderCellDef style="width: 10%;"> Created At </th>
+                        <td mat-cell *matCellDef="let element">{{element.created_at | date:'dd MMM yyyy, hh:mm a' }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="actions">
+                        <th style="text-align: center;width: 5%;" mat-header-cell *matHeaderCellDef> Action </th>
+                        <td style="text-align: center;" mat-cell *matCellDef="let element">
+                            <button class="action-btn" mat-icon-button [matMenuTriggerFor]="structureaction" (click)="$event.stopPropagation();">
+                                <mat-icon>more_vert</mat-icon>
+                            </button>
+                            <mat-menu class="table-actions" #structureaction="matMenu" xPosition="before" overlapTrigger="true">
+                                <button mat-menu-item color="primary" class="menu-item" (click)="onView(element);">
+                                    <mat-icon>visibility</mat-icon> View
+                                </button>
+                                <button mat-menu-item color="primary" class="menu-item" (click)="onEdit(element);">
+                                    <mat-icon>edit</mat-icon> Edit
+                                </button>
+                                <button mat-menu-item color="warn" class="menu-item delete-item" (click)="onDelete(element);">
+                                    <mat-icon>delete</mat-icon> Delete
+                                </button>
+                            </mat-menu>
+                        </td>
+                    </ng-container>
+
+                    <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></tr>
+                    <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+
+                    <!-- Empty state -->
+                    <tr mat-no-data-row *matNoDataRow>
+                        <td class="no-data" [attr.colspan]="displayedColumns.length">
+                            <mat-icon>event_busy</mat-icon>
+                            <span>No reservations found for the selected filters.</span>
+                        </td>
+                    </tr>
+                </table>
+            </ng-container>
+        </div>
+
+        <footer class="table-footer" *ngIf="!isPageLoad">
+            <mat-paginator #paginator [pageIndex]="requestData.page_number!-1" [length]="pageDet.total_docs"
+                [pageSize]="pageDet.limit" [pageSizeOptions]="[10, 20, 50]" (page)="onPaginateChange($event)"
+                showFirstLastButtons>
+            </mat-paginator>
+        </footer>
+    </div>
+
+</div>
+
+<app-page-loader *ngIf="isPageLoad"></app-page-loader>

@@ -1,0 +1,182 @@
+<div class="order-list-shell">
+  <app-navigation-bar [navData]="navData"></app-navigation-bar>
+
+  <div class="order-list-content">
+    <!-- Filters Section -->
+    <mat-card class="filter-card">
+      <mat-card-content>
+        <div class="filter-row">
+          <mat-form-field appearance="outline" class="search-field">
+            <mat-label>Search Orders</mat-label>
+            <input matInput [(ngModel)]="searchValue" placeholder="Order number, table, customer..." (keyup)="applyFilter()">
+            <mat-icon matSuffix>search</mat-icon>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="filter-field">
+            <mat-label>Status</mat-label>
+            <mat-select [(ngModel)]="statusFilter" (selectionChange)="onStatusFilterChange()">
+              <mat-option value="">All Statuses</mat-option>
+              <mat-option *ngFor="let s of ORDER_STATUSES" [value]="s">{{ getStatusLabel(s) }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="filter-field">
+            <mat-label>Payment Status</mat-label>
+            <mat-select [(ngModel)]="paymentStatusFilter" (selectionChange)="onPaymentStatusFilterChange()">
+              <mat-option value="">All</mat-option>
+              <mat-option *ngFor="let s of PAYMENT_STATUSES" [value]="s">{{ getPaymentStatusLabel(s) }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="date-field">
+            <mat-label>From Date</mat-label>
+            <input matInput [matDatepicker]="fromPicker" [(ngModel)]="fromDate" (dateChange)="onDateFilterChange()">
+            <mat-datepicker-toggle matIconSuffix [for]="fromPicker"></mat-datepicker-toggle>
+            <mat-datepicker #fromPicker></mat-datepicker>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="date-field">
+            <mat-label>To Date</mat-label>
+            <input matInput [matDatepicker]="toPicker" [(ngModel)]="toDate" (dateChange)="onDateFilterChange()">
+            <mat-datepicker-toggle matIconSuffix [for]="toPicker"></mat-datepicker-toggle>
+            <mat-datepicker #toPicker></mat-datepicker>
+          </mat-form-field>
+
+          <button mat-stroked-button color="warn" (click)="clearFilter()" class="clear-btn">
+            <mat-icon>filter_alt_off</mat-icon> Clear All
+          </button>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Orders Table -->
+    <mat-card class="table-card">
+      <mat-card-content>
+        <div class="table-header">
+          <div class="table-title">
+            <span class="head-icon"><mat-icon>receipt_long</mat-icon></span>
+            <div class="head-text">
+              <h3>All Orders</h3>
+              <p>{{ pageDet.total_docs }} orders • Page {{ requestData.page_number }} of {{ (pageDet.total_docs > 0 ? Math.ceil(pageDet.total_docs / pageDet.limit) : 1) }}</p>
+            </div>
+          </div>
+        </div>
+
+        <ng-container *ngIf="!isPageLoad">
+            <div class="table-scroll">
+              <table mat-table [dataSource]="dataSource" class="order-table">
+
+                <!-- Sr. No. -->
+                <ng-container matColumnDef="sr">
+                  <th mat-header-cell *matHeaderCellDef style="width: 6%;"> Sr. No. </th>
+                  <td mat-cell *matCellDef="let element; let i = index">
+                    {{ (requestData.page_size! * (requestData.page_number! - 1)) + (i + 1) }}
+                  </td>
+                </ng-container>
+
+                <!-- Order Number -->
+                <ng-container matColumnDef="order_number">
+                  <th mat-header-cell *matHeaderCellDef style="width: 14%;"> Order No. </th>
+                  <td mat-cell *matCellDef="let element">
+                    <span class="cell-strong">{{ element.order_number }}</span>
+                  </td>
+                </ng-container>
+
+                <!-- Reference -->
+                <ng-container matColumnDef="reference_label">
+                  <th mat-header-cell *matHeaderCellDef style="width: 16%;"> Table / Customer </th>
+                  <td mat-cell *matCellDef="let element">
+                    <span class="cell-reference">{{ element.reference_label }}</span>
+                  </td>
+                </ng-container>
+
+                <!-- Ordered At -->
+                <ng-container matColumnDef="ordered_at">
+                  <th mat-header-cell *matHeaderCellDef style="width: 14%;"> Ordered At </th>
+                  <td mat-cell *matCellDef="let element">
+                    {{ element.ordered_at ? (element.ordered_at | date:'dd/MM/yyyy HH:mm') : '-' }}
+                  </td>
+                </ng-container>
+
+                <!-- Item Count -->
+                <ng-container matColumnDef="item_count">
+                  <th mat-header-cell *matHeaderCellDef style="width: 8%; text-align: center;"> Items </th>
+                  <td mat-cell *matCellDef="let element" style="text-align: center;">
+                    {{ element.item_count }}
+                  </td>
+                </ng-container>
+
+                <!-- Total Amount -->
+                <ng-container matColumnDef="total_amount">
+                  <th mat-header-cell *matHeaderCellDef style="width: 12%; text-align: right;"> Total </th>
+                  <td mat-cell *matCellDef="let element" style="text-align: right;">
+                    <span class="cell-amount">{{ element.total_amount | currencyInr }}</span>
+                  </td>
+                </ng-container>
+
+                <!-- Payment Status -->
+                <ng-container matColumnDef="payment_status">
+                  <th mat-header-cell *matHeaderCellDef style="width: 12%;"> Payment </th>
+                  <td mat-cell *matCellDef="let element">
+                    <span class="payment-status-pill" [ngClass]="getPaymentStatusClass(element.payment_status)">
+                      {{ getPaymentStatusLabel(element.payment_status) }}
+                    </span>
+                  </td>
+                </ng-container>
+
+                <!-- Status -->
+                <ng-container matColumnDef="status">
+                  <th mat-header-cell *matHeaderCellDef style="width: 10%;"> Status </th>
+                  <td mat-cell *matCellDef="let element">
+                    <span class="status-pill" [ngClass]="getStatusClass(element.status)">
+                      {{ getStatusLabel(element.status) }}
+                    </span>
+                  </td>
+                </ng-container>
+
+                <!-- Actions -->
+                <ng-container matColumnDef="actions">
+                  <th mat-header-cell *matHeaderCellDef style="width: 10%;"> Actions </th>
+                  <td mat-cell *matCellDef="let element" style="text-align: center;">
+                    <button mat-icon-button [matMenuTriggerFor]="actionMenu" class="action-btn" (click)="$event.stopPropagation();">
+                      <mat-icon>more_vert</mat-icon>
+                    </button>
+                    <mat-menu #actionMenu="matMenu" xPosition="before" overlapTrigger="true">
+                      <button mat-menu-item (click)="onRowClick(element)">
+                        <mat-icon>visibility</mat-icon> View Details
+                      </button>
+                      <button mat-menu-item *ngIf="element.status === 'pending' || element.status === 'confirmed'" (click)="onCancelOrder(element)">
+                        <mat-icon color="warn">cancel</mat-icon> Cancel Order
+                      </button>
+                    </mat-menu>
+                  </td>
+                </ng-container>
+
+                <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></tr>
+                <tr mat-row *matRowDef="let row; columns: displayedColumns;" (click)="onRowClick(row)"></tr>
+
+                <tr mat-no-data-row *matNoDataRow>
+                  <td class="no-data" [attr.colspan]="displayedColumns.length">
+                    <mat-icon>receipt_long</mat-icon>
+                    <span>No orders found for the selected criteria.</span>
+                  </td>
+                </tr>
+              </table>
+            </div>
+
+            <mat-paginator #paginator [pageIndex]="requestData.page_number! - 1"
+              [length]="pageDet.total_docs" [pageSize]="pageDet.limit"
+              [pageSizeOptions]="[10, 20, 50]" (page)="onPaginateChange($event)"
+              showFirstLastButtons aria-label="Select page">
+            </mat-paginator>
+          </ng-container>
+
+          <div class="loading-overlay" *ngIf="isPageLoad">
+            <mat-spinner diameter="40"></mat-spinner>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+
+    <app-page-loader *ngIf="isPageLoad"></app-page-loader>
+  </div>

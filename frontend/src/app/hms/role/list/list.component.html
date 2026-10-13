@@ -1,0 +1,117 @@
+<app-navigation-bar [navData]="navData"></app-navigation-bar>
+
+<div class="top-sub-nav-controls">
+    <button type="button" mat-raised-button color="primary" routerLink="/hms/roles/add-role">
+        <mat-icon>add</mat-icon> Add Role
+    </button>
+</div>
+
+<div class="roles-page">
+
+    <!-- Table card — same structure as the guests list: fixed header,
+         only the body scrolls, fixed paginator -->
+    <div class="table-card">
+
+        <header class="table-header">
+            <div class="table-title">
+                <span class="head-icon"><mat-icon>badge</mat-icon></span>
+                <div class="head-text">
+                    <h3>All Roles</h3>
+                    <p>Every role in the system with its current status</p>
+                </div>
+            </div>
+
+            <div class="filter-controls">
+                <mat-form-field appearance="outline" floatLabel="always" class="custom-input">
+                    <mat-label>Search</mat-label>
+                    <mat-icon matIconPrefix class="search-prefix">search</mat-icon>
+                    <input matInput [(ngModel)]="gridSearch" placeholder="Role name" (keyup)="applyFilter()">
+                </mat-form-field>
+
+                <div class="filter-action">
+                    <button mat-button color="warn" (click)="clearFilter()">
+                        <mat-icon>filter_alt_off</mat-icon> Clear Filters
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <div class="table-scroll">
+            <ng-container *ngIf="!isPageLoad">
+                <table mat-table [dataSource]="dataSource" class="roles-table">
+
+                    <ng-container matColumnDef="sr">
+                        <th mat-header-cell *matHeaderCellDef style="width: 8%;"> Sr. No. </th>
+                        <td mat-cell *matCellDef="let element;let i=index"> {{
+                            (requestData.page_size!*(requestData.page_number!-1)) + (i+1)}} </td>
+                    </ng-container>
+
+                    <ng-container matColumnDef="roleCode">
+                        <th mat-header-cell *matHeaderCellDef style="width: 27%;"> Role Code </th>
+                        <td mat-cell *matCellDef="let element">
+                            <span class="role-code">{{ element.role_code }}</span>
+                        </td>
+                    </ng-container>
+
+                    <ng-container matColumnDef="roleName">
+                        <th mat-header-cell *matHeaderCellDef style="width: 65%;"> Role Name </th>
+                        <td mat-cell *matCellDef="let element">
+                            <span class="role-name">{{ element.role_name }}</span>
+                        </td>
+                    </ng-container>
+
+                    <ng-container matColumnDef="status">
+                        <th mat-header-cell *matHeaderCellDef style="text-align: center; width: 17%;"> Status </th>
+                        <td mat-cell *matCellDef="let element" style="text-align: center;">
+                            <span class="status-pill" [ngClass]="element.is_active ? 'st-active' : 'st-inactive'">
+                                {{ element.is_active ? 'Active' : 'Inactive' }}
+                            </span>
+                        </td>
+                    </ng-container>
+
+                    <ng-container matColumnDef="actions">
+                        <th style="text-align: center;width: 10%;" mat-header-cell *matHeaderCellDef> Action </th>
+                        <td style="text-align: center;" mat-cell *matCellDef="let element">
+                            <button class="action-btn" mat-icon-button [matMenuTriggerFor]="structureaction"
+                                (click)="$event.stopPropagation();">
+                                <mat-icon>more_vert</mat-icon>
+                            </button>
+                            <mat-menu class="table-actions" #structureaction="matMenu" xPosition="before" overlapTrigger="true">
+                                <button mat-menu-item color="primary" class="menu-item" (click)="onEdit(element);">
+                                    <mat-icon>edit</mat-icon> Edit
+                                </button>
+                                <button mat-menu-item color="primary" class="menu-item" (click)="OnEditRoleAccess(element);">
+                                    <mat-icon>admin_panel_settings</mat-icon> View Role Access
+                                </button>
+                                <button mat-menu-item color="warn" class="menu-item delete-item" (click)="onDelete(element);">
+                                    <mat-icon>delete</mat-icon> Delete
+                                </button>
+                            </mat-menu>
+                        </td>
+                    </ng-container>
+
+                    <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></tr>
+                    <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+
+                    <!-- Empty state -->
+                    <tr mat-no-data-row *matNoDataRow>
+                        <td class="no-data" [attr.colspan]="displayedColumns.length">
+                            <mat-icon>badge</mat-icon>
+                            <span>No roles found for the selected search.</span>
+                        </td>
+                    </tr>
+                </table>
+            </ng-container>
+        </div>
+
+        <footer class="table-footer" *ngIf="!isPageLoad">
+            <mat-paginator #paginator [pageIndex]="requestData.page_number!-1" [length]="pageDet.total_docs"
+                [pageSize]="pageDet.limit" [pageSizeOptions]="[10, 20, 50]" (page)="onPaginateChange($event)"
+                showFirstLastButtons>
+            </mat-paginator>
+        </footer>
+    </div>
+
+</div>
+
+<app-page-loader *ngIf="isPageLoad"></app-page-loader>

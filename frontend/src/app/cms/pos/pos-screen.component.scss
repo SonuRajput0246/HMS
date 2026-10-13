@@ -1,0 +1,1174 @@
+// ============================================================
+//  POS SCREEN — cashier's full-bleed terminal
+//  Brand: navy #003366 / teal #16b4a4
+//
+//  Routed outside the app shell (cms-routing.module.ts), so this
+//  component owns its own 100vh layout rather than the
+//  `calc(100vh - 110px)` budget the list screens use.
+//
+//  Everything is prefixed `.pos-` because component styles are
+//  NOT namespaced by Angular — two screens declaring the same
+//  class name would silently fight.
+// ============================================================
+
+// `list.nth` unpacks the (background, foreground) pairs the theme's status
+// maps store, so a colour pair is defined once in cms-theme.scss instead of
+// being re-typed per status here.
+@use 'sass:list';
+@use '../cms-theme' as theme;
+
+// ------------------------------------------------------------
+//  Shell — two columns: the floor, then the bill
+// ------------------------------------------------------------
+.pos-shell {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 14px 12px;
+  box-sizing: border-box;
+  overflow: hidden;
+  @include theme.cms-page-bg;
+}
+
+// ------------------------------------------------------------
+//  Till counters — the three numbers that drive the next action
+// ------------------------------------------------------------
+.pos-topbar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 14px;
+  @include theme.cms-card;
+}
+
+.pos-brand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  flex: 0 0 auto;
+
+  .pos-brand-icon {
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
+    border-radius: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, theme.$navy, theme.$navy-light);
+    box-shadow: 0 4px 10px rgba(0, 51, 102, 0.25);
+
+    mat-icon {
+      color: #fff;
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+    }
+  }
+
+  .pos-brand-text {
+    h2 {
+      margin: 0;
+      font-size: 15.5px;
+      font-weight: 700;
+      color: theme.$navy;
+      letter-spacing: 0.2px;
+    }
+
+    p {
+      margin: 2px 0 0;
+      font-size: 12px;
+      color: theme.$text-muted;
+    }
+  }
+}
+
+.pos-counters {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+
+.pos-counter {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 12px;
+  border-radius: theme.$radius-sm;
+  background: theme.$navy-soft;
+  border: 1px solid theme.$border;
+  white-space: nowrap;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    color: theme.$navy;
+  }
+
+  .c-val {
+    font-size: 15px;
+    font-weight: 800;
+    color: theme.$navy;
+    letter-spacing: 0.2px;
+  }
+
+  .c-lbl {
+    font-size: 11px;
+    font-weight: 600;
+    color: theme.$text-muted;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+
+  // Status hues pulled from the shared token set so a table state never
+  // wears one colour here and another on the KDS.
+  &.c-available {
+    background: theme.$ok-soft;
+    border-color: rgba(22, 163, 74, 0.22);
+    mat-icon,
+    .c-val { color: theme.$ok; }
+  }
+
+  &.c-occupied {
+    background: theme.$info-soft;
+    border-color: rgba(37, 99, 235, 0.22);
+    mat-icon,
+    .c-val { color: theme.$info; }
+  }
+
+  &.c-orders {
+    background: theme.$teal-soft;
+    border-color: rgba(15, 143, 131, 0.22);
+    mat-icon,
+    .c-val { color: theme.$teal-dark; }
+  }
+
+  &.c-revenue {
+    background: #fff;
+    mat-icon { color: theme.$teal-dark; }
+    .c-val { color: theme.$text; }
+  }
+}
+
+.pos-refresh {
+  flex: 0 0 auto;
+
+  mat-icon.spin {
+    animation: pos-spin 0.9s linear infinite;
+  }
+}
+
+@keyframes pos-spin {
+  to { transform: rotate(360deg); }
+}
+
+// ------------------------------------------------------------
+//  Two-column body — both columns fill the remaining height so
+//  only their inner areas scroll, never the page itself
+// ------------------------------------------------------------
+.pos-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  gap: 10px;
+}
+
+// ------------------------------------------------------------
+//  LEFT — floor grid
+// ------------------------------------------------------------
+.pos-floor {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  @include theme.cms-card;
+  overflow: hidden;
+}
+
+.floor-head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid theme.$border;
+
+  .floor-head-text {
+    h3 {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 700;
+      color: theme.$navy;
+    }
+
+    p {
+      margin: 2px 0 0;
+      font-size: 12px;
+      color: theme.$text-muted;
+    }
+  }
+}
+
+// Tells the cashier whether the floor is moving under them. While a
+// bill is open the poll is deliberately stopped, and saying so is the
+// only way "Refresh" doesn't look broken.
+.live-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: theme.$ok;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: theme.$ok-soft;
+
+  .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: theme.$ok;
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.18);
+    animation: pos-pulse 1.8s ease-in-out infinite;
+  }
+
+  &.frozen {
+    color: theme.$warn;
+    background: theme.$warn-soft;
+
+    mat-icon {
+      font-size: 14px;
+      width: 14px;
+      height: 14px;
+    }
+  }
+}
+
+@keyframes pos-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+.floor-scroll {
+  @include theme.cms-scroll;
+  padding: 12px 14px 16px;
+}
+
+.zone-block {
+  margin-bottom: 18px;
+
+  &:last-child { margin-bottom: 0; }
+}
+
+.zone-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 9px;
+
+  mat-icon {
+    font-size: 17px;
+    width: 17px;
+    height: 17px;
+    color: theme.$teal-dark;
+  }
+
+  .zone-name {
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.7px;
+    color: theme.$text-muted;
+  }
+
+  .zone-count {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: theme.$text-faint;
+    background: theme.$neutral-soft;
+    border-radius: 999px;
+    padding: 2px 8px;
+  }
+}
+
+.table-grid {
+  display: grid;
+  // auto-fill rather than fixed columns: a café with 8 patio tables and
+  // one with 60 indoor tables should both get a full grid without a
+  // media query per breakpoint.
+  grid-template-columns: repeat(auto-fill, minmax(146px, 1fr));
+  gap: 9px;
+}
+
+// ----- one table tile -----
+.table-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-height: 92px;
+  padding: 10px 11px;
+  border-radius: theme.$radius-sm;
+  border: 1.5px solid theme.$border;
+  background: theme.$card-bg;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition: transform 0.12s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+
+  &:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: theme.$shadow-raised;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+
+  .t-number {
+    font-size: 17px;
+    font-weight: 800;
+    color: theme.$navy;
+    line-height: 1.1;
+  }
+
+  .t-name {
+    font-size: 11.5px;
+    color: theme.$text-muted;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+
+  .t-cap {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 11px;
+    color: theme.$text-faint;
+
+    mat-icon {
+      font-size: 13px;
+      width: 13px;
+      height: 13px;
+    }
+  }
+
+  .t-status {
+    @include theme.cms-pill(theme.$neutral-soft, theme.$neutral);
+    margin-top: auto;
+  }
+
+  // The live bill on an occupied table — the cashier should know whose
+  // table they are about to open before the bill opens.
+  .t-order {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    width: 100%;
+    margin-top: 5px;
+    padding-top: 5px;
+    border-top: 1px dashed theme.$border-strong;
+
+    .t-order-no {
+      font-size: 10.5px;
+      font-weight: 700;
+      color: theme.$text-muted;
+    }
+
+    .t-order-amt {
+      font-size: 11px;
+      font-weight: 800;
+      color: theme.$navy;
+    }
+  }
+
+  // ----- status skins, from the shared $table-status-colors map -----
+  // Generated in a loop rather than hand-written so a new status added
+  // to the theme gets a tile skin for free instead of silently falling
+  // back to an unstyled grey.
+  @each $status, $pair in theme.$table-status-colors {
+    &.ts-#{$status} {
+      $bg: list.nth($pair, 1);
+      $fg: list.nth($pair, 2);
+      background: $bg;
+      border-color: $bg;
+
+      .t-number { color: $fg; }
+      .t-status { background: rgba(255, 255, 255, 0.72); color: $fg; }
+
+      &:hover:not(:disabled) { border-color: $fg; }
+    }
+  }
+}
+
+.floor-empty,
+.menu-empty,
+.cart-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 34px 16px;
+  color: theme.$text-muted;
+  font-size: 13px;
+
+  mat-icon {
+    font-size: 34px;
+    width: 34px;
+    height: 34px;
+    color: #9db6d4;
+  }
+}
+
+// ------------------------------------------------------------
+//  RIGHT — order panel
+// ------------------------------------------------------------
+.pos-panel {
+  // Fixed rather than flexible: the floor should absorb the leftover
+  // width on a big till, while the bill column stays a predictable
+  // column the cashier's muscle memory is built around.
+  flex: 0 0 clamp(430px, 36vw, 560px);
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  @include theme.cms-card;
+  overflow: hidden;
+}
+
+// ----- idle state: walk-in + guest lookup -----
+.panel-idle {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 26px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.idle-hero {
+  text-align: center;
+  padding: 14px 0 4px;
+
+  .idle-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 66px;
+    height: 66px;
+    border-radius: 20px;
+    background: theme.$navy-soft;
+    margin-bottom: 12px;
+
+    mat-icon {
+      font-size: 32px;
+      width: 32px;
+      height: 32px;
+      color: theme.$navy;
+    }
+  }
+
+  h3 {
+    margin: 0 0 4px;
+    font-size: 17px;
+    font-weight: 700;
+    color: theme.$navy;
+  }
+
+  p {
+    margin: 0;
+    font-size: 12.5px;
+    color: theme.$text-muted;
+  }
+}
+
+.walkin-btn {
+  height: 50px;
+  font-size: 14.5px;
+  font-weight: 700;
+
+  mat-icon { margin-right: 6px; }
+}
+
+.lookup-block {
+  margin-top: 4px;
+  padding: 14px;
+  border-radius: theme.$radius-sm;
+  border: 1px dashed theme.$border-strong;
+  background: #fbfcfe;
+
+  h4 {
+    margin: 0 0 4px;
+    font-size: 13px;
+    font-weight: 800;
+    color: theme.$navy;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+  }
+
+  .lookup-hint {
+    margin: 0 0 12px;
+    font-size: 12px;
+    color: theme.$text-muted;
+  }
+}
+
+.lookup-field {
+  width: 100%;
+  font-size: 13px;
+}
+
+.lookup-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+
+  button { flex: 1 1 auto; }
+}
+
+// ----- order header -----
+.panel-head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px 10px 14px;
+  background: linear-gradient(135deg, theme.$navy, theme.$navy-light);
+  color: #fff;
+
+  .panel-head-main {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+
+    .panel-ref {
+      font-size: 15px;
+      font-weight: 800;
+      line-height: 1.15;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .panel-order-no {
+      font-size: 11px;
+      opacity: 0.8;
+      letter-spacing: 0.4px;
+    }
+  }
+
+  .panel-head-side {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .panel-status {
+    @include theme.cms-pill(rgba(255, 255, 255, 0.18), #fff);
+    text-transform: capitalize;
+  }
+
+  .panel-close {
+    color: #fff !important;
+    --mdc-icon-button-state-layer-size: 32px;
+  }
+}
+
+// ----- menu + cart, the scrollable middle -----
+.panel-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+// ----- category rail -----
+.cat-rail {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 6px;
+  padding: 9px 12px;
+  overflow-x: auto;
+  border-bottom: 1px solid theme.$border;
+  background: #fbfcfe;
+  scrollbar-width: thin;
+
+  &::-webkit-scrollbar { height: 6px; }
+  &::-webkit-scrollbar-thumb { background: #c3d2e4; border-radius: 6px; }
+}
+
+.cat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  padding: 6px 13px;
+  border-radius: 999px;
+  border: 1.5px solid theme.$border-strong;
+  background: theme.$card-bg;
+  color: theme.$text-muted;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+
+  .cat-count {
+    font-size: 10.5px;
+    font-weight: 800;
+    color: theme.$text-faint;
+  }
+
+  &:hover { background: theme.$navy-soft; color: theme.$navy; }
+
+  &.active {
+    background: theme.$navy;
+    border-color: theme.$navy;
+    color: #fff;
+
+    .cat-count { color: rgba(255, 255, 255, 0.75); }
+  }
+}
+
+// ----- recipe grid -----
+.menu-block {
+  // Shares the middle with the cart. The menu gets the larger share
+  // because adding a line is the frequent action; the cart only needs
+  // room for what is already on the bill.
+  flex: 1 1 56%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid theme.$border;
+}
+
+.menu-scroll {
+  @include theme.cms-scroll;
+  padding: 10px 12px 12px;
+}
+
+.menu-title {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  color: theme.$text-faint;
+  margin-bottom: 8px;
+}
+
+.menu-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: 8px;
+}
+
+.menu-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-height: 74px;
+  padding: 9px 10px;
+  border-radius: theme.$radius-sm;
+  border: 1.5px solid theme.$border;
+  background: theme.$card-bg;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition: transform 0.12s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+
+  &:hover:not(:disabled) {
+    border-color: theme.$teal;
+    box-shadow: 0 6px 16px rgba(15, 143, 131, 0.16);
+    transform: translateY(-1px);
+  }
+
+  &:disabled { opacity: 0.55; cursor: default; }
+
+  .m-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: theme.$text;
+    line-height: 1.25;
+    // Two lines then ellipsis: a long dish name must not stretch its
+    // tile until the grid stops being a grid.
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .m-price {
+    font-size: 13px;
+    font-weight: 800;
+    color: theme.$navy;
+    margin-top: auto;
+  }
+
+  .m-diet {
+    display: flex;
+    gap: 3px;
+
+    mat-icon {
+      font-size: 14px;
+      width: 14px;
+      height: 14px;
+    }
+
+    .d-veg { color: theme.$ok; }
+    .d-vegan { color: theme.$teal-dark; }
+    .d-spicy { color: theme.$danger; }
+    .d-rec { color: theme.$warn; }
+  }
+}
+
+// ----- cart -----
+.cart-block {
+  flex: 1 1 44%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.cart-head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 12px;
+  border-bottom: 1px solid theme.$border;
+  background: theme.$navy-soft;
+
+  h4 {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.7px;
+    color: theme.$navy;
+  }
+
+  .cart-count {
+    font-size: 11px;
+    font-weight: 700;
+    color: theme.$text-muted;
+  }
+}
+
+.cart-scroll {
+  @include theme.cms-scroll;
+  padding: 6px 12px 10px;
+}
+
+.cart-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid theme.$border;
+
+  &:last-child { border-bottom: none; }
+
+  .line-main {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .line-name {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: theme.$text;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .line-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 3px;
+  }
+
+  .line-unit {
+    font-size: 10.5px;
+    color: theme.$text-faint;
+  }
+
+  // The kitchen's own line state, shown on the till. Reusing
+  // $prep-status-colors means a dish is never amber on the KDS and
+  // grey on the POS.
+  .line-prep {
+    @include theme.cms-pill(theme.$neutral-soft, theme.$neutral);
+    font-size: 10px;
+    padding: 2px 8px;
+
+    @each $status, $pair in theme.$prep-status-colors {
+      &.#{$status} {
+        @include theme.cms-pill(list.nth($pair, 1), list.nth($pair, 2));
+      }
+    }
+  }
+
+  .line-qty {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 1px;
+    border: 1px solid theme.$border-strong;
+    border-radius: 999px;
+    padding: 1px;
+    background: theme.$card-bg;
+  }
+
+  .qty-btn {
+    --mdc-icon-button-state-layer-size: 26px;
+    width: 26px;
+    height: 26px;
+    padding: 0 !important;
+    color: theme.$navy !important;
+
+    mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+      line-height: 16px;
+    }
+
+    &:hover:not(:disabled) { background: theme.$navy-soft; }
+  }
+
+  .qty-val {
+    min-width: 24px;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 800;
+    color: theme.$text;
+  }
+
+  .line-total {
+    flex: 0 0 78px;
+    text-align: right;
+    font-size: 13px;
+    font-weight: 800;
+    color: theme.$navy;
+  }
+
+  .line-remove {
+    flex: 0 0 auto;
+    --mdc-icon-button-state-layer-size: 30px;
+    width: 30px;
+    height: 30px;
+    padding: 0 !important;
+    color: theme.$danger !important;
+
+    mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+      line-height: 18px;
+    }
+
+    &:hover:not(:disabled) { background: theme.$danger-soft; }
+  }
+}
+
+// ------------------------------------------------------------
+//  Payment panel — inline on purpose. A dialog would cover the
+//  cart the cashier is reconciling against.
+// ------------------------------------------------------------
+.pay-panel {
+  flex: 0 0 auto;
+  padding: 12px 14px;
+  border-top: 2px solid theme.$teal;
+  background: theme.$teal-soft;
+
+  .pay-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    h4 {
+      margin: 0;
+      font-size: 13px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: theme.$teal-dark;
+    }
+  }
+}
+
+.method-chips {
+  display: flex;
+  gap: 7px;
+  margin: 10px 0;
+  flex-wrap: wrap;
+}
+
+.method-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1.5px solid theme.$border-strong;
+  background: theme.$card-bg;
+  color: theme.$text-muted;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  mat-icon {
+    font-size: 17px;
+    width: 17px;
+    height: 17px;
+  }
+
+  &:hover { border-color: theme.$teal; color: theme.$teal-dark; }
+
+  &.active {
+    background: theme.$teal;
+    border-color: theme.$teal;
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(22, 180, 164, 0.3);
+  }
+}
+
+.pay-fields {
+  display: flex;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+
+.pay-field {
+  flex: 1 1 160px;
+  font-size: 13px;
+}
+
+.change-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+  padding: 9px 13px;
+  border-radius: theme.$radius-sm;
+  background: #fff;
+  border: 1.5px dashed theme.$teal;
+
+  span {
+    font-size: 12px;
+    font-weight: 700;
+    color: theme.$text-muted;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  strong {
+    font-size: 19px;
+    font-weight: 800;
+    color: theme.$teal-dark;
+  }
+}
+
+.kitchen-warn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 10px;
+  padding: 8px 12px;
+  border-radius: theme.$radius-sm;
+  background: theme.$warn-soft;
+  color: theme.$warn;
+  font-size: 12px;
+  font-weight: 700;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.pay-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+
+  .settle-btn {
+    flex: 1 1 auto;
+    height: 44px;
+    font-size: 14px;
+    font-weight: 800;
+  }
+}
+
+// ------------------------------------------------------------
+//  Totals bar — pinned to the bottom, always visible
+// ------------------------------------------------------------
+.totals-bar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 14px;
+  border-top: 1px solid theme.$border;
+  background: #fbfcfe;
+}
+
+.totals-rows {
+  flex: 1 1 auto;
+  min-width: 0;
+
+  .t-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 12px;
+    color: theme.$text-muted;
+    padding: 1px 0;
+
+    span:last-child {
+      font-weight: 700;
+      color: theme.$text;
+    }
+
+    .t-discount { color: theme.$ok; }
+
+    &.t-total {
+      margin-top: 2px;
+      padding-top: 4px;
+      border-top: 1px dashed theme.$border-strong;
+      font-size: 13px;
+      font-weight: 800;
+      color: theme.$navy;
+
+      span:last-child { color: theme.$navy; }
+    }
+  }
+}
+
+.due-block {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  padding-left: 14px;
+  border-left: 2px solid theme.$teal;
+
+  .due-label {
+    font-size: 10.5px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: theme.$text-faint;
+  }
+
+  .due-amount {
+    font-size: 21px;
+    font-weight: 800;
+    color: theme.$navy;
+    line-height: 1.15;
+  }
+}
+
+.pay-btn {
+  flex: 0 0 auto;
+  height: 46px;
+  min-width: 152px;
+  font-size: 14px;
+  font-weight: 800;
+
+  mat-icon { margin-right: 5px; }
+}
+
+// ------------------------------------------------------------
+//  Material overrides — form fields are stocky by default and the
+//  cashier types into these one-handed, all shift.
+// ------------------------------------------------------------
+::ng-deep .pos-shell .lookup-field .mat-mdc-form-field-subscript-wrapper,
+::ng-deep .pos-shell .pay-field .mat-mdc-form-field-subscript-wrapper {
+  display: none;
+}
+
+::ng-deep .pos-shell .lookup-field .mdc-text-field-wrapper,
+::ng-deep .pos-shell .pay-field .mdc-text-field-wrapper {
+  background: #fff;
+  border-radius: theme.$radius-sm !important;
+}
+
+::ng-deep .pos-shell .lookup-field .mdc-notched-outline__leading,
+::ng-deep .pos-shell .pay-field .mdc-notched-outline__leading {
+  border-radius: theme.$radius-sm 0 0 theme.$radius-sm !important;
+}
+
+::ng-deep .pos-shell .lookup-field .mdc-notched-outline__trailing,
+::ng-deep .pos-shell .pay-field .mdc-notched-outline__trailing {
+  border-radius: 0 theme.$radius-sm theme.$radius-sm 0 !important;
+}
+
+::ng-deep .pos-shell .lookup-field .mat-mdc-form-field-icon-prefix,
+::ng-deep .pos-shell .pay-field .mat-mdc-form-field-icon-prefix {
+  color: theme.$navy;
+  padding: 0 4px 0 10px;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+}
+
+::ng-deep .pos-shell .pay-field .mat-mdc-input-element {
+  font-size: 14px !important;
+  font-weight: 700;
+  color: theme.$navy !important;
+}
+
+// ------------------------------------------------------------
+//  Responsive — a 1366x768 till is the realistic floor, so the
+//  panel narrows before anything is allowed to wrap awkwardly.
+// ------------------------------------------------------------
+@media (max-width: 1280px) {
+  .pos-panel {
+    flex-basis: clamp(390px, 40vw, 480px);
+  }
+
+  .pos-counter {
+    padding: 5px 10px;
+
+    .c-lbl { display: none; }
+  }
+}
+
+@media (max-width: 1024px) {
+  .pos-body {
+    flex-direction: column;
+  }
+
+  .pos-floor { flex: 1 1 45%; }
+  .pos-panel { flex: 1 1 55%; }
+
+  .pos-counters { display: none; }
+}

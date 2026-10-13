@@ -1,0 +1,123 @@
+.mat-mdc-nav-list {
+    width: 100%;
+    min-height: 100%;
+    height: 100%;
+    background: #003366;
+
+    a {
+        display: flex;
+        color: white !important;
+
+        .mat-icon {
+            margin-right: 15px;
+            color: white;
+        }
+    }
+}
+
+
+::ng-deep.mdc-list-item__content {
+    .mdc-list-item__primary-text {
+        display: flex !important;
+        align-items: center !important;
+    }
+}
+
+
+
+.example-fill-remaining-space {
+    /* This fills the remaining space, by using flexbox.
+     Every toolbar row uses a flexbox row layout. */
+    flex: 1 1 auto;
+}
+
+
+.mat-list-button {
+    display: flex;
+    justify-content: center;
+}
+
+.mat-list-button-icon-up {
+    transform: rotateZ(-180deg);
+}
+
+
+.ActiveMenu {
+    background: #003366;
+    color: white;
+    height: 46px !important;
+
+    .mat-icon {
+        color: white !important;
+    }
+
+    span {
+        color: white !important;
+    }
+
+    .menu_name_div {
+        display: none;
+    }
+}
+
+
+.ActiveMenu:hover {
+    background: #003366;
+    color: white;
+
+    .mat-icon {
+        color: white !important;
+    }
+
+    .menu_name_div {
+        height: 35px;
+        position: fixed;
+        left: 0px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding-left: 55px;
+        padding-right: 15px;
+        border-radius: 6px;
+        // background: #3A3A3A;
+        // background: #1E4F8A;
+        background: #244E7A;
+        // background: #2C3E50;
+        color: #fff;
+        font-size: 14px;
+    }
+}
+
+
+.sidenav-icon {
+    width: 20px;
+    height: 20px;
+}
+
+
+.Parent_menu_text {
+    display: flex !important;
+    align-items: center;
+    width: 90%;
+    height: 100%;
+    font-size: 0.9rem;
+    justify-content: center;
+    z-index: 9;
+}
+
+
+::ng-deep.mat-list-base {
+    padding-top: 0px !important;
+}
+
+
+/// Menu Height (Gap between two menu items)
+.ActiveMenu {
+    height: 35px !important;
+}
+
+
+.mdc-list {
+    margin: 0;
+    padding: 0;
+}

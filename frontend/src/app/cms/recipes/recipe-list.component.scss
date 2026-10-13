@@ -1,0 +1,1231 @@
+// ============================================================
+//  MENU & RECIPES — CMS admin screen
+//
+//  Same shell as the table screen so the two admin pages feel
+//  identical. Prefix `.rcp-` per the CMS-FRONTEND-SPEC naming
+//  rule (component stylesheets are not namespaced by Angular).
+//
+//  The 86 treatment gets the most attention here: an 86'd dish is
+//  a safety decision, and a cashier has to see it while scanning
+//  a long menu, not notice a switch in the off position.
+// ============================================================
+
+@use '../cms-theme' as theme;
+
+:host {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.rcp-list {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  // NOT position: relative — see list-category.component.scss. The global
+  // `.top-sub-nav-controls` is absolutely positioned against the app
+  // container, and making this box positioned would swallow the CTAs.
+}
+
+// ------------------------------------------------------------
+//  Tabs
+// ------------------------------------------------------------
+::ng-deep .rcp-list .rcp-tabs {
+  flex: 0 0 auto;
+
+  .mat-mdc-tab-header {
+    border-bottom: 1px solid theme.$border;
+  }
+
+  .mdc-tab {
+    padding: 0 18px;
+    min-width: 150px;
+    height: 46px;
+  }
+
+  .mat-mdc-tab .mdc-tab__text-label {
+    gap: 7px;
+    color: theme.$text-muted;
+    font-weight: 600;
+  }
+
+  .mat-mdc-tab.mdc-tab--active .mdc-tab__text-label {
+    color: theme.$navy;
+  }
+
+  .mdc-tab-indicator__content--underline {
+    border-color: theme.$teal;
+    border-width: 3px;
+    border-radius: 3px 3px 0 0;
+  }
+
+  .mat-mdc-tab-body-wrapper {
+    flex: 1;
+    min-height: 0;
+  }
+
+  .mat-mdc-tab-body-content {
+    height: 100%;
+    overflow: hidden;
+  }
+}
+
+.tab-body {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  padding: 10px 0 0;
+}
+
+// ------------------------------------------------------------
+//  Table card
+// ------------------------------------------------------------
+.table-card {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  @include theme.cms-card;
+  border-radius: 18px;
+  box-shadow: 0 6px 24px rgba(15, 42, 77, 0.06);
+  overflow: hidden;
+
+  .table-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding: 10px 16px;
+    border-bottom: 1px solid theme.$border;
+
+    .table-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+
+      .head-icon {
+        width: 40px;
+        height: 40px;
+        flex: 0 0 40px;
+        border-radius: 11px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, theme.$navy, theme.$navy-light);
+        box-shadow: 0 4px 10px rgba(0, 51, 102, 0.25);
+
+        mat-icon {
+          color: #fff;
+          font-size: 20px;
+          width: 20px;
+          height: 20px;
+        }
+      }
+
+      .head-text {
+        min-width: 0;
+
+        h3 {
+          margin: 0;
+          font-size: 15.5px;
+          font-weight: 700;
+          color: theme.$navy;
+          letter-spacing: 0.2px;
+        }
+
+        p {
+          margin: 2px 0 0;
+          font-size: 12.5px;
+          color: theme.$text-muted;
+        }
+      }
+    }
+
+    .filter-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-left: auto;
+
+      .custom-input {
+        width: 190px;
+      }
+
+      .select-input {
+        width: 155px;
+      }
+    }
+
+    .filter-action button {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      border: 1.5px solid theme.$danger;
+      border-radius: 999px;
+      background-color: theme.$danger-soft !important;
+      color: theme.$danger !important;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 2px 14px;
+      transition: all 0.2s ease;
+
+      mat-icon {
+        font-size: 15px;
+        width: 15px;
+        height: 15px;
+      }
+
+      &:hover {
+        background-color: #fecaca !important;
+        box-shadow: 0 4px 10px rgba(220, 38, 38, 0.2);
+      }
+    }
+  }
+
+  .table-scroll {
+    @include theme.cms-scroll;
+    scrollbar-width: thin;
+    scrollbar-color: #c3d2e4 transparent;
+
+    &::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    &::-webkit-scrollbar-thumb {
+      background: #c3d2e4;
+      border-radius: 8px;
+    }
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+  }
+
+  .table-footer {
+    border-top: 1px solid theme.$border;
+    background: #fbfcfe;
+    padding: 2px 14px 2px 0;
+  }
+}
+
+.no-pager-note {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  border-top: 1px solid theme.$border;
+  background: #fbfcfe;
+  padding: 9px 16px;
+  font-size: 12px;
+  color: theme.$text-muted;
+
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    color: theme.$text-faint;
+  }
+}
+
+// ------------------------------------------------------------
+//  Compact header filters
+// ------------------------------------------------------------
+::ng-deep .rcp-list .table-header .filter-controls .mat-mdc-form-field {
+  --mat-form-field-container-height: 40px;
+  --mat-form-field-container-vertical-padding: 10px;
+  font-size: 13px;
+}
+::ng-deep .rcp-list .table-header .filter-controls .mat-mdc-form-field-subscript-wrapper {
+  display: none;
+}
+::ng-deep .rcp-list .table-header .filter-controls .mat-mdc-text-field-wrapper {
+  background: #f8fafd;
+  border-radius: 11px !important;
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+::ng-deep .rcp-list .table-header .filter-controls .mat-mdc-text-field-wrapper.mdc-text-field--focused {
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(0, 51, 102, 0.12);
+}
+::ng-deep .rcp-list .table-header .filter-controls .mdc-notched-outline__leading {
+  border-radius: 11px 0 0 11px !important;
+}
+::ng-deep .rcp-list .table-header .filter-controls .mdc-notched-outline__trailing {
+  border-radius: 0 11px 11px 0 !important;
+}
+::ng-deep .rcp-list .table-header .filter-controls .mdc-notched-outline > * {
+  border-color: #dbe4f0 !important;
+}
+::ng-deep .rcp-list .table-header .filter-controls
+  .mat-mdc-text-field-wrapper.mdc-text-field--focused:not(.mdc-text-field--invalid)
+  .mdc-notched-outline > * {
+  border-color: theme.$navy !important;
+  border-width: 1.5px !important;
+}
+::ng-deep .rcp-list .table-header .filter-controls .mat-mdc-floating-label {
+  color: #7d8ea3;
+  font-size: 13px;
+}
+::ng-deep .rcp-list .table-header .filter-controls .mat-mdc-floating-label--float-above {
+  color: theme.$navy !important;
+  font-size: 14px;
+  font-weight: 600;
+}
+::ng-deep .rcp-list .table-header .filter-controls .mat-mdc-input-element {
+  font-size: 13px !important;
+  color: theme.$text !important;
+  font-weight: 500;
+}
+::ng-deep .rcp-list .table-header .filter-controls .mdc-line-ripple::before,
+::ng-deep .rcp-list .table-header .filter-controls .mdc-line-ripple::after {
+  display: none;
+}
+::ng-deep .rcp-list .table-header .filter-controls .mat-mdc-form-field-icon-prefix {
+  color: theme.$navy;
+  padding: 0 4px 0 10px;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+}
+
+// ------------------------------------------------------------
+//  Grid
+// ------------------------------------------------------------
+.table-scroll .cms-table {
+  width: 100%;
+  min-width: 1120px;
+  table-layout: fixed;
+  background: transparent;
+  --mat-table-row-item-container-height: 34px;
+  --mat-table-header-container-height: 29px;
+}
+
+::ng-deep .table-scroll .cms-table th.mat-mdc-header-cell {
+  background: theme.$navy-soft;
+  color: theme.$navy;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  padding: 5px 10px;
+  line-height: 30px;
+  white-space: nowrap;
+  border-bottom: 1.5px solid #d5e0ee;
+}
+
+::ng-deep .table-scroll .cms-table td.mat-mdc-cell {
+  font-size: 12px;
+  color: theme.$text;
+  padding: 4px 10px;
+  line-height: 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-bottom-color: theme.$border;
+}
+
+::ng-deep .table-scroll .cms-table td.mat-column-station,
+::ng-deep .table-scroll .cms-table td.mat-column-margin_percent,
+::ng-deep .table-scroll .cms-table td.mat-column-is_available,
+::ng-deep .table-scroll .cms-table td.mat-column-recipe_count,
+::ng-deep .table-scroll .cms-table td.mat-column-actions {
+  overflow: visible;
+}
+
+::ng-deep .table-scroll .cms-table tr.mat-mdc-row {
+  transition: background 0.15s ease;
+}
+::ng-deep .table-scroll .cms-table tr.mat-mdc-row:hover td.mat-mdc-cell {
+  background: theme.$teal-soft;
+}
+
+// ------------------------------------------------------------
+//  86'd row.
+//
+//  Dimmed, greyed and struck through rather than hidden: the dish
+//  is still on the books and someone has to un-86 it later, and the
+//  cashier's job is to notice it cannot be rung up. Desaturation is
+//  the loudest signal a row can carry without moving anything on
+//  screen, so the eye lands on colour first.
+// ------------------------------------------------------------
+::ng-deep .table-scroll .cms-table tr.mat-mdc-row.row-eighty-sixed {
+  opacity: 0.6;
+  filter: grayscale(0.5);
+
+  // The 86 chip and the switch that controls it are the one thing on this row
+  // that still has to be readable, so they opt back out of the dimming.
+  td.mat-column-is_available {
+    opacity: 1;
+    filter: none;
+  }
+
+  &:hover td.mat-mdc-cell {
+    background: theme.$warn-soft;
+  }
+}
+
+.cell-strong {
+  font-weight: 600;
+  color: theme.$navy;
+}
+
+.cell-sub {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 10.5px;
+  color: theme.$text-faint;
+  font-family: 'Roboto Mono', 'Consolas', monospace;
+}
+
+.muted {
+  color: theme.$text-faint;
+}
+
+// Diet badges — small, because the dish name is what a manager scans for.
+.diet-badges {
+  display: inline-flex;
+  gap: 3px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.mini-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+
+  &.veg {
+    background: theme.$ok-soft;
+    color: theme.$ok;
+  }
+
+  &.spicy {
+    background: theme.$danger-soft;
+    color: theme.$danger;
+  }
+
+  &.star {
+    background: theme.$warn-soft;
+    color: theme.$warn;
+
+    mat-icon {
+      font-size: 11px;
+      width: 11px;
+      height: 11px;
+    }
+  }
+}
+
+// ------------------------------------------------------------
+//  Margin pill. Class comes from the component (number + '% margin')
+//  so a thin or negative margin can be coloured rather than just
+//  printed -- a dish selling below cost should not look the same as
+//  one at 70%.
+// ------------------------------------------------------------
+.margin-pill {
+  @include theme.cms-pill(theme.$neutral-soft, theme.$neutral);
+}
+
+.margin-pill.m-loss {
+  background: theme.$danger-soft;
+  color: theme.$danger;
+}
+
+.margin-pill.m-thin {
+  background: theme.$warn-soft;
+  color: #92400e;
+}
+
+.margin-pill.m-ok {
+  background: theme.$info-soft;
+  color: theme.$info;
+}
+
+.margin-pill.m-good {
+  background: theme.$ok-soft;
+  color: theme.$ok;
+}
+
+// ------------------------------------------------------------
+//  Station pill. Deterministic per station so the same station
+//  always reads the same colour across the menu.
+// ------------------------------------------------------------
+.station-pill {
+  @include theme.cms-pill(theme.$navy-soft, theme.$navy);
+}
+
+.stn-grill,
+.stn-tandoor,
+.stn-bakery {
+  background: theme.$warn-soft;
+  color: #92400e;
+}
+
+.stn-fry,
+.stn-bar {
+  background: theme.$info-soft;
+  color: theme.$info;
+}
+
+.stn-cold {
+  background: theme.$ok-soft;
+  color: theme.$ok;
+}
+
+.stn-dessert {
+  background: #fce7f3;
+  color: #9d174d;
+}
+
+.stn-saute,
+.stn-other {
+  background: theme.$neutral-soft;
+  color: theme.$neutral;
+}
+
+// ------------------------------------------------------------
+//  Availability switch.
+//
+//  A button rather than a slide-toggle on purpose: the row must
+//  not change until the server agrees, and a toggle bound to the
+//  model would flip optimistically and be wrong after a failure.
+// ------------------------------------------------------------
+.avail-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 68px;
+  justify-content: center;
+  padding: 3px 10px;
+  border: 1.5px solid theme.$ok;
+  border-radius: 999px;
+  background: theme.$ok-soft;
+  color: theme.$ok;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  mat-icon {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+  }
+
+  &:hover:not(:disabled) {
+    box-shadow: 0 3px 8px rgba(22, 163, 74, 0.25);
+  }
+
+  &.off {
+    border-color: theme.$danger;
+    background: theme.$danger-soft;
+    color: theme.$danger;
+
+    &:hover:not(:disabled) {
+      box-shadow: 0 3px 8px rgba(220, 38, 38, 0.25);
+    }
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: progress;
+  }
+}
+
+// ------------------------------------------------------------
+//  Admin lifecycle pill + counts
+// ------------------------------------------------------------
+.status-pill {
+  @include theme.cms-pill(theme.$neutral-soft, theme.$neutral);
+
+  &::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  &.st-active {
+    background: theme.$ok-soft;
+    color: theme.$ok;
+
+    &::before {
+      background: theme.$ok;
+      box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.2);
+    }
+  }
+
+  &.st-inactive {
+    background: theme.$danger-soft;
+    color: theme.$danger;
+  }
+}
+
+.count-chip {
+  display: inline-block;
+  min-width: 26px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: theme.$navy-soft;
+  color: theme.$navy;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.count-sub {
+  display: block;
+  font-size: 10px;
+  color: theme.$text-faint;
+}
+
+// ------------------------------------------------------------
+//  Row actions
+// ------------------------------------------------------------
+.action-btn {
+  --mdc-icon-button-state-layer-size: 28px;
+  width: 28px;
+  height: 28px;
+  padding: 0 !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  color: theme.$navy !important;
+  transition: all 0.15s ease;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    line-height: 18px;
+    flex: 0 0 auto;
+  }
+
+  &:hover {
+    background: theme.$navy-soft !important;
+  }
+
+  &.danger {
+    color: theme.$danger !important;
+
+    &:hover {
+      background: theme.$danger-soft !important;
+    }
+  }
+}
+
+::ng-deep .cms-actions-menu {
+  border-radius: 12px;
+  min-width: 190px;
+  padding: 5px !important;
+  border: 1px solid theme.$border;
+  box-shadow: 0 12px 30px rgba(0, 51, 102, 0.18);
+
+  .mat-mdc-menu-item {
+    border-radius: 8px;
+    min-height: 34px;
+    font-size: 12px;
+    font-weight: 500;
+    color: theme.$text;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+
+    mat-icon {
+      color: theme.$navy;
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+      margin-right: 8px !important;
+    }
+
+    .mat-mdc-menu-item-text {
+      text-align: left;
+      font-size: 12px !important;
+      line-height: 1.3;
+    }
+
+    &:hover {
+      background: theme.$navy-soft;
+      color: theme.$navy;
+    }
+
+    &.delete-item {
+      color: theme.$danger;
+
+      mat-icon {
+        color: theme.$danger;
+      }
+
+      &:hover {
+        background: theme.$danger-soft;
+      }
+    }
+  }
+}
+
+// ------------------------------------------------------------
+//  Empty state
+// ------------------------------------------------------------
+::ng-deep .table-scroll .cms-table tr.mat-mdc-no-data-row td {
+  display: table-cell;
+  width: 100%;
+  height: calc(100vh - 340px);
+  padding: 40px 16px;
+  border-bottom: none;
+  text-align: center;
+  vertical-align: middle;
+  white-space: normal;
+}
+
+.no-data {
+  width: 100%;
+  height: 100%;
+  padding: 24px 16px;
+  box-sizing: border-box;
+  color: theme.$text-muted;
+  font-size: 13px;
+
+  mat-icon {
+    display: block;
+    margin: 0 auto 10px;
+    font-size: 34px;
+    width: 34px;
+    height: 34px;
+    color: #9db6d4;
+  }
+
+  span {
+    display: block;
+    text-align: center;
+  }
+}
+
+.rcp-cta {
+  z-index: 3;
+}
+
+// ------------------------------------------------------------
+//  Dialog chrome
+// ------------------------------------------------------------
+::ng-deep .rcp-dialog-panel {
+  .mat-mdc-dialog-container .mdc-dialog__surface {
+    border-radius: 16px;
+    padding: 0;
+    overflow: hidden;
+  }
+}
+
+.rcp-dialog {
+  display: flex;
+  flex-direction: column;
+  max-height: 88vh;
+}
+
+.rcp-dialog-title {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0;
+  padding: 16px 22px 12px;
+  font-size: 16px;
+  font-weight: 700;
+  color: theme.$navy;
+  border-bottom: 1px solid theme.$border;
+
+  mat-icon {
+    color: theme.$teal;
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
+
+  .title-code {
+    margin-left: 4px;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: theme.$text-muted;
+    font-family: 'Roboto Mono', 'Consolas', monospace;
+  }
+}
+
+.rcp-dialog-body {
+  padding: 16px 22px 8px;
+  overflow-y: auto;
+}
+
+.rcp-dialog-actions {
+  padding: 12px 22px 16px;
+  border-top: 1px solid theme.$border;
+  gap: 10px;
+
+  .footer-note {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11.5px;
+    color: theme.$text-muted;
+
+    mat-icon {
+      font-size: 15px;
+      width: 15px;
+      height: 15px;
+      color: theme.$text-faint;
+    }
+  }
+
+  .spacer {
+    flex: 1;
+  }
+}
+
+.btn-cancel,
+.btn-outline {
+  border-radius: 999px;
+}
+
+.btn-outline {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.btn-submit {
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+// ------------------------------------------------------------
+//  Form sections
+// ------------------------------------------------------------
+.recipe-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-section {
+  & + .form-section {
+    margin-top: 22px;
+    padding-top: 20px;
+    border-top: 1px dashed #dfe7f1;
+  }
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+
+  .head-icon {
+    width: 36px;
+    height: 36px;
+    flex: 0 0 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, theme.$navy, theme.$navy-light);
+    box-shadow: 0 4px 10px rgba(0, 51, 102, 0.25);
+
+    mat-icon {
+      color: #fff;
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
+  }
+
+  .head-text {
+    h3 {
+      margin: 0;
+      font-size: 14.5px;
+      font-weight: 700;
+      color: theme.$navy;
+    }
+
+    p {
+      margin: 2px 0 0;
+      font-size: 12px;
+      color: theme.$text-muted;
+    }
+  }
+}
+
+.section-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px 14px;
+
+  &.tight {
+    margin-top: 6px;
+  }
+}
+
+.full-width {
+  grid-column: 1 / -1;
+}
+
+.toggle-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 10px;
+  margin: 8px 0 14px;
+}
+
+.toggle-card {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 13px;
+  border: 1px solid theme.$border;
+  border-radius: 12px;
+  background: #fbfcfe;
+  transition: border-color 0.15s ease, background 0.15s ease;
+
+  // The card itself lights up with the toggle, so "which flags are on"
+  // is readable at a glance rather than requiring eight switches to
+  // be checked one by one.
+  &.toggled {
+    border-color: theme.$teal;
+    background: theme.$teal-soft;
+  }
+
+  .toggle-icon {
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: theme.$navy-soft;
+    color: theme.$navy;
+
+    &.success {
+      background: theme.$ok-soft;
+      color: theme.$ok;
+    }
+
+    &.hot {
+      background: theme.$danger-soft;
+      color: theme.$danger;
+    }
+
+    &.warn {
+      background: theme.$warn-soft;
+      color: theme.$warn;
+    }
+
+    mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
+  }
+
+  .toggle-body {
+    flex: 1;
+    min-width: 0;
+
+    strong {
+      display: block;
+      font-size: 12.5px;
+      color: theme.$navy;
+    }
+
+    small {
+      display: block;
+      font-size: 11px;
+      color: theme.$text-muted;
+    }
+  }
+}
+
+// ------------------------------------------------------------
+//  Read-only derived value (cost price / margin)
+//
+//  Presented as a card rather than a disabled field: a greyed-out
+//  input reads as "broken", whereas a card with an explanation reads
+//  as "this is computed, and here is why you cannot type it".
+// ------------------------------------------------------------
+.derived-card {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin: 4px 0 12px;
+  padding: 11px 13px;
+  border: 1px dashed #b9cbe4;
+  border-radius: 12px;
+  background: theme.$navy-soft;
+
+  .derived-icon {
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+    color: theme.$navy;
+
+    mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
+  }
+
+  .derived-body {
+    flex: 1;
+    min-width: 0;
+
+    strong {
+      display: block;
+      font-size: 12.5px;
+      color: theme.$navy;
+    }
+
+    small {
+      display: block;
+      font-size: 11px;
+      line-height: 1.45;
+      color: theme.$text-muted;
+    }
+  }
+
+  .derived-value {
+    text-align: right;
+    white-space: nowrap;
+
+    .dv-cost {
+      display: block;
+      font-size: 14px;
+      font-weight: 700;
+      color: theme.$navy;
+    }
+
+    .dv-margin {
+      display: block;
+      font-size: 11px;
+      color: theme.$text-muted;
+    }
+  }
+}
+
+// ------------------------------------------------------------
+//  Explanatory notes
+// ------------------------------------------------------------
+.inline-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 8px 0 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #cfe0f5;
+  background: theme.$info-soft;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #1e3a8a;
+
+  mat-icon {
+    font-size: 17px;
+    width: 17px;
+    height: 17px;
+    flex: 0 0 auto;
+    margin-top: 1px;
+  }
+
+  &.warn-note {
+    border-color: #f3d9a8;
+    background: theme.$warn-soft;
+    color: #92400e;
+  }
+
+  &.danger-note {
+    border-color: #f5b8b8;
+    background: theme.$danger-soft;
+    color: #991b1b;
+  }
+}
+
+// ------------------------------------------------------------
+//  Ingredient grid
+// ------------------------------------------------------------
+.ing-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+
+  .spacer {
+    flex: 1;
+  }
+
+  .toolbar-note {
+    font-size: 11.5px;
+    color: theme.$text-muted;
+  }
+}
+
+.stock-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid theme.$ok;
+  background: theme.$ok-soft;
+  color: #14532d;
+  font-size: 12px;
+  line-height: 1.5;
+
+  mat-icon {
+    font-size: 17px;
+    width: 17px;
+    height: 17px;
+    flex: 0 0 auto;
+    margin-top: 1px;
+
+    &.ok {
+      color: theme.$ok;
+    }
+
+    // A dish that cannot be made has to be louder than one that can.
+    &.bad {
+      color: theme.$danger;
+    }
+  }
+}
+
+.ing-table-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 22px;
+}
+
+.ing-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid theme.$border;
+  border-radius: 10px;
+  overflow: hidden;
+
+  thead th {
+    background: theme.$navy-soft;
+    color: theme.$navy;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 7px 8px;
+    text-align: left;
+    border-bottom: 1px solid #d5e0ee;
+  }
+
+  tbody tr {
+    border-bottom: 1px solid theme.$border;
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    &:hover {
+      background: #fbfcfe;
+    }
+  }
+
+  td {
+    padding: 2px 6px;
+    vertical-align: middle;
+    font-size: 12px;
+    color: theme.$text;
+  }
+}
+
+.ing-field {
+  width: 100%;
+
+  ::ng-deep .mat-mdc-form-field-subscript-wrapper {
+    display: none;
+  }
+
+  ::ng-deep .mat-mdc-form-field-infix {
+    min-height: 38px;
+    padding-top: 9px;
+    padding-bottom: 9px;
+    font-size: 12.5px;
+  }
+
+  ::ng-deep .mat-mdc-text-field-wrapper {
+    background: #f8fafd;
+  }
+}
+
+.line-cost {
+  font-size: 11.5px;
+  color: theme.$text-muted;
+}
+
+.stock-out {
+  margin-left: 5px;
+  font-size: 15px;
+  width: 15px;
+  height: 15px;
+  color: theme.$warn;
+  vertical-align: middle;
+}
+
+.ing-empty {
+  padding: 18px 10px !important;
+  text-align: center;
+  color: theme.$text-muted;
+  font-size: 12px;
+}
+
+// ------------------------------------------------------------
+//  Responsive
+// ------------------------------------------------------------
+@media (max-width: 1400px) {
+  .table-header .filter-controls .custom-input {
+    width: 170px;
+  }
+  .table-header .filter-controls .select-input {
+    width: 140px;
+  }
+}
+
+@media (max-width: 900px) {
+  .table-header .filter-controls .custom-input,
+  .table-header .filter-controls .select-input {
+    width: 100%;
+  }
+
+  .section-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .rcp-dialog-actions .footer-note {
+    display: none;
+  }
+}

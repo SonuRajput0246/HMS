@@ -1,0 +1,451 @@
+// ============================================================
+//  RESERVATION DETAILS — styled HMS detail page
+//  Brand: navy #003366 / teal #16b4a4
+//  Matches the edit-reservation page design system.
+// ============================================================
+
+$navy: #003366;
+$navy-light: #0a4387;
+$navy-soft: #eef3fa;
+$teal: #16b4a4;
+$teal-dark: #0d9488;
+$teal-soft: #e2f6f3;
+$page-bg: #f2f6fc;
+$card-bg: #ffffff;
+$text: #1c2b3a;
+$text-muted: #64748b;
+$border: #e2e8f0;
+$danger: #dc2626;
+$danger-soft: #fee2e2;
+$green: #15803d;
+$green-soft: #dcfce7;
+$amber: #b45309;
+$amber-soft: #fef3c7;
+$radius-lg: 18px;
+$radius: 12px;
+
+// ------------------------------------------------------------
+//  Page layout — navy/teal radial canvas, page scrolls
+// ------------------------------------------------------------
+.details-page {
+  height: calc(100vh - 110px);
+  box-sizing: border-box;
+  padding: 10px 20px 16px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background:
+    radial-gradient(1200px 400px at 85% -10%, rgba(22, 180, 164, 0.10), transparent 60%),
+    radial-gradient(900px 380px at -10% -10%, rgba(10, 67, 135, 0.08), transparent 55%),
+    $page-bg;
+
+  scrollbar-width: thin;
+  scrollbar-color: #c3d2e4 transparent;
+
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: #c3d2e4;
+    border-radius: 8px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+// ------------------------------------------------------------
+//  Header band — navy gradient with teal glow
+// ------------------------------------------------------------
+.details-band {
+  box-sizing: border-box;
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 12px 20px;
+  border-radius: 14px;
+  background:
+    radial-gradient(500px 140px at 100% 0%, rgba(22, 180, 164, 0.28), transparent 60%),
+    linear-gradient(120deg, #0b2f5e 0%, $navy 45%, $navy-light 100%);
+  box-shadow: 0 10px 24px rgba(0, 51, 102, 0.20);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+
+  .band-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+
+    .band-icon {
+      width: 42px;
+      height: 42px;
+      flex: 0 0 42px;
+      border-radius: 11px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 255, 255, 0.14);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+
+      mat-icon {
+        color: #fff;
+        font-size: 22px;
+        width: 22px;
+        height: 22px;
+      }
+    }
+
+    .band-title {
+      min-width: 0;
+
+      h2 {
+        margin: 0;
+        font-size: 19px;
+        font-weight: 700;
+        letter-spacing: 0.3px;
+        color: #fff;
+        white-space: nowrap;
+      }
+
+      .band-sub {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 4px;
+      }
+
+      .band-meta {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 12.5px;
+        color: rgba(255, 255, 255, 0.86);
+        white-space: nowrap;
+
+        mat-icon {
+          font-size: 15px;
+          width: 15px;
+          height: 15px;
+          opacity: 0.85;
+        }
+
+        em {
+          font-style: normal;
+          margin: 0 1px;
+          opacity: 0.7;
+        }
+      }
+    }
+  }
+
+  .band-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+
+    button.mat-mdc-raised-button {
+      border-radius: 10px !important;
+      transition: background-color 0.2s ease, box-shadow 0.2s ease;
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+
+      .mat-mdc-button-persistent-ripple::before {
+        opacity: 0 !important;
+      }
+    }
+
+    .btn-back {
+      background: rgba(255, 255, 255, 0.10) !important;
+      color: #fff !important;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      box-shadow: none !important;
+
+      &:hover:not(:disabled) {
+        background: rgba(255, 255, 255, 0.22) !important;
+      }
+    }
+
+    .btn-edit {
+      background: #ffffff !important;
+      color: $navy !important;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.20) !important;
+
+      &:hover:not(:disabled) {
+        background: #f0f9ff !important;
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.26) !important;
+      }
+    }
+
+    .btn-checkin {
+      background: $teal !important;
+      color: #ffffff !important;
+      box-shadow: 0 4px 12px rgba(22, 180, 164, 0.35) !important;
+
+      &:hover:not(:disabled) {
+        background: $teal-dark !important;
+      }
+    }
+
+    /* Destructive -- deliberately the loudest button in the band so it is
+       never hit by accident next to Check In. */
+    .btn-cancel-res {
+      background: #b23c3c !important;
+      color: #ffffff !important;
+      box-shadow: 0 4px 12px rgba(178, 60, 60, 0.40) !important;
+
+      &:hover:not(:disabled) {
+        background: #8f2f2f !important;
+      }
+    }
+  }
+}
+
+// ------------------------------------------------------------
+//  Body — sections stack in one column
+// ------------------------------------------------------------
+.details-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-bottom: 20px;
+}
+
+.sections {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+// ------------------------------------------------------------
+//  Section shell — white card with rounded corners
+// ------------------------------------------------------------
+.form-shell {
+  background: $card-bg;
+  border-radius: $radius-lg;
+  box-shadow: 0 6px 24px rgba(15, 42, 77, 0.06);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  overflow: hidden;
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 20px;
+    border-bottom: 1px solid $border;
+
+    .head-icon {
+      width: 40px;
+      height: 40px;
+      flex: 0 0 40px;
+      border-radius: 11px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, $navy, $navy-light);
+      box-shadow: 0 4px 10px rgba(0, 51, 102, 0.25);
+
+      mat-icon {
+        color: #fff;
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+      }
+    }
+
+    .head-text {
+      min-width: 0;
+
+      h3 {
+        margin: 0;
+        font-size: 15.5px;
+        font-weight: 700;
+        color: $navy;
+        letter-spacing: 0.2px;
+      }
+
+      p {
+        margin: 2px 0 0;
+        font-size: 12.5px;
+        color: $text-muted;
+      }
+    }
+  }
+}
+
+// ------------------------------------------------------------
+//  Info grid — label/value pairs
+// ------------------------------------------------------------
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1px;
+  background: $border;
+
+  .info-item {
+    background: $card-bg;
+    padding: 14px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+
+    .label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      color: $text-muted;
+    }
+
+    .value {
+      font-size: 14px;
+      font-weight: 600;
+      color: $text;
+      word-break: break-word;
+
+      &.highlight {
+        color: $navy;
+        font-size: 16px;
+        font-weight: 700;
+      }
+
+      &.total_amount {
+        color: $navy;
+        font-weight: 700;
+      }
+
+      &.paid {
+        color: $green;
+        font-weight: 700;
+      }
+
+      &.balance_amount {
+        color: $teal-dark;
+        font-weight: 700;
+
+        // nothing outstanding against a stay that has been paid
+        &.settled {
+          color: $green;
+        }
+      }
+
+      // surplus collected over the stay value, and money handed back
+      &.over_collected,
+      &.refunded {
+        color: #b23c3c;
+        font-weight: 700;
+      }
+    }
+  }
+}
+
+// ------------------------------------------------------------
+//  Status badge — same pill treatment as the edit page band
+// ------------------------------------------------------------
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 11px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  white-space: nowrap;
+
+  &::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  &.reserved,
+  &.created {
+    background: rgba(255, 255, 255, 0.16);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+  }
+
+  &.checked_in {
+    background: $teal;
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+  }
+
+  &.checked_out {
+    background: rgba(139, 92, 246, 0.30);
+    color: #e9d5ff;
+    border: 1px solid rgba(167, 139, 250, 0.45);
+  }
+
+  &.cancelled {
+    background: rgba(220, 38, 38, 0.55);
+    color: #fff;
+    border: 1px solid rgba(248, 113, 113, 0.6);
+  }
+}
+
+// ------------------------------------------------------------
+//  Empty state
+// ------------------------------------------------------------
+.no-data-msg {
+  padding: 20px;
+  font-size: 13.5px;
+  color: $text-muted;
+  font-style: italic;
+}
+
+// ------------------------------------------------------------
+//  Table — additional guests
+// ------------------------------------------------------------
+.table-wrap {
+  overflow-x: auto;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+
+  thead th {
+    background: $navy-soft;
+    color: $navy;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    text-align: left;
+    padding: 10px 16px;
+    border-bottom: 1px solid $border;
+    white-space: nowrap;
+  }
+
+  tbody td {
+    padding: 11px 16px;
+    color: $text;
+    border-bottom: 1px solid $border;
+
+    &:last-child {
+      border-bottom: none;
+    }
+  }
+
+  tbody tr:nth-child(even) {
+    background: rgba(238, 243, 250, 0.35);
+  }
+
+  tbody tr:hover {
+    background: $navy-soft;
+  }
+}

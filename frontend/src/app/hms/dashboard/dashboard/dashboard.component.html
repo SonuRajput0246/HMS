@@ -1,0 +1,25 @@
+<!-- <app-navigation-bar [navData]="navData"></app-navigation-bar> -->
+
+<div class="dashboard-grid">
+  <mat-card
+    *ngFor="let card of dashboardCards"
+    class="stat-card clickable-card"
+    [ngClass]="card.cssClass"
+    role="button"
+    tabindex="0"
+    matRipple
+    (click)="navigate(card.route)"
+    (keyup.enter)="navigate(card.route)"
+  >
+    <mat-card-content>
+      <div class="stat-header">
+        <div class="stat-icon">
+          <mat-icon>{{ card.icon }}</mat-icon>
+        </div>
+        <span class="stat-label">{{ card.title }}</span>
+      </div>
+
+      <div class="stat-value">{{ card.value }}</div>
+    </mat-card-content>
+  </mat-card>
+</div>

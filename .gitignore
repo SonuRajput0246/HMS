@@ -1,0 +1,102 @@
+# ============================================================
+# HMS-CMS monorepo .gitignore
+# Merged from the previous backend (Flask/Python) and
+# frontend (Angular) repositories.
+# ============================================================
+
+# ------------------------------------------------------------
+# Common: OS files
+# ------------------------------------------------------------
+.DS_Store
+Thumbs.db
+
+# ------------------------------------------------------------
+# Common: IDEs and editors
+# ------------------------------------------------------------
+.idea/
+.project
+.classpath
+.c9/
+.settings/
+*.launch
+*.sublime-workspace
+
+# Visual Studio Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.history/*
+
+# ------------------------------------------------------------
+# Backend (Python / Flask)  ->  backend/
+# ------------------------------------------------------------
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+.venv/
+v_env/
+.v_env/
+.env
+.flaskenv
+
+# Flask instance folder (if used for config or local files)
+instance/
+
+# Pytest / coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+
+# Logs and SQLite databases
+*.log
+*.sqlite3
+
+# Other caches or temp files
+*.cache/
+*.tmp
+
+# ------------------------------------------------------------
+# Frontend (Angular / Node)  ->  frontend/
+# ------------------------------------------------------------
+# Compiled output
+frontend/dist/
+frontend/tmp/
+frontend/out-tsc/
+frontend/bazel-out/
+
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Angular / Sass cache
+frontend/.angular/cache/
+.sass-cache/
+
+# Miscellaneous
+frontend/connect.lock
+frontend/coverage/
+frontend/libpeerconnection.log
+testem.log
+frontend/typings/

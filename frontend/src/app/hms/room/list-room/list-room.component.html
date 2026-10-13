@@ -1,0 +1,129 @@
+<app-navigation-bar [navData]="navData"></app-navigation-bar>
+
+<div class="top-sub-nav-controls">
+    <button type="button" mat-raised-button color="primary" routerLink="/hms/rooms/add-room">
+        <mat-icon>add</mat-icon> Add Room
+    </button>
+</div>
+
+<div class="rooms-page">
+
+    <div class="table-card">
+
+        <header class="table-header">
+            <div class="table-title">
+                <span class="head-icon"><mat-icon>meeting_room</mat-icon></span>
+                <div class="head-text">
+                    <h3>All Rooms</h3>
+                    <p>All room details with type, status and view</p>
+                </div>
+            </div>
+
+            <div class="filter-controls">
+                <mat-form-field appearance="outline" floatLabel="always" class="custom-input">
+                    <mat-label>Search</mat-label>
+                    <mat-icon matIconPrefix class="search-prefix">search</mat-icon>
+                    <input matInput [(ngModel)]="gridSearch" placeholder="Room number or type" (keyup)="applyFilter()">
+                </mat-form-field>
+
+                <mat-form-field appearance="outline" floatLabel="always" class="custom-input">
+                    <mat-label>Room Type</mat-label>
+                    <mat-select [(ngModel)]="requestData.room_type_id" (selectionChange)="applyFilter()"
+                        panelClass="compact-select-panel">
+                        <mat-option [value]="0">All</mat-option>
+                        <mat-option *ngFor="let roomType of roomTypesList" [value]="roomType.id">
+                            {{ roomType.name }}
+                        </mat-option>
+                    </mat-select>
+                </mat-form-field>
+
+                <div class="filter-action">
+                    <button mat-button color="warn" (click)="clearFilter()">
+                        <mat-icon>filter_alt_off</mat-icon> Clear Filters
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <div class="table-scroll">
+            <ng-container *ngIf="!isPageLoad">
+                <table mat-table [dataSource]="dataSource" class="rooms-table">
+
+                    <ng-container matColumnDef="sr">
+                        <th mat-header-cell *matHeaderCellDef style="width: 5%;"> Sr. No. </th>
+                        <td mat-cell *matCellDef="let element;let i=index"> {{
+                            (requestData.page_size!*(requestData.page_number!-1)) + (i+1)}} </td>
+                    </ng-container>
+
+                    <ng-container matColumnDef="roomNumber">
+                        <th mat-header-cell *matHeaderCellDef style="width: 15%;"> Room Number </th>
+                        <td mat-cell *matCellDef="let element">{{element.room_number}}</td>
+                    </ng-container>
+
+                    <ng-container matColumnDef="roomType">
+                        <th mat-header-cell *matHeaderCellDef style="width: 15%;"> Room Type </th>
+                        <td mat-cell *matCellDef="let element">{{element.room_type_name}}</td>
+                    </ng-container>
+
+                    <ng-container matColumnDef="room_status">
+                        <th mat-header-cell *matHeaderCellDef style="text-align: center; width: 15%;"> Room Status </th>
+                        <td mat-cell *matCellDef="let element" style="text-align: center;">
+                            <span class="status-pill"
+                                [ngClass]="element.room_status === 'available' ? 'st-active' : (element.room_status === 'occupied' || element.room_status === 'reserved' ? 'st-inactive' : 'st-other')">
+                                {{element.room_status | snakeToTitle }}
+                            </span>
+                        </td>
+                    </ng-container>
+
+                    <ng-container matColumnDef="view">
+                        <th mat-header-cell *matHeaderCellDef style="width: 15%;"> View </th>
+                        <td mat-cell *matCellDef="let element">{{element.view}}</td>
+                    </ng-container>
+
+                    <ng-container matColumnDef="notes">
+                        <th mat-header-cell *matHeaderCellDef style="width: 25%;"> Notes </th>
+                        <td mat-cell *matCellDef="let element">{{element.notes}}</td>
+                    </ng-container>
+
+                    <ng-container matColumnDef="actions">
+                        <th style="text-align: center;width: 7%;" mat-header-cell *matHeaderCellDef> Action </th>
+                        <td style="text-align: center;" mat-cell *matCellDef="let element">
+                            <button class="action-btn" mat-icon-button [matMenuTriggerFor]="structureaction"
+                                (click)="$event.stopPropagation();">
+                                <mat-icon>more_vert</mat-icon>
+                            </button>
+                            <mat-menu class="table-actions" #structureaction="matMenu" xPosition="before" overlapTrigger="true">
+                                <button mat-menu-item color="primary" class="menu-item" (click)="onEdit(element);">
+                                    <mat-icon>edit</mat-icon> Edit
+                                </button>
+                                <button mat-menu-item color="warn" class="menu-item delete-item" (click)="onDelete(element);">
+                                    <mat-icon>delete</mat-icon> Delete
+                                </button>
+                            </mat-menu>
+                        </td>
+                    </ng-container>
+
+                    <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></tr>
+                    <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+
+                    <tr mat-no-data-row *matNoDataRow>
+                        <td class="no-data" [attr.colspan]="displayedColumns.length">
+                            <mat-icon>meeting_room</mat-icon>
+                            <span>No rooms found for the selected filters.</span>
+                        </td>
+                    </tr>
+                </table>
+            </ng-container>
+        </div>
+
+        <footer class="table-footer" *ngIf="!isPageLoad">
+            <mat-paginator #paginator [pageIndex]="requestData.page_number!-1" [length]="pageDet.total_docs"
+                [pageSize]="pageDet.limit" [pageSizeOptions]="[10, 20, 50]" (page)="onPaginateChange($event)"
+                showFirstLastButtons>
+            </mat-paginator>
+        </footer>
+    </div>
+
+</div>
+
+<app-page-loader *ngIf="isPageLoad"></app-page-loader>

@@ -1,0 +1,112 @@
+<app-navigation-bar [navData]="navData"></app-navigation-bar>
+
+<div class="top-sub-nav-controls">
+    <button type="button" mat-raised-button color="primary" routerLink="/hms/profile">
+        <mat-icon>arrow_back</mat-icon> Back
+    </button>
+</div>
+
+<div class="manage-profile-page">
+
+    <div class="in_up_form form-scroll">
+
+        <form [formGroup]="profileForm" (ngSubmit)="updateProfile()" autocomplete="off">
+            <div class="form-shell manage-profile-form">
+
+                <!-- ================= Identity strip ================= -->
+                <div class="identity-strip">
+                    <div class="avatar-wrap">
+                        <img [src]="avatar" alt="Profile" class="avatar-img" />
+                    </div>
+                    <div class="identity-text">
+                        <strong>Update your profile</strong>
+                        <small>Changes apply immediately across the app</small>
+                    </div>
+                </div>
+
+                <!-- ================= Personal Information ================= -->
+                <section class="form-section">
+                    <header class="section-header">
+                        <span class="head-icon"><mat-icon>person</mat-icon></span>
+                        <div class="head-text">
+                            <h3>Personal Information</h3>
+                            <p>The name shown across the app and in reports</p>
+                        </div>
+                    </header>
+
+                    <div class="section-grid">
+                        <mat-form-field appearance="outline" floatLabel="always">
+                            <mat-label>First Name</mat-label>
+                            <input matInput type="text" formControlName="first_name" placeholder="Enter First Name">
+                            <mat-error *ngIf="profileForm.get('first_name')?.hasError('required')">
+                                First Name is required
+                            </mat-error>
+                        </mat-form-field>
+
+                        <mat-form-field appearance="outline" floatLabel="always">
+                            <mat-label>Last Name</mat-label>
+                            <input matInput type="text" formControlName="last_name" placeholder="Enter Last Name">
+                            <mat-error *ngIf="profileForm.get('last_name')?.hasError('required')">
+                                Last Name is required
+                            </mat-error>
+                        </mat-form-field>
+                    </div>
+                </section>
+
+                <!-- ================= Account Details (locked) ================= -->
+                <section class="form-section">
+                    <header class="section-header">
+                        <span class="head-icon"><mat-icon>admin_panel_settings</mat-icon></span>
+                        <div class="head-text">
+                            <h3>Account Details</h3>
+                            <p>Sign-in email and role are managed by your administrator</p>
+                        </div>
+                    </header>
+
+                    <div class="section-grid">
+                        <mat-form-field appearance="outline" floatLabel="always" class="locked-field">
+                            <mat-label>Email</mat-label>
+                            <input matInput type="email" formControlName="email" placeholder="Enter Email"
+                                autocomplete="off">
+                            <mat-icon matIconSuffix class="lock-icon">lock</mat-icon>
+                        </mat-form-field>
+
+                        <mat-form-field appearance="outline" floatLabel="always" class="locked-field">
+                            <mat-label>Role</mat-label>
+                            <input matInput formControlName="role_name" placeholder="Role">
+                            <mat-icon matIconSuffix class="lock-icon">lock</mat-icon>
+                        </mat-form-field>
+                    </div>
+                </section>
+
+            </div>
+
+            <!-- Footer Actions -->
+            <div class="form-footer">
+                <div class="footer-note">
+                    <mat-icon>lock</mat-icon>
+                    <span>Profile details are stored securely</span>
+                </div>
+
+                <div class="footer-buttons">
+                    <button mat-stroked-button type="button" class="btn-cancel" routerLink="/hms/profile">
+                        Cancel
+                    </button>
+                    <button mat-flat-button type="submit" class="btn-submit" [disabled]="isLoading">
+                        <span class="btn-content" *ngIf="!isLoading">
+                            <mat-icon>save</mat-icon>
+                            Save Changes
+                        </span>
+                        <span class="btn-content" *ngIf="isLoading">
+                            Please Wait
+                            <mat-progress-spinner diameter="18" mode="indeterminate" class="btn-spinner">
+                            </mat-progress-spinner>
+                        </span>
+                    </button>
+                </div>
+            </div>
+        </form>
+
+    </div>
+
+</div>

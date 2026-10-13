@@ -1,0 +1,200 @@
+<app-navigation-bar [navData]="navData"></app-navigation-bar>
+
+<div class="advance-payment-page">
+
+    <!-- Compact Reservation Status Band — same as Guest Details (we are on the Payment step) -->
+    <div class="status-band">
+        <div class="band-stepper">
+            <div class="bp-step done">
+                <span class="bp-dot"><mat-icon>check</mat-icon></span>
+                <span class="bp-label">Select Room</span>
+            </div>
+            <span class="bp-line"></span>
+            <div class="bp-step done">
+                <span class="bp-dot"><mat-icon>check</mat-icon></span>
+                <span class="bp-label">Guest Details</span>
+            </div>
+            <span class="bp-line"></span>
+            <div class="bp-step active">
+                <span class="bp-dot">3</span>
+                <span class="bp-label">Payment</span>
+            </div>
+        </div>
+
+        <span class="band-divider"></span>
+
+        <div class="band-note">
+            <mat-icon>receipt_long</mat-icon>
+            <span>Advance Payment &middot; Reservation #{{ reservationId }}</span>
+        </div>
+    </div>
+
+    <!-- Form Area -->
+    <div class="in_up_form form-scroll">
+
+        <form [formGroup]="paymentForm" (ngSubmit)="finalSubmit()" autocomplete="off">
+            <div class="form-shell payment-form">
+
+                <!-- ================= Payment Details ================= -->
+                <section class="form-section">
+                    <header class="section-header">
+                        <span class="head-icon"><mat-icon>payments</mat-icon></span>
+                        <div class="head-text">
+                            <h3>Payment Details</h3>
+                            <p>Amount, currency and method of this advance payment</p>
+                        </div>
+                    </header>
+
+                    <div class="section-grid">
+                        <mat-form-field appearance="outline" floatLabel="always">
+                            <mat-label>Payment Amount</mat-label>
+                            <input matInput type="number" formControlName="amount" placeholder="Enter Payment Amount">
+                            <mat-error *ngIf="paymentForm.get('amount')?.hasError('required')">
+                                Payment Amount is required
+                            </mat-error>
+                        </mat-form-field>
+
+                        <mat-form-field appearance="outline"
+                            [floatLabel]="isCurrencyLoading ? 'auto' : 'always'" [hideRequiredMarker]="isCurrencyLoading">
+                            <mat-label>
+                                <span class="label-loader" *ngIf="isCurrencyLoading; else currencyLabel">
+                                    <span>Loading...</span>
+                                    <mat-spinner diameter="16"></mat-spinner>
+                                </span>
+                                <ng-template #currencyLabel>Currency</ng-template>
+                            </mat-label>
+                            <mat-select formControlName="currency" placeholder="Choose Currency" panelClass="guest-select-panel">
+                                <mat-option>
+                                    <ngx-mat-select-search
+                                    [formControl]="currencySearchCtrl"
+                                    placeholderLabel="Search Currency..."
+                                    noEntriesFoundLabel="No currency found">
+                                    </ngx-mat-select-search>
+                                </mat-option>
+                                <mat-option *ngFor="let item of currencyList" [value]="item.code">
+                                    {{ item.code }}
+                                </mat-option>
+                            </mat-select>
+                            <mat-error *ngIf="paymentForm.get('currency')?.hasError('required')">
+                                Currency is required
+                            </mat-error>
+                        </mat-form-field>
+
+                        <mat-form-field appearance="outline"
+                            [floatLabel]="isPaymentMethodLoading ? 'auto' : 'always'" [hideRequiredMarker]="isPaymentMethodLoading">
+                            <mat-label>
+                                <span class="label-loader" *ngIf="isPaymentMethodLoading; else paymentMethodLabel">
+                                    <span>Loading...</span>
+                                    <mat-spinner diameter="16"></mat-spinner>
+                                </span>
+                                <ng-template #paymentMethodLabel>Payment Method</ng-template>
+                            </mat-label>
+                            <mat-select formControlName="payment_method" placeholder="Choose Payment Method"
+                                [disabled]="isPaymentMethodLoading" panelClass="guest-select-panel">
+                                <mat-option *ngFor="let item of paymentMethodList" [value]="item.option_key">
+                                    {{ item.option_label }}
+                                </mat-option>
+                            </mat-select>
+                            <mat-error *ngIf="paymentForm.get('payment_method')?.hasError('required')">
+                                Payment Method is required
+                            </mat-error>
+                        </mat-form-field>
+
+                        <mat-form-field appearance="outline"
+                            [floatLabel]="isPaymentStatusLoading ? 'auto' : 'always'" [hideRequiredMarker]="isPaymentStatusLoading">
+                            <mat-label>
+                                <span class="label-loader" *ngIf="isPaymentStatusLoading; else paymentStatusLabel">
+                                    <span>Loading...</span>
+                                    <mat-spinner diameter="16"></mat-spinner>
+                                </span>
+                                <ng-template #paymentStatusLabel>Payment Status</ng-template>
+                            </mat-label>
+                            <mat-select formControlName="payment_status" placeholder="Choose Payment Status"
+                                [disabled]="isPaymentStatusLoading" panelClass="guest-select-panel">
+                                <mat-option *ngFor="let item of paymentStatusList" [value]="item.option_key">
+                                    {{ item.option_label }}
+                                </mat-option>
+                            </mat-select>
+                            <mat-error *ngIf="paymentForm.get('payment_status')?.hasError('required')">
+                                Payment Status is required
+                            </mat-error>
+                        </mat-form-field>
+
+                        <mat-form-field appearance="outline" floatLabel="always">
+                            <mat-label>Payment Date</mat-label>
+                            <input matInput [matDatepicker]="picker" formControlName="payment_date" placeholder="Select Payment Date">
+                            <mat-hint>DD/MM/YYYY</mat-hint>
+                            <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
+                            <mat-datepicker #picker panelClass="reservation-range-picker"></mat-datepicker>
+                            <mat-error *ngIf="paymentForm.get('payment_date')?.hasError('required')">
+                                Payment Date is required
+                            </mat-error>
+                        </mat-form-field>
+                    </div>
+                </section>
+
+                <!-- ================= Reference & Notes ================= -->
+                <section class="form-section">
+                    <header class="section-header">
+                        <span class="head-icon"><mat-icon>receipt_long</mat-icon></span>
+                        <div class="head-text">
+                            <h3>Reference &amp; Notes</h3>
+                            <p>Transaction reference and any remarks</p>
+                        </div>
+                    </header>
+
+                    <div class="section-grid">
+                        <mat-form-field appearance="outline" floatLabel="always">
+                            <mat-label>Transaction Reference</mat-label>
+                            <input matInput type="text" formControlName="transaction_ref" placeholder="Enter Transaction Reference">
+                            <mat-error *ngIf="paymentForm.get('transaction_ref')?.hasError('required')">
+                                Transaction Reference is required
+                            </mat-error>
+                        </mat-form-field>
+
+                        <mat-form-field appearance="outline" floatLabel="always">
+                            <mat-label>Remark</mat-label>
+                            <input matInput type="text" formControlName="remark" placeholder="Enter Remark">
+                        </mat-form-field>
+
+                        <mat-form-field appearance="outline" floatLabel="always" class="field-span-2">
+                            <mat-label>Notes</mat-label>
+                            <textarea matInput formControlName="notes" rows="1" maxlength="250" placeholder="Enter Notes"></textarea>
+                        </mat-form-field>
+                    </div>
+                </section>
+
+            </div>
+
+            <!-- Footer Actions -->
+            <div class="form-footer">
+                <div class="footer-note">
+                    <mat-icon>lock</mat-icon>
+                    <span>Payment is recorded against reservation #{{ reservationId }}</span>
+                </div>
+
+                <div class="footer-buttons">
+                    <button mat-stroked-button type="button" class="btn-cancel" routerLink="/hms/reservations">
+                        Skip for Now
+                    </button>
+                    <button mat-flat-button type="submit" class="btn-submit" [disabled]="isLoading || isEnumLoading">
+                        <span class="btn-content" *ngIf="!isLoading">
+                            <mat-icon>print</mat-icon>
+                            Save &amp; Print Receipt
+                        </span>
+                        <span class="btn-content" *ngIf="isLoading">
+                            Please Wait
+                            <mat-progress-spinner diameter="18" mode="indeterminate" class="btn-spinner">
+                            </mat-progress-spinner>
+                        </span>
+                    </button>
+                </div>
+            </div>
+        </form>
+
+        <ng-container *ngIf="isPageLoad">
+            <app-page-loader></app-page-loader>
+        </ng-container>
+    </div>
+
+</div>

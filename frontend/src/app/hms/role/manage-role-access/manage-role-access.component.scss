@@ -1,0 +1,405 @@
+// ============================================================
+//  MANAGE ROLE ACCESS — styled HMS permission matrix
+//  Brand: navy #003366 / teal #16b4a4
+//  Reuses the list page's table-card shell. This page has no
+//  guest equivalent, so the matrix chrome (chips, category tree,
+//  permission checkboxes) is built from the same design tokens.
+// ============================================================
+
+$navy: #003366;
+$navy-light: #0a4387;
+$navy-soft: #eef3fa;
+$teal: #16b4a4;
+$teal-soft: #e2f6f3;
+$page-bg: #f2f6fc;
+$card-bg: #ffffff;
+$text: #1c2b3a;
+$text-muted: #64748b;
+$border: #e2e8f0;
+$gray: #6b7280;
+$gray-soft: #f3f4f6;
+$radius-lg: 18px;
+
+// ------------------------------------------------------------
+//  Page wrapper (same as guests-page / roles-page)
+// ------------------------------------------------------------
+.role-access-page {
+  height: calc(100vh - 110px);
+  display: flex;
+  flex-direction: column;
+  padding: 10px 20px 16px;
+  gap: 10px;
+  box-sizing: border-box;
+  background:
+    radial-gradient(1200px 400px at 85% -10%, rgba(22, 180, 164, 0.10), transparent 60%),
+    radial-gradient(900px 380px at -10% -10%, rgba(10, 67, 135, 0.08), transparent 55%),
+    $page-bg;
+}
+
+// ------------------------------------------------------------
+//  Table card — fixed header, only the matrix scrolls
+// ------------------------------------------------------------
+.table-card {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: $card-bg;
+  border: 1px solid $border;
+  border-radius: $radius-lg;
+  box-shadow: 0 6px 24px rgba(15, 42, 77, 0.06);
+  overflow: hidden;
+
+  .table-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding: 10px 16px;
+    border-bottom: 1px solid $border;
+
+    .table-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+
+      .head-icon {
+        width: 40px;
+        height: 40px;
+        flex: 0 0 40px;
+        border-radius: 11px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, $navy, $navy-light);
+        box-shadow: 0 4px 10px rgba(0, 51, 102, 0.25);
+
+        mat-icon {
+          color: #fff;
+          font-size: 20px;
+          width: 20px;
+          height: 20px;
+        }
+      }
+
+      .head-text {
+        min-width: 0;
+
+        h3 {
+          margin: 0;
+          font-size: 15.5px;
+          font-weight: 700;
+          color: $navy;
+          letter-spacing: 0.2px;
+        }
+
+        p {
+          margin: 2px 0 0;
+          font-size: 12.5px;
+          color: $text-muted;
+        }
+      }
+    }
+
+    .filter-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-left: auto;
+    }
+  }
+
+  // ----- ONLY the matrix scrolls -----
+  .table-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #c3d2e4 transparent;
+
+    &::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    &::-webkit-scrollbar-thumb {
+      background: #c3d2e4;
+      border-radius: 8px;
+    }
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+  }
+}
+
+// ------------------------------------------------------------
+//  Header meta chip — "N modules"
+// ------------------------------------------------------------
+.access-meta .meta-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid $border;
+  background: #f8fafd;
+  color: $text-muted;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+
+  mat-icon {
+    font-size: 15px;
+    width: 15px;
+    height: 15px;
+    color: $navy;
+  }
+}
+
+// ------------------------------------------------------------
+//  Update Access button (mirrors the forms' .btn-submit pill)
+// ------------------------------------------------------------
+.btn-save {
+  border-radius: 999px;
+  padding: 0 24px;
+  min-height: 40px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  background: linear-gradient(135deg, $teal, #0f9d8c) !important;
+  color: #fff !important;
+  box-shadow: 0 6px 16px rgba(22, 180, 164, 0.35);
+  transition: all 0.2s ease;
+
+  .btn-content {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+
+    mat-icon {
+      font-size: 17px;
+      width: 17px;
+      height: 17px;
+    }
+  }
+
+  &:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 22px rgba(22, 180, 164, 0.45);
+  }
+
+  &:disabled {
+    opacity: 0.75;
+  }
+}
+
+::ng-deep .btn-save .btn-spinner circle {
+  stroke: #ffffff;
+}
+
+// ------------------------------------------------------------
+//  Matrix table
+// ------------------------------------------------------------
+.table-scroll .role-access-table {
+  width: 100%;
+  min-width: 760px;
+  table-layout: fixed;
+  background: transparent;
+  --mat-table-row-item-container-height: 38px;
+  --mat-table-header-container-height: 29px;
+}
+
+::ng-deep .table-scroll .role-access-table th.mat-mdc-header-cell {
+  background: $navy-soft;
+  color: $navy;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  padding: 5px 10px;
+  line-height: 30px;
+  white-space: nowrap;
+  border-bottom: 1.5px solid #d5e0ee;
+}
+
+::ng-deep .table-scroll .role-access-table td.mat-mdc-cell {
+  font-size: 12px;
+  color: $text;
+  padding: 6px 10px;
+  line-height: 18px;
+  border-bottom-color: $border;
+  vertical-align: middle;
+}
+
+::ng-deep .table-scroll .role-access-table tr.mat-mdc-row {
+  transition: background 0.15s ease;
+}
+::ng-deep .table-scroll .role-access-table tr.mat-mdc-row:hover td.mat-mdc-cell {
+  background: $teal-soft;
+}
+
+// ------------------------------------------------------------
+//  Category column — parent / child tree
+// ------------------------------------------------------------
+.category-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+
+  &.is-child {
+    padding-left: 32px;
+  }
+}
+
+.category-name {
+  font-size: 12.5px;
+  color: $text;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  &.is-parent {
+    font-weight: 700;
+    color: $navy;
+  }
+}
+
+// ------------------------------------------------------------
+//  Permissions grid
+// ------------------------------------------------------------
+.checkbox-container {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px 10px;
+}
+
+.checkbox-item {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 2px;
+  min-width: 0;
+
+  label {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 12px;
+    color: $text;
+    margin: 0;
+  }
+}
+
+// ------------------------------------------------------------
+//  Checkbox theming
+//  Category checkbox = navy, permission checkbox = teal.
+//  Disabled boxes fade out so the parent/child dependency
+//  reads at a glance.
+// ------------------------------------------------------------
+::ng-deep .category-check.mat-mdc-checkbox {
+  --mdc-checkbox-selected-icon-color: #{$navy};
+  --mdc-checkbox-selected-hover-icon-color: #{$navy-light};
+  --mdc-checkbox-selected-focus-icon-color: #{$navy-light};
+  --mdc-checkbox-selected-pressed-icon-color: #{$navy-light};
+  --mdc-checkbox-selected-checkmark-color: #ffffff;
+  --mdc-checkbox-unselected-hover-icon-color: #{$navy-soft};
+  --mdc-checkbox-unselected-focus-icon-color: #{$navy-soft};
+}
+
+::ng-deep .permission-check.mat-mdc-checkbox {
+  --mdc-checkbox-selected-icon-color: #{$teal};
+  --mdc-checkbox-selected-hover-icon-color: #0f9d8c;
+  --mdc-checkbox-selected-focus-icon-color: #0f9d8c;
+  --mdc-checkbox-selected-pressed-icon-color: #0f9d8c;
+  --mdc-checkbox-selected-checkmark-color: #ffffff;
+  --mdc-checkbox-unselected-hover-icon-color: #{$teal-soft};
+  --mdc-checkbox-unselected-focus-icon-color: #{$teal-soft};
+}
+
+// disabled state — muted outline, greyed checkmark
+::ng-deep .category-check.mat-mdc-checkbox.mat-mdc-checkbox-disabled,
+::ng-deep .permission-check.mat-mdc-checkbox.mat-mdc-checkbox-disabled {
+  --mdc-checkbox-disabled-selected-icon-color: #b9c6d6;
+  --mdc-checkbox-disabled-selected-hover-icon-color: #b9c6d6;
+  --mdc-checkbox-disabled-selected-focus-icon-color: #b9c6d6;
+  --mdc-checkbox-disabled-selected-checkmark-color: #ffffff;
+  --mdc-checkbox-disabled-unselected-icon-color: #dbe4f0;
+  --mdc-checkbox-disabled-unselected-hover-icon-color: #dbe4f0;
+  --mdc-checkbox-disabled-unselected-focus-icon-color: #dbe4f0;
+}
+
+// Tighten the default 40px touch/state layer down to 30px so the
+// permission rows stay compact.
+//
+// Do NOT set `padding` on .mdc-checkbox directly: Material positions the
+// visible 18px square (`.mdc-checkbox__background`) with
+//   top/left = calc((var(--mdc-checkbox-state-layer-size) - 18px) / 2)
+// which is independent of padding, while the hover/focus circle is centred
+// on the padding box. Overriding padding alone therefore slides the box
+// down-right out of the circle. Changing the variable keeps Material's own
+// calcs in agreement.
+::ng-deep .category-check,
+::ng-deep .permission-check {
+  --mdc-checkbox-state-layer-size: 30px;
+}
+
+// ------------------------------------------------------------
+//  Empty state
+// ------------------------------------------------------------
+::ng-deep .table-scroll .role-access-table tr.mat-mdc-no-data-row td {
+  display: table-cell;
+  width: 100%;
+  height: calc(100vh - 300px);
+  padding: 40px 16px;
+  border-bottom: none;
+  text-align: center;
+  vertical-align: middle;
+  white-space: normal;
+}
+
+.no-data {
+  width: 100%;
+  height: 100%;
+  padding: 24px 16px;
+  box-sizing: border-box;
+  color: $text-muted;
+  font-size: 13px;
+
+  mat-icon {
+    display: block;
+    margin: 0 auto 10px;
+    font-size: 34px;
+    width: 34px;
+    height: 34px;
+    color: #9db6d4;
+  }
+
+  span {
+    display: block;
+    text-align: center;
+  }
+}
+
+// ------------------------------------------------------------
+//  Responsive
+// ------------------------------------------------------------
+@media screen and (max-width: 992px) {
+  .checkbox-container {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .checkbox-container {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 1000px) {
+  .role-access-page {
+    padding: 8px 14px 14px;
+  }
+}

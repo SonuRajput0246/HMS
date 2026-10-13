@@ -1,0 +1,225 @@
+<app-navigation-bar [navData]="navData"></app-navigation-bar>
+
+<div class="details-page" *ngIf="!isLoading && reservation">
+
+    <!-- ================= Header band ================= -->
+    <div class="details-band">
+        <div class="band-left">
+            <span class="band-icon"><mat-icon>receipt_long</mat-icon></span>
+            <div class="band-title">
+                <h2>Reservation #{{ reservation.reservation_number || reservation.reservation_id }}</h2>
+                <div class="band-sub">
+                    <span class="status-badge" [ngClass]="reservation.reservation_status">
+                        {{ reservation.reservation_status | snakeToTitle }}
+                    </span>
+                    <span class="band-meta">
+                        <mat-icon>event</mat-icon>
+                        {{ reservation.check_in_date | date:'dd MMM' }}
+                        <em>&rarr;</em>
+                        {{ reservation.check_out_date | date:'dd MMM yyyy' }}
+                    </span>
+                    <span class="band-meta">
+                        <mat-icon>hotel</mat-icon> Room {{ reservation.room?.room_number }}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div class="band-actions">
+            <button mat-raised-button color="primary" class="btn-back" (click)="onBack()" matTooltip="Back to list">
+                <mat-icon>arrow_back</mat-icon> Back
+            </button>
+            <button mat-raised-button color="primary" class="btn-edit" (click)="onEdit()">
+                <mat-icon>edit</mat-icon> Edit
+            </button>
+            <button mat-raised-button color="accent" class="btn-checkin"
+                *ngIf="reservation.reservation_status === 'reserved'" (click)="onCheckIn()">
+                <mat-icon>login</mat-icon> Check In
+            </button>
+            <button mat-raised-button class="btn-cancel-res" color="warn"
+                *ngIf="isCancellable" [disabled]="isCancelling" (click)="onCancel()"
+                matTooltip="Cancel this reservation">
+                <mat-icon>cancel</mat-icon>
+                {{ isCancelling ? 'Cancelling' : 'Cancel Reservation' }}
+            </button>
+        </div>
+    </div>
+
+    <!-- ================= Body ================= -->
+    <div class="details-body">
+        <div class="sections">
+
+            <!-- =============== 1. STAY & ROOM =============== -->
+            <section class="form-shell">
+                <header class="section-header">
+                    <span class="head-icon"><mat-icon>hotel</mat-icon></span>
+                    <div class="head-text">
+                        <h3>Stay &amp; Room</h3>
+                        <p>Dates, assigned room and stay pricing</p>
+                    </div>
+                </header>
+
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="label">Room Number</span>
+                        <span class="value highlight">{{ reservation.room?.room_number || 'N/A' }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Room Type</span>
+                        <span class="value">{{ reservation.room?.room_type || 'N/A' }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Check In Date</span>
+                        <span class="value">{{ reservation.check_in_date | date:'dd MMM yyyy' }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Check Out Date</span>
+                        <span class="value">{{ reservation.check_out_date | date:'dd MMM yyyy' }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Total Nights</span>
+                        <span class="value">{{ totalNights }} Night(s)</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Guest Count</span>
+                        <span class="value">{{ getGuestSummary() }}</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- =============== 2. PRIMARY GUEST =============== -->
+            <section class="form-shell">
+                <header class="section-header">
+                    <span class="head-icon"><mat-icon>person</mat-icon></span>
+                    <div class="head-text">
+                        <h3>Primary Guest Information</h3>
+                        <p>Contact details and identity information</p>
+                    </div>
+                </header>
+
+                <div class="info-grid" *ngIf="reservation.primary_guest; else noGuest">
+                    <div class="info-item">
+                        <span class="label">Full Name</span>
+                        <span class="value">{{ reservation.primary_guest.first_name }} {{ reservation.primary_guest.last_name }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Phone</span>
+                        <span class="value">{{ reservation.primary_guest.phone_number || 'N/A' }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Email</span>
+                        <span class="value">{{ reservation.primary_guest.email || 'N/A' }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Identity Proof</span>
+                        <span class="value">{{ reservation.primary_guest.id_type | titlecase }}: {{ reservation.primary_guest.id_number }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">City</span>
+                        <span class="value">{{ reservation.primary_guest.city || 'N/A' }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">State</span>
+                        <span class="value">{{ reservation.primary_guest.state || 'N/A' }}</span>
+                    </div>
+                </div>
+                <ng-template #noGuest>
+                    <div class="no-data-msg">No primary guest linked yet.</div>
+                </ng-template>
+            </section>
+
+            <!-- =============== 3. BILLING & PRICING =============== -->
+            <section class="form-shell">
+                <header class="section-header">
+                    <span class="head-icon"><mat-icon>payments</mat-icon></span>
+                    <div class="head-text">
+                        <h3>Billing &amp; Pricing</h3>
+                        <p>Stay totals, payments collected and balance due</p>
+                    </div>
+                </header>
+
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="label">Total Amount</span>
+                        <span class="value total_amount">{{ reservation.total_amount | currency:'INR':'symbol':'1.2-2' }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Total Paid</span>
+                        <span class="value paid">{{ paidTotal | currency:'INR':'symbol':'1.2-2' }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Balance Amount</span>
+                        <span class="value balance_amount" [class.settled]="balanceAmount === 0 && paidTotal > 0">
+                            {{ balanceAmount | currency:'INR':'symbol':'1.2-2' }}
+                        </span>
+                    </div>
+                    <div class="info-item" *ngIf="overCollectedAmount > 0">
+                        <span class="label">Over Collected</span>
+                        <span class="value over_collected">{{ overCollectedAmount | currency:'INR':'symbol':'1.2-2' }}</span>
+                    </div>
+                    <div class="info-item" *ngIf="isRefunded">
+                        <span class="label">Refunded</span>
+                        <span class="value refunded">{{ refundTotal | currency:'INR':'symbol':'1.2-2' }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Payment Method</span>
+                        <span class="value">{{ paymentMethodSummary }}</span>
+                    </div>
+                    <div class="info-item" *ngIf="reservation.cancellation_reason">
+                        <span class="label">Cancellation Reason</span>
+                        <span class="value over_collected">{{ reservation.cancellation_reason }}</span>
+                    </div>
+                    <div class="info-item" *ngIf="reservation.cancelled_at">
+                        <span class="label">Cancelled At</span>
+                        <span class="value">{{ reservation.cancelled_at | date:'dd MMM yyyy, hh:mm a' }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Created By</span>
+                        <span class="value">{{ reservation.created_by }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Created At</span>
+                        <span class="value">{{ reservation.created_at | date:'dd MMM yyyy, hh:mm a' }}</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- =============== 4. ADDITIONAL GUESTS =============== -->
+            <section class="form-shell" *ngIf="reservation.additional_guests?.length">
+                <header class="section-header">
+                    <span class="head-icon"><mat-icon>group</mat-icon></span>
+                    <div class="head-text">
+                        <h3>Additional Guests</h3>
+                        <p>{{ reservation.additional_guests?.length }} guest(s) on this reservation</p>
+                    </div>
+                </header>
+
+                <div class="table-wrap">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Sr. No.</th>
+                                <th>Full Name</th>
+                                <th>Gender</th>
+                                <th>Age / DOB</th>
+                                <th>ID Proof</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr *ngFor="let guest of reservation.additional_guests; let i = index">
+                                <td>{{ i + 1 }}</td>
+                                <td>{{ guest.full_name }}</td>
+                                <td>{{ guest.gender || 'N/A' }}</td>
+                                <td>{{ guest.age || (guest.dob | date:'dd MMM yyyy') || 'N/A' }}</td>
+                                <td>{{ guest.id_type ? (guest.id_type + ' - ' + guest.id_number) : 'N/A' }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+        </div>
+    </div>
+</div>
+
+<app-page-loader *ngIf="isLoading"></app-page-loader>
