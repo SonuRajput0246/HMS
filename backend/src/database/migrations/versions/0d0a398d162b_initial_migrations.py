@@ -1,8 +1,8 @@
-"""initial_migrations
+"""Initial Migrations
 
-Revision ID: dc171fda68b9
+Revision ID: 0d0a398d162b
 Revises: 
-Create Date: 2026-10-11 15:41:50.126361
+Create Date: 2026-10-14 00:28:09.013018
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'dc171fda68b9'
+revision: str = '0d0a398d162b'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -53,47 +53,6 @@ def upgrade() -> None:
     sa.Column('is_active', sa.Boolean(), server_default=sa.text('1'), nullable=False),
     sa.PrimaryKeyConstraint('code')
     )
-    op.create_table('customers',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('customer_code', sa.String(length=20), nullable=False),
-    sa.Column('name', sa.String(length=100), nullable=False),
-    sa.Column('phone', sa.String(length=20), nullable=True),
-    sa.Column('email', sa.String(length=100), nullable=True),
-    sa.Column('address', sa.String(length=255), nullable=True),
-    sa.Column('loyalty_points', sa.Integer(), server_default='0', nullable=False),
-    sa.Column('total_visits', sa.Integer(), server_default='0', nullable=False),
-    sa.Column('total_spent', sa.Numeric(precision=12, scale=2), server_default='0.00', nullable=False),
-    sa.Column('last_visit_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('preferred_table_id', sa.Integer(), nullable=True),
-    sa.Column('dietary_notes', sa.String(length=500), nullable=True),
-    sa.Column('is_active', sa.Boolean(), server_default='1', nullable=False),
-    sa.Column('is_vip', sa.Boolean(), server_default='0', nullable=False),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('customer_code')
-    )
-    op.create_index('ix_customer_active_phone', 'customers', ['is_deleted', 'is_active', 'phone'], unique=False)
-    op.create_index('ix_customer_code', 'customers', ['is_deleted', 'customer_code'], unique=False)
-    op.create_index('ix_customer_name', 'customers', ['is_deleted', 'name'], unique=False)
-    op.create_index('ix_customer_vip', 'customers', ['is_deleted', 'is_vip', 'is_active'], unique=False)
-    op.create_index(op.f('ix_customers_phone'), 'customers', ['phone'], unique=False)
-    op.create_table('document_sequences',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('purpose', sa.String(length=20), nullable=False),
-    sa.Column('period_year', sa.Integer(), nullable=False),
-    sa.Column('period_month', sa.Integer(), nullable=False),
-    sa.Column('last_sequence', sa.Integer(), server_default='0', nullable=False),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('purpose', 'period_year', 'period_month', name='uq_document_sequence_scope')
-    )
-    op.create_index('ix_document_sequence_lookup', 'document_sequences', ['purpose', 'period_year', 'period_month'], unique=False)
     op.create_table('enum_definitions',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('enum_key', sa.String(length=100), nullable=False),
@@ -170,22 +129,6 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('purpose', name='uq_prefixes_purpose')
     )
-    op.create_table('recipe_categories',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('name', sa.String(length=50), nullable=False),
-    sa.Column('display_name', sa.String(length=50), nullable=False),
-    sa.Column('description', sa.Text(), nullable=True),
-    sa.Column('display_order', sa.Integer(), server_default='0', nullable=False),
-    sa.Column('is_active', sa.Boolean(), server_default='1', nullable=False),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('name')
-    )
-    op.create_index('ix_recipe_category_active_order', 'recipe_categories', ['is_deleted', 'is_active', 'display_order', 'id'], unique=False)
-    op.create_index('ix_recipe_category_name', 'recipe_categories', ['is_deleted', 'name'], unique=False)
     op.create_table('roles',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('role_code', sa.String(length=50), nullable=False),
@@ -237,22 +180,6 @@ def upgrade() -> None:
     sa.Column('value', sa.String(length=255), nullable=False),
     sa.PrimaryKeyConstraint('key')
     )
-    op.create_table('table_zones',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('name', sa.String(length=50), nullable=False),
-    sa.Column('display_name', sa.String(length=50), nullable=False),
-    sa.Column('description', sa.String(length=255), nullable=True),
-    sa.Column('display_order', sa.Integer(), server_default='0', nullable=False),
-    sa.Column('is_active', sa.Boolean(), server_default='1', nullable=False),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('name')
-    )
-    op.create_index('ix_table_zone_active_order', 'table_zones', ['is_deleted', 'is_active', 'display_order', 'id'], unique=False)
-    op.create_index('ix_table_zone_name', 'table_zones', ['is_deleted', 'name'], unique=False)
     op.create_table('enum_options',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('enum_id', sa.Integer(), nullable=False),
@@ -289,46 +216,6 @@ def upgrade() -> None:
     op.create_index('ix_active_inventory_id', 'inventory', ['is_deleted', 'id'], unique=False)
     op.create_index('ix_active_inventory_name_id', 'inventory', ['is_deleted', 'name', 'id'], unique=False)
     op.create_index(op.f('ix_inventory_category_id'), 'inventory', ['category_id'], unique=False)
-    op.create_table('recipes',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('recipe_code', sa.String(length=20), nullable=False),
-    sa.Column('name', sa.String(length=100), nullable=False),
-    sa.Column('display_name', sa.String(length=100), nullable=False),
-    sa.Column('category_id', sa.Integer(), nullable=True),
-    sa.Column('description', sa.Text(), nullable=True),
-    sa.Column('instructions', sa.Text(), nullable=True),
-    sa.Column('image_url', sa.String(length=500), nullable=True),
-    sa.Column('selling_price', sa.Numeric(precision=12, scale=2), nullable=False),
-    sa.Column('cost_price', sa.Numeric(precision=12, scale=2), nullable=False),
-    sa.Column('station', sa.String(length=20), server_default='other', nullable=False),
-    sa.Column('prep_time_minutes', sa.Integer(), server_default='0', nullable=False),
-    sa.Column('cook_time_minutes', sa.Integer(), server_default='0', nullable=False),
-    sa.Column('is_vegetarian', sa.Boolean(), server_default='0', nullable=False),
-    sa.Column('is_vegan', sa.Boolean(), server_default='0', nullable=False),
-    sa.Column('is_spicy', sa.Boolean(), server_default='0', nullable=False),
-    sa.Column('default_spice_level', sa.String(length=20), nullable=True),
-    sa.Column('is_recommended', sa.Boolean(), server_default='0', nullable=False),
-    sa.Column('is_available', sa.Boolean(), server_default='1', nullable=False),
-    sa.Column('display_order', sa.Integer(), server_default='0', nullable=False),
-    sa.Column('is_active', sa.Boolean(), server_default='1', nullable=False),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True),
-    sa.CheckConstraint('cook_time_minutes >= 0', name='ck_recipe_cook_time_nonneg'),
-    sa.CheckConstraint('cost_price >= 0', name='ck_recipe_cost_price_nonneg'),
-    sa.CheckConstraint('prep_time_minutes >= 0', name='ck_recipe_prep_time_nonneg'),
-    sa.CheckConstraint('selling_price >= 0', name='ck_recipe_selling_price_nonneg'),
-    sa.ForeignKeyConstraint(['category_id'], ['recipe_categories.id'], ondelete='SET NULL'),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('recipe_code')
-    )
-    op.create_index('ix_recipe_active_category', 'recipes', ['is_deleted', 'is_active', 'category_id', 'display_order', 'id'], unique=False)
-    op.create_index('ix_recipe_available', 'recipes', ['is_deleted', 'is_available', 'is_active'], unique=False)
-    op.create_index('ix_recipe_code', 'recipes', ['is_deleted', 'recipe_code'], unique=False)
-    op.create_index('ix_recipe_name', 'recipes', ['is_deleted', 'name'], unique=False)
-    op.create_index('ix_recipe_station', 'recipes', ['is_deleted', 'is_active', 'station'], unique=False)
-    op.create_index(op.f('ix_recipes_category_id'), 'recipes', ['category_id'], unique=False)
     op.create_table('reservation_sequences',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('prefix_id', sa.Integer(), nullable=False),
@@ -406,30 +293,6 @@ def upgrade() -> None:
     sa.UniqueConstraint('country_id', 'name', name='uq_state_country_name')
     )
     op.create_index(op.f('ix_states_country_id'), 'states', ['country_id'], unique=False)
-    op.create_table('tables',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('table_number', sa.String(length=20), nullable=False),
-    sa.Column('table_name', sa.String(length=50), nullable=True),
-    sa.Column('capacity', sa.Integer(), server_default='4', nullable=False),
-    sa.Column('status', sa.String(length=20), server_default='available', nullable=False),
-    sa.Column('zone_id', sa.Integer(), nullable=True),
-    sa.Column('position_x', sa.Integer(), nullable=True),
-    sa.Column('position_y', sa.Integer(), nullable=True),
-    sa.Column('shape', sa.String(length=20), nullable=True),
-    sa.Column('is_active', sa.Boolean(), server_default='1', nullable=False),
-    sa.Column('is_combinable', sa.Boolean(), server_default='0', nullable=False),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True),
-    sa.ForeignKeyConstraint(['zone_id'], ['table_zones.id'], ondelete='SET NULL'),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('table_number')
-    )
-    op.create_index('ix_table_active_status', 'tables', ['is_deleted', 'is_active', 'status', 'id'], unique=False)
-    op.create_index('ix_table_number', 'tables', ['is_deleted', 'table_number'], unique=False)
-    op.create_index('ix_table_zone_status', 'tables', ['is_deleted', 'zone_id', 'status', 'id'], unique=False)
-    op.create_index(op.f('ix_tables_zone_id'), 'tables', ['zone_id'], unique=False)
     op.create_table('users',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('role_id', sa.Integer(), nullable=False),
@@ -449,7 +312,7 @@ def upgrade() -> None:
     sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
     sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True),
-    sa.CheckConstraint("INSTR(email, '@') > 1 AND INSTR(email, '.') > INSTR(email, '@')", name='ck_user_email_format'),
+    sa.CheckConstraint("email LIKE '_%%@_%%.__%%'", name='ck_user_email_format'),
     sa.CheckConstraint('CHAR_LENGTH(TRIM(first_name)) > 0', name='ck_user_first_name'),
     sa.CheckConstraint('CHAR_LENGTH(TRIM(last_name)) > 0', name='ck_user_last_name'),
     sa.ForeignKeyConstraint(['role_id'], ['roles.id'], ),
@@ -481,57 +344,6 @@ def upgrade() -> None:
     sa.UniqueConstraint('state_id', 'name', name='uq_city_state_name')
     )
     op.create_index(op.f('ix_cities_state_id'), 'cities', ['state_id'], unique=False)
-    op.create_table('cms_orders',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('order_number', sa.String(length=30), nullable=False),
-    sa.Column('reference_type', sa.String(length=20), nullable=False),
-    sa.Column('reference_id', sa.Integer(), nullable=False),
-    sa.Column('table_id', sa.Integer(), nullable=True),
-    sa.Column('customer_id', sa.Integer(), nullable=True),
-    sa.Column('status', sa.Enum('PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'SERVED', 'CANCELLED', 'COMPLETED', name='orderstatusenum'), nullable=False),
-    sa.Column('order_type', sa.Enum('DINE_IN', 'TAKEAWAY', 'DELIVERY', name='ordertypeenum'), nullable=False),
-    sa.Column('subtotal', sa.Numeric(precision=12, scale=2), nullable=False),
-    sa.Column('tax_amount', sa.Numeric(precision=12, scale=2), nullable=False),
-    sa.Column('discount_amount', sa.Numeric(precision=12, scale=2), nullable=False),
-    sa.Column('total_amount', sa.Numeric(precision=12, scale=2), nullable=False),
-    sa.Column('payment_status', sa.Enum('PENDING', 'PARTIAL', 'PAID', 'REFUNDED', 'FAILED', name='paymentstatusenum'), nullable=False),
-    sa.Column('paid_amount', sa.Numeric(precision=12, scale=2), nullable=False),
-    sa.Column('notes', sa.Text(), nullable=True),
-    sa.Column('kitchen_notes', sa.Text(), nullable=True),
-    sa.Column('estimated_ready_time', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('ordered_at', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('confirmed_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('completed_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('cancelled_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('cancelled_reason', sa.Text(), nullable=True),
-    sa.Column('created_by', sa.Integer(), nullable=False),
-    sa.Column('updated_by', sa.Integer(), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True),
-    sa.CheckConstraint('discount_amount <= subtotal + tax_amount', name='ck_cms_order_discount_valid'),
-    sa.CheckConstraint('discount_amount >= 0', name='ck_cms_order_discount_nonneg'),
-    sa.CheckConstraint('paid_amount >= 0', name='ck_cms_order_paid_nonneg'),
-    sa.CheckConstraint('subtotal >= 0', name='ck_cms_order_subtotal_nonneg'),
-    sa.CheckConstraint('tax_amount >= 0', name='ck_cms_order_tax_nonneg'),
-    sa.CheckConstraint('total_amount >= 0', name='ck_cms_order_total_nonneg'),
-    sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
-    sa.ForeignKeyConstraint(['customer_id'], ['customers.id'], ondelete='SET NULL'),
-    sa.ForeignKeyConstraint(['table_id'], ['tables.id'], ondelete='SET NULL'),
-    sa.ForeignKeyConstraint(['updated_by'], ['users.id'], ),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('order_number')
-    )
-    op.create_index('ix_cms_order_customer', 'cms_orders', ['is_deleted', 'customer_id', 'id'], unique=False)
-    op.create_index('ix_cms_order_number', 'cms_orders', ['is_deleted', 'order_number'], unique=False)
-    op.create_index('ix_cms_order_ordered_at', 'cms_orders', ['is_deleted', 'ordered_at', 'id'], unique=False)
-    op.create_index('ix_cms_order_payment_status', 'cms_orders', ['is_deleted', 'payment_status', 'id'], unique=False)
-    op.create_index('ix_cms_order_reference', 'cms_orders', ['is_deleted', 'reference_type', 'reference_id'], unique=False)
-    op.create_index('ix_cms_order_status', 'cms_orders', ['is_deleted', 'status', 'id'], unique=False)
-    op.create_index('ix_cms_order_table', 'cms_orders', ['is_deleted', 'table_id', 'id'], unique=False)
-    op.create_index(op.f('ix_cms_orders_customer_id'), 'cms_orders', ['customer_id'], unique=False)
-    op.create_index(op.f('ix_cms_orders_table_id'), 'cms_orders', ['table_id'], unique=False)
     op.create_table('email_otps',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('user_id', sa.Integer(), nullable=False),
@@ -576,28 +388,6 @@ def upgrade() -> None:
     op.create_index('ix_template_code_search', 'message_templates', ['is_deleted', 'code'], unique=False)
     op.create_index('ix_template_name_search', 'message_templates', ['is_deleted', 'name'], unique=False)
     op.create_index('ix_template_resolve', 'message_templates', ['is_deleted', 'channel', 'code', 'is_active'], unique=False)
-    op.create_table('recipe_ingredients',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('recipe_id', sa.Integer(), nullable=False),
-    sa.Column('inventory_id', sa.Integer(), nullable=False),
-    sa.Column('quantity', sa.Numeric(precision=10, scale=3), nullable=False),
-    sa.Column('unit', sa.String(length=20), nullable=False),
-    sa.Column('is_optional', sa.Boolean(), server_default='0', nullable=False),
-    sa.Column('is_prepped', sa.Boolean(), server_default='0', nullable=False),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True),
-    sa.CheckConstraint('quantity > 0', name='ck_recipe_ing_qty_positive'),
-    sa.ForeignKeyConstraint(['inventory_id'], ['inventory.id'], ondelete='RESTRICT'),
-    sa.ForeignKeyConstraint(['recipe_id'], ['recipes.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('recipe_id', 'inventory_id', name='uq_recipe_inventory_ingredient')
-    )
-    op.create_index('ix_recipe_ing_inventory', 'recipe_ingredients', ['is_deleted', 'inventory_id'], unique=False)
-    op.create_index('ix_recipe_ing_recipe', 'recipe_ingredients', ['is_deleted', 'recipe_id', 'id'], unique=False)
-    op.create_index(op.f('ix_recipe_ingredients_inventory_id'), 'recipe_ingredients', ['inventory_id'], unique=False)
-    op.create_index(op.f('ix_recipe_ingredients_recipe_id'), 'recipe_ingredients', ['recipe_id'], unique=False)
     op.create_table('reservations',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('reservation_number', sa.String(length=20), nullable=False),
@@ -656,78 +446,6 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index('ix_active_token', 'tokens', ['user_id', 'is_revoked'], unique=False)
-    op.create_table('cms_order_items',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('order_id', sa.Integer(), nullable=False),
-    sa.Column('item_type', sa.String(length=20), nullable=False),
-    sa.Column('item_id', sa.Integer(), nullable=False),
-    sa.Column('item_name', sa.String(length=100), nullable=False),
-    sa.Column('quantity', sa.Numeric(precision=10, scale=2), nullable=False),
-    sa.Column('unit_price', sa.Numeric(precision=12, scale=2), nullable=False),
-    sa.Column('total_price', sa.Numeric(precision=12, scale=2), nullable=False),
-    sa.Column('modifiers', sa.JSON(), nullable=True),
-    sa.Column('cooking_instructions', sa.Text(), nullable=True),
-    sa.Column('spice_level', sa.String(length=20), nullable=True),
-    sa.Column('prep_status', sa.String(length=20), server_default='pending', nullable=False),
-    sa.Column('station', sa.String(length=30), nullable=True),
-    sa.Column('prep_started_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('prep_completed_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('void_reason', sa.String(length=255), nullable=True),
-    sa.Column('voided_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('voided_by', sa.Integer(), nullable=True),
-    sa.Column('recipe_id', sa.Integer(), nullable=True),
-    sa.Column('inventory_item_id', sa.Integer(), nullable=True),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True),
-    sa.CheckConstraint('quantity > 0', name='ck_cms_order_item_qty_positive'),
-    sa.CheckConstraint('total_price >= 0', name='ck_cms_order_item_total_nonneg'),
-    sa.CheckConstraint('unit_price >= 0', name='ck_cms_order_item_unit_price_nonneg'),
-    sa.ForeignKeyConstraint(['inventory_item_id'], ['inventory.id'], ondelete='SET NULL'),
-    sa.ForeignKeyConstraint(['order_id'], ['cms_orders.id'], ondelete='CASCADE'),
-    sa.ForeignKeyConstraint(['recipe_id'], ['recipes.id'], ondelete='SET NULL'),
-    sa.ForeignKeyConstraint(['voided_by'], ['users.id'], ondelete='SET NULL'),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index('ix_cms_order_item_inventory', 'cms_order_items', ['is_deleted', 'inventory_item_id'], unique=False)
-    op.create_index('ix_cms_order_item_order', 'cms_order_items', ['is_deleted', 'order_id', 'id'], unique=False)
-    op.create_index('ix_cms_order_item_prep', 'cms_order_items', ['is_deleted', 'order_id', 'prep_status', 'station'], unique=False)
-    op.create_index('ix_cms_order_item_recipe', 'cms_order_items', ['is_deleted', 'recipe_id'], unique=False)
-    op.create_index('ix_cms_order_item_void', 'cms_order_items', ['is_deleted', 'voided_at', 'voided_by'], unique=False)
-    op.create_index(op.f('ix_cms_order_items_order_id'), 'cms_order_items', ['order_id'], unique=False)
-    op.create_table('cms_payments',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('order_id', sa.Integer(), nullable=False),
-    sa.Column('amount', sa.Numeric(precision=12, scale=2), nullable=False),
-    sa.Column('payment_method', sa.Enum('CASH', 'CARD', 'UPI', 'WALLET', 'SPLIT', name='paymentmethodenum'), nullable=False),
-    sa.Column('payment_status', sa.Enum('PENDING', 'PARTIAL', 'PAID', 'REFUNDED', 'FAILED', name='paymentstatusenum'), nullable=False),
-    sa.Column('split_group_id', sa.String(length=50), nullable=True),
-    sa.Column('split_payer_name', sa.String(length=100), nullable=True),
-    sa.Column('transaction_ref', sa.String(length=100), nullable=True),
-    sa.Column('gateway_response', sa.JSON(), nullable=True),
-    sa.Column('paid_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('verified_by', sa.Integer(), nullable=True),
-    sa.Column('verified_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('remarks', sa.Text(), nullable=True),
-    sa.Column('created_by', sa.Integer(), nullable=False),
-    sa.Column('is_deleted', sa.Boolean(), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True),
-    sa.CheckConstraint('amount > 0', name='ck_cms_payment_amount_positive'),
-    sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
-    sa.ForeignKeyConstraint(['order_id'], ['cms_orders.id'], ondelete='CASCADE'),
-    sa.ForeignKeyConstraint(['verified_by'], ['users.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index('ix_cms_payment_method', 'cms_payments', ['is_deleted', 'payment_method', 'id'], unique=False)
-    op.create_index('ix_cms_payment_order', 'cms_payments', ['is_deleted', 'order_id', 'id'], unique=False)
-    op.create_index('ix_cms_payment_paid_at', 'cms_payments', ['is_deleted', 'paid_at', 'id'], unique=False)
-    op.create_index('ix_cms_payment_split_group', 'cms_payments', ['is_deleted', 'split_group_id'], unique=False)
-    op.create_index('ix_cms_payment_status', 'cms_payments', ['is_deleted', 'payment_status', 'id'], unique=False)
-    op.create_index(op.f('ix_cms_payments_order_id'), 'cms_payments', ['order_id'], unique=False)
-    op.create_index(op.f('ix_cms_payments_split_group_id'), 'cms_payments', ['split_group_id'], unique=False)
     op.create_table('guests',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('first_name', sa.String(length=50), nullable=False),
@@ -839,21 +557,6 @@ def downgrade() -> None:
     op.drop_index('ix_guest_email_id_active', table_name='guests')
     op.drop_index('ix_guest_email_active', table_name='guests')
     op.drop_table('guests')
-    op.drop_index(op.f('ix_cms_payments_split_group_id'), table_name='cms_payments')
-    op.drop_index(op.f('ix_cms_payments_order_id'), table_name='cms_payments')
-    op.drop_index('ix_cms_payment_status', table_name='cms_payments')
-    op.drop_index('ix_cms_payment_split_group', table_name='cms_payments')
-    op.drop_index('ix_cms_payment_paid_at', table_name='cms_payments')
-    op.drop_index('ix_cms_payment_order', table_name='cms_payments')
-    op.drop_index('ix_cms_payment_method', table_name='cms_payments')
-    op.drop_table('cms_payments')
-    op.drop_index(op.f('ix_cms_order_items_order_id'), table_name='cms_order_items')
-    op.drop_index('ix_cms_order_item_void', table_name='cms_order_items')
-    op.drop_index('ix_cms_order_item_recipe', table_name='cms_order_items')
-    op.drop_index('ix_cms_order_item_prep', table_name='cms_order_items')
-    op.drop_index('ix_cms_order_item_order', table_name='cms_order_items')
-    op.drop_index('ix_cms_order_item_inventory', table_name='cms_order_items')
-    op.drop_table('cms_order_items')
     op.drop_index('ix_active_token', table_name='tokens')
     op.drop_table('tokens')
     op.drop_index('ix_room_blocks_conflict_check', table_name='room_blocks')
@@ -863,11 +566,6 @@ def downgrade() -> None:
     op.drop_index('ix_reservation_conflict_check', table_name='reservations')
     op.drop_index('ix_reservation_availability', table_name='reservations')
     op.drop_table('reservations')
-    op.drop_index(op.f('ix_recipe_ingredients_recipe_id'), table_name='recipe_ingredients')
-    op.drop_index(op.f('ix_recipe_ingredients_inventory_id'), table_name='recipe_ingredients')
-    op.drop_index('ix_recipe_ing_recipe', table_name='recipe_ingredients')
-    op.drop_index('ix_recipe_ing_inventory', table_name='recipe_ingredients')
-    op.drop_table('recipe_ingredients')
     op.drop_index('ix_template_resolve', table_name='message_templates')
     op.drop_index('ix_template_name_search', table_name='message_templates')
     op.drop_index('ix_template_code_search', table_name='message_templates')
@@ -876,16 +574,6 @@ def downgrade() -> None:
     op.drop_table('message_templates')
     op.drop_index('ix_user_purpose_active', table_name='email_otps')
     op.drop_table('email_otps')
-    op.drop_index(op.f('ix_cms_orders_table_id'), table_name='cms_orders')
-    op.drop_index(op.f('ix_cms_orders_customer_id'), table_name='cms_orders')
-    op.drop_index('ix_cms_order_table', table_name='cms_orders')
-    op.drop_index('ix_cms_order_status', table_name='cms_orders')
-    op.drop_index('ix_cms_order_reference', table_name='cms_orders')
-    op.drop_index('ix_cms_order_payment_status', table_name='cms_orders')
-    op.drop_index('ix_cms_order_ordered_at', table_name='cms_orders')
-    op.drop_index('ix_cms_order_number', table_name='cms_orders')
-    op.drop_index('ix_cms_order_customer', table_name='cms_orders')
-    op.drop_table('cms_orders')
     op.drop_index(op.f('ix_cities_state_id'), table_name='cities')
     op.drop_table('cities')
     op.drop_index(op.f('ix_account_deletions_user_id'), table_name='account_deletions')
@@ -894,11 +582,6 @@ def downgrade() -> None:
     op.drop_index('ix_user_active_id', table_name='users')
     op.drop_index('ix_user_active_email', table_name='users')
     op.drop_table('users')
-    op.drop_index(op.f('ix_tables_zone_id'), table_name='tables')
-    op.drop_index('ix_table_zone_status', table_name='tables')
-    op.drop_index('ix_table_number', table_name='tables')
-    op.drop_index('ix_table_active_status', table_name='tables')
-    op.drop_table('tables')
     op.drop_index(op.f('ix_states_country_id'), table_name='states')
     op.drop_table('states')
     op.drop_index('ix_room_validation', table_name='rooms')
@@ -914,13 +597,6 @@ def downgrade() -> None:
     op.drop_table('role_module_access')
     op.drop_index('ix_reservation_sequence_lookup', table_name='reservation_sequences')
     op.drop_table('reservation_sequences')
-    op.drop_index(op.f('ix_recipes_category_id'), table_name='recipes')
-    op.drop_index('ix_recipe_station', table_name='recipes')
-    op.drop_index('ix_recipe_name', table_name='recipes')
-    op.drop_index('ix_recipe_code', table_name='recipes')
-    op.drop_index('ix_recipe_available', table_name='recipes')
-    op.drop_index('ix_recipe_active_category', table_name='recipes')
-    op.drop_table('recipes')
     op.drop_index(op.f('ix_inventory_category_id'), table_name='inventory')
     op.drop_index('ix_active_inventory_name_id', table_name='inventory')
     op.drop_index('ix_active_inventory_id', table_name='inventory')
@@ -929,9 +605,6 @@ def downgrade() -> None:
     op.drop_index('ix_enum_options_is_active', table_name='enum_options')
     op.drop_index('ix_enum_options_enum_id_active', table_name='enum_options')
     op.drop_table('enum_options')
-    op.drop_index('ix_table_zone_name', table_name='table_zones')
-    op.drop_index('ix_table_zone_active_order', table_name='table_zones')
-    op.drop_table('table_zones')
     op.drop_table('system_settings')
     op.drop_table('room_types')
     op.drop_index(op.f('ix_room_amenities_name'), table_name='room_amenities')
@@ -941,9 +614,6 @@ def downgrade() -> None:
     op.drop_index('ix_active_role_id', table_name='roles')
     op.drop_index('ix_active_role_code', table_name='roles')
     op.drop_table('roles')
-    op.drop_index('ix_recipe_category_name', table_name='recipe_categories')
-    op.drop_index('ix_recipe_category_active_order', table_name='recipe_categories')
-    op.drop_table('recipe_categories')
     op.drop_table('prefixes')
     op.drop_table('modules')
     op.drop_table('login_sliders')
@@ -954,14 +624,6 @@ def downgrade() -> None:
     op.drop_index('ix_enum_definitions_is_system', table_name='enum_definitions')
     op.drop_index('ix_enum_definitions_enum_key', table_name='enum_definitions')
     op.drop_table('enum_definitions')
-    op.drop_index('ix_document_sequence_lookup', table_name='document_sequences')
-    op.drop_table('document_sequences')
-    op.drop_index(op.f('ix_customers_phone'), table_name='customers')
-    op.drop_index('ix_customer_vip', table_name='customers')
-    op.drop_index('ix_customer_name', table_name='customers')
-    op.drop_index('ix_customer_code', table_name='customers')
-    op.drop_index('ix_customer_active_phone', table_name='customers')
-    op.drop_table('customers')
     op.drop_table('currencies')
     op.drop_table('countries')
     op.drop_table('additional_guests')

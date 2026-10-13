@@ -54,7 +54,6 @@ def seed_reference_data():
 
 
 def run_domain_seeders():
-    print(">>>>> Seeding domain data")
     seed_room_amenities()
     seed_room_types()
     seed_room_type_amenities()
