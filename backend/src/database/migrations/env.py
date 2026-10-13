@@ -11,7 +11,7 @@ import os
 load_dotenv()
 
 # ✅ Import your Base from model definitions
-# from src.api.models.common.user_model import Base  # import all models here
+# from src.api.models.user_model import Base  # import all models here
 from src.database.base import Base
 import src.api.models
 

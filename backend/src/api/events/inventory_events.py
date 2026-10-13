@@ -1,7 +1,7 @@
 from sqlalchemy import event
 from datetime import datetime, timezone
-from src.api.models.common.inventory_category_model import InventoryCategory
-from src.api.models.common.inventory_model import Inventory
+from src.api.models.inventory_category_model import InventoryCategory
+from src.api.models.inventory_model import Inventory
 
 
 

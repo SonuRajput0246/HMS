@@ -2,9 +2,9 @@
 # from sqlalchemy import event
 # from sqlalchemy.orm import Session
 #
-# from src.api.models.hms.refund_model import Refund, RefundStatusEnum
-# from src.api.models.hms.payment_model import Payment, PaymentStatusEnum
-# from src.api.models.hms.folio_model import Folio
+# from src.api.models.refund_model import Refund, RefundStatusEnum
+# from src.api.models.payment_model import Payment, PaymentStatusEnum
+# from src.api.models.folio_model import Folio
 #
 #
 # # =========================================================

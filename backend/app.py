@@ -10,21 +10,21 @@ from marshmallow.exceptions import MarshmallowError
 from sqlalchemy.sql.operators import json_getitem_op
 from src.api.utils.error_handlers import register_error_handlers
 
-## Routes, grouped by bucket. `common/` is shared infrastructure, `hms/` is the
-## hotel domain. Everything registered below always exists -- there is no
-## instance switch, so an endpoint is either part of HMS or it is not written.
-from src.api.routes.common.auth_route import auth_bp
-from src.api.routes.common.user_route import user_bp
-from src.api.routes.common.admin_route import admin_bp
-from src.api.routes.common.common_route import common_bp
-from src.api.routes.common.user_account_route import account_bp
-from src.api.routes.common.template_route import template_bp
-
-## HMS (hotel) routes
-from src.api.routes.hms.room_route import room_bp
-from src.api.routes.hms.guest_route import guest_bp
-from src.api.routes.common.inventory_route import inventory_bp
-from src.api.routes.hms.reservation_route import reservation_bp
+## Routes. Every blueprint below is registered unconditionally -- there is no
+## instance switch, so an endpoint either exists here or was never written.
+##
+## Imports are unconditional on purpose, and the order is only for readability:
+## identity/access, then reference data, then the hotel domain.
+from src.api.routes.auth_route import auth_bp
+from src.api.routes.user_route import user_bp
+from src.api.routes.admin_route import admin_bp
+from src.api.routes.common_route import common_bp
+from src.api.routes.user_account_route import account_bp
+from src.api.routes.template_route import template_bp
+from src.api.routes.inventory_route import inventory_bp
+from src.api.routes.room_route import room_bp
+from src.api.routes.guest_route import guest_bp
+from src.api.routes.reservation_route import reservation_bp
 
 import src.api.events.user_events
 import src.api.events.email_otp_events
@@ -58,10 +58,9 @@ def create_app():
 
     ## Register blueprints
     ##
-    ## Every blueprint is registered unconditionally. There is no instance
-    ## switch: the module tree seeded into `modules` and the endpoints that
-    ## exist are the same list, so an endpoint that is unreachable here is one
-    ## that was never written.
+    ## The module tree seeded into `modules` and the endpoints that exist are
+    ## the same list, so an endpoint that is unreachable here is one that was
+    ## never written.
     app.register_blueprint(auth_bp, url_prefix="/api/v1/auth")
     app.register_blueprint(user_bp, url_prefix="/api/v1/user")
     app.register_blueprint(admin_bp, url_prefix="/api/v1/admin")
@@ -69,11 +68,9 @@ def create_app():
     app.register_blueprint(account_bp, url_prefix="/api/v1/user-account")
     app.register_blueprint(template_bp, url_prefix="/api/v1/template")
     app.register_blueprint(inventory_bp, url_prefix="/api/v1/inventory")
-
-    ## HMS (hotel) routes
-    app.register_blueprint(reservation_bp, url_prefix="/api/v1/reservation")
     app.register_blueprint(room_bp, url_prefix="/api/v1/room")
     app.register_blueprint(guest_bp, url_prefix="/api/v1/guest")
+    app.register_blueprint(reservation_bp, url_prefix="/api/v1/reservation")
 
     @app.teardown_appcontext
     def shutdown_session(exception=None):

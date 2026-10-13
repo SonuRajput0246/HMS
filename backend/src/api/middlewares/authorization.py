@@ -40,8 +40,8 @@ from flask import g
 from sqlalchemy import select
 
 from src.api.middlewares.auth_middleware import authenticate
-from src.api.models.common.module_model import Module
-from src.api.models.common.role_module_access_model import RoleModuleAccess
+from src.api.models.module_model import Module
+from src.api.models.role_module_access_model import RoleModuleAccess
 from src.database.session import db_session
 from src.api.utils.errors import APIError
 

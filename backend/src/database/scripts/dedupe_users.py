@@ -18,7 +18,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Must match src/database/seeders/common/super_admin_seeder.py
+# Must match src/database/seeders/super_admin_seeder.py
 SUPER_ADMIN_EMAIL = "sonurajput8454@gmail.com"
 
 APPLY = "--apply" in sys.argv

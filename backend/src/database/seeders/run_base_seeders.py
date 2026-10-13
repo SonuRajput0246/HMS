@@ -2,10 +2,8 @@
 
 Run with `python -m src.database.seeders.run_base_seeders` from backend/.
 
-Seeding is split by bucket, mirroring src/api: `common/` seeders populate
-shared infrastructure, `hms/` seeders populate the hotel domain.
-
-Two ordering constraints are load-bearing:
+Every seeder lives directly in this package. The order below is not
+alphabetical -- it is a dependency order, and two of the steps are load-bearing:
 
   1. Modules seed before roles. role_seeder reads the live `modules` table and
      grants permissions only for modules that exist, so seeding roles first
@@ -14,34 +12,34 @@ Two ordering constraints are load-bearing:
   2. Inventory seeds before rooms/reservations. The room and reservation seeders
      reference inventory ids.
 """
-from src.database.seeders.common.countries_states_cities_seeder import seed_countries_states_cities
-from src.database.seeders.common.currencies_seeder import seed_currencies
-from src.database.seeders.common.enum_seeder import seed_enums
-from src.database.seeders.common.inventory_category_seeder import seed_inventory_categories
-from src.database.seeders.common.inventory_seeder import seed_inventories
-from src.database.seeders.common.inventory_units_seeder import seed_inventory_units
-from src.database.seeders.common.login_slider_seeder import seed_login_sliders
-from src.database.seeders.common.prefixes_seeder import seed_prefixes
-from src.database.seeders.common.role_seeder import seed_roles
-from src.database.seeders.common.super_admin_seeder import seed_super_admin
-from src.database.seeders.common.system_setting_seeder import seed_system_settings
-from src.database.seeders.common.template_seeder import seed_templates
+from src.database.seeders.countries_states_cities_seeder import seed_countries_states_cities
+from src.database.seeders.currencies_seeder import seed_currencies
+from src.database.seeders.enum_seeder import seed_enums
+from src.database.seeders.inventory_category_seeder import seed_inventory_categories
+from src.database.seeders.inventory_seeder import seed_inventories
+from src.database.seeders.inventory_units_seeder import seed_inventory_units
+from src.database.seeders.login_slider_seeder import seed_login_sliders
+from src.database.seeders.prefixes_seeder import seed_prefixes
+from src.database.seeders.role_seeder import seed_roles
+from src.database.seeders.super_admin_seeder import seed_super_admin
+from src.database.seeders.system_setting_seeder import seed_system_settings
+from src.database.seeders.template_seeder import seed_templates
 
-from src.database.seeders.hms.additional_guest_seeder import seed_additional_guests
-from src.database.seeders.hms.amenity_seeder import seed_room_amenities
-from src.database.seeders.hms.guest_seeder import seed_guest
-from src.database.seeders.hms.module_seeder import seed_modules_hms
-from src.database.seeders.hms.reservation_additional_guest_seeder import seed_reservation_additional_guests
-from src.database.seeders.hms.reservation_primary_guest_seeder import seed_reservation_primary_guest
-from src.database.seeders.hms.reservation_seeder import seed_reservations
-from src.database.seeders.hms.reservation_sequence_seeder import seed_reservation_sequences
-from src.database.seeders.hms.room_blocks_seeder import seed_room_blocks
-from src.database.seeders.hms.room_seeder import seed_rooms
-from src.database.seeders.hms.room_type_amenity_seeder import seed_room_type_amenities
-from src.database.seeders.hms.room_type_seeder import seed_room_types
+from src.database.seeders.additional_guest_seeder import seed_additional_guests
+from src.database.seeders.amenity_seeder import seed_room_amenities
+from src.database.seeders.guest_seeder import seed_guest
+from src.database.seeders.module_seeder import seed_modules
+from src.database.seeders.reservation_additional_guest_seeder import seed_reservation_additional_guests
+from src.database.seeders.reservation_primary_guest_seeder import seed_reservation_primary_guest
+from src.database.seeders.reservation_seeder import seed_reservations
+from src.database.seeders.reservation_sequence_seeder import seed_reservation_sequences
+from src.database.seeders.room_blocks_seeder import seed_room_blocks
+from src.database.seeders.room_seeder import seed_rooms
+from src.database.seeders.room_type_amenity_seeder import seed_room_type_amenities
+from src.database.seeders.room_type_seeder import seed_room_types
 
 
-## Reference data every deployment needs, and that HMS domain data depends on.
+## Reference data everything else depends on.
 def seed_reference_data():
     seed_login_sliders()
     seed_enums()
@@ -55,8 +53,8 @@ def seed_reference_data():
     seed_inventories()
 
 
-def run_hms_seeders():
-    print(">>>>> Seeding HMS domain data")
+def run_domain_seeders():
+    print(">>>>> Seeding domain data")
     seed_room_amenities()
     seed_room_types()
     seed_room_type_amenities()
@@ -81,14 +79,14 @@ def run_base_seeders():
     ## and grants permissions only for modules that exist, so seeding roles
     ## first silently produces roles with no permissions at all.
     print(">>>>> Seeding modules")
-    seed_modules_hms()
+    seed_modules()
 
     ## Now that modules exist, roles can resolve their permissions.
     seed_roles()
     seed_super_admin()
 
     ## Remaining shared tables, then the hotel domain data.
-    run_hms_seeders()
+    run_domain_seeders()
 
     print("***** Base seeders executed successfully. *****")
 

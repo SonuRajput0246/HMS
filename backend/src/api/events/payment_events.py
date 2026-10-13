@@ -1,6 +1,6 @@
 # from decimal import Decimal
 # from sqlalchemy.orm import Session
-from src.api.models.hms.payment_model import Payment
+from src.api.models.payment_model import Payment
 from sqlalchemy import event
 from datetime import datetime, timezone
 

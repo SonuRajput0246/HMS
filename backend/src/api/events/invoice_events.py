@@ -2,8 +2,8 @@
 # from sqlalchemy import event
 # from sqlalchemy.orm import Session
 #
-# from src.api.models.hms.invoice_model import Invoice
-# from src.api.models.hms.folio_model import Folio
+# from src.api.models.invoice_model import Invoice
+# from src.api.models.folio_model import Folio
 #
 #
 # # =========================================================

@@ -29,7 +29,7 @@ import sys
 import app as flask_app  # noqa: E402
 from sqlalchemy import select  # noqa: E402
 
-from src.api.models.common.module_model import Module  # noqa: E402
+from src.api.models.module_model import Module  # noqa: E402
 from src.database.scripts.known_modules import known_module_names  # noqa: E402
 from src.database.session import db_session  # noqa: E402
 

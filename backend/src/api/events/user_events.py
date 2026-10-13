@@ -1,6 +1,6 @@
 from sqlalchemy import event, inspect
 from datetime import datetime, timezone
-from src.api.models.common.user_model import User
+from src.api.models.user_model import User
 
 
 ### COMMON HELPERS

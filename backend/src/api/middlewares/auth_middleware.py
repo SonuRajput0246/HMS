@@ -2,8 +2,8 @@ import jwt
 from functools import wraps
 from sqlalchemy import select
 from flask import request, current_app, g
-from src.api.models.common.user_model import User
-from src.api.models.common.token_model import Token
+from src.api.models.user_model import User
+from src.api.models.token_model import Token
 from src.database.session import db_session
 from src.api.utils.errors import UnauthorizedError
 
