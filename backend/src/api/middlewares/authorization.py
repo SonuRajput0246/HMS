@@ -11,10 +11,10 @@ This module makes it the server's decision.
 
 Design notes worth keeping:
 
-* **Modules are named, not numbered.** Module ids differ per instance -- 3 is
-  TABLE on CMS and something else on HMS -- so keying enforcement on a name
-  resolved against the running instance avoids the shared-database trap that
-  Phase 8 documented, where the module tree is whichever instance last seeded.
+* **Modules are named, not numbered.** Module ids are an artefact of the seeder
+  and carry no meaning. Keying enforcement on the name, resolved against the
+  live module tree, means a re-seed that renumbers cannot silently change who
+  can reach what.
 
 * **There is no wildcard.** ROLE_PERMISSIONS gives SUPER_ADMIN a "*", but
   role_seeder expands it into concrete role_module_access rows at seed time. So
@@ -136,14 +136,13 @@ def requires_module(module_name):
                     ## Logged at warning, not error: a 403 on a legitimate
                     ## request is the system working, not a fault. A module
                     ## absent from the tree entirely is a different problem --
-                    ## the database holds another instance's module set -- so
-                    ## that one is worth an error.
+                    ## the module tree has not been seeded -- so that one is
+                    ## worth an error.
                     if not _module_exists(module_name):
                         logging.error(
                             "Authorization refused: module %r is not in the "
-                            "module tree for this instance. The database may "
-                            "hold another instance's modules -- run this "
-                            "instance's seeders. user_id=%s",
+                            "module tree. Run the seeders so the tree exists. "
+                            "user_id=%s",
                             module_name, getattr(user, "id", None),
                         )
                     else:

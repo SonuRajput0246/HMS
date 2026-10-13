@@ -1,40 +1,10 @@
 from src.api.models import LoginSliders, Country, State, City, Currency, EnumDefinition, EnumOption
 from src.api.utils.responses import service_response
-from src.config import get_config
-
-config = get_config()
-
-## Derived from DATABASE_URL rather than a separate DB_NAME setting, because
-## .env in this project points at one database by URL and has no DB_NAME
-## attribute on the config object.
 
 
 class CommonService:
     def __init__(self, db):
         self.db = db
-
-    @staticmethod
-    def get_instance_config():
-        """Which product this backend is running as.
-
-        Public and unauthenticated on purpose: the frontend calls it during
-        APP_INITIALIZER, before any token exists. It exposes only the instance
-        discriminator and the database name -- no host, no credentials, no rows.
-        A login screen cannot leak anything useful from it.
-
-        The point is to make the backend the single source of truth for which
-        instance is live. Previously the frontend read `instance_type` from its
-        own config.json and the backend read `INSTANCE_TYPE` from .env, and
-        nothing compared them: a mismatch produced no error at all, just a
-        frontend serving URLs whose endpoints did not exist.
-        """
-        return {
-            "status": True,
-            "message": "Instance configuration fetched successfully.",
-            "data": {
-                "instance_type": config.INSTANCE_TYPE.value
-            },
-        }, 200
 
 
     def get_login_slider_data(self):

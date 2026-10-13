@@ -19,15 +19,12 @@ class Inventory(BaseModel):
     )
     quantity: Mapped[float] = mapped_column(Float, nullable=False, default=0)
     unit: Mapped[str] = mapped_column(String(10), nullable=False)
-    ## CMS: per-unit purchase cost, used to compute recipe cost_price
-    ## (Recipe.calculate_cost_from_ingredients reads this). NULL until an
-    ## inventory manager fills it in, so existing rows stay valid.
+    ## Purchase cost per unit, used to value stock on hand. NULL until an
+    ## inventory manager fills it in, so existing rows stay valid and null is
+    ## how the cost model says "unknown" rather than "free".
     unit_cost: Mapped[float | None] = mapped_column(Numeric(12, 2), nullable=True)
-    ## CMS: sell price for items that can be ringed up directly without being a
-    ## Recipe (bottled water, takeaway packets). NULL means "not directly
-    ## sellable" and the POS forces staff to pick a Recipe instead. Recipes
-    ## carry their own selling_price, so this is only read when
-    ## cms_order_items.item_type == 'inventory'.
+    ## Default sell price for the item. NULL means no price has been set, which
+    ## is distinct from a price of zero.
     selling_price: Mapped[float | None] = mapped_column(Numeric(12, 2), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 

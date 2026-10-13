@@ -1,25 +1,9 @@
 import os
-from enum import Enum
 
 from dotenv import load_dotenv
 
 
 load_dotenv()
-
-
-class InstanceType(str, Enum):
-    """The products a deployment can be configured as.
-
-    Subclasses `str` so a value is directly usable as a Flask config value and
-    compares equal to the plain string it was parsed from.
-    """
-
-    HMS = "HMS"
-    CMS = "CMS"
-
-    @classmethod
-    def values(cls):
-        return {m.value for m in cls}
 
 
 class BaseConfig:
@@ -52,28 +36,6 @@ class BaseConfig:
     ## Cookies
     COOKIE_SECURE = os.getenv("COOKIE_SECURE")
     COOKIE_SAMESITE = os.getenv("COOKIE_SAMESITE")
-
-    ## Instance Type
-    ##
-    ## Which product this process serves: HMS (hotel) or CMS (cafe). It
-    ## decides which blueprints get registered, so a typo here must not fail
-    ## quietly -- it raises at import, while the process is still starting and
-    ## the stack trace points straight at this file.
-    ##
-    ## Keep in sync with `instance_type` in the frontend's
-    ## src/assets/config.json. They are two halves of one switch: this one
-    ## decides which endpoints exist, the other which screens load.
-    _RAW_INSTANCE_TYPE = (os.getenv("INSTANCE_TYPE") or "").strip().upper()
-
-    if _RAW_INSTANCE_TYPE not in InstanceType.values():
-        raise RuntimeError(
-            f"INSTANCE_TYPE must be one of {sorted(InstanceType.values())}, "
-            f"got {os.getenv('INSTANCE_TYPE')!r}"
-        )
-
-    INSTANCE_TYPE = InstanceType(_RAW_INSTANCE_TYPE)
-    IS_HMS = INSTANCE_TYPE is InstanceType.HMS
-    IS_CMS = INSTANCE_TYPE is InstanceType.CMS
 
     ## Timezone the business trades in. Every "today" boundary in a report is
     ## computed in THIS zone, not the server's: under Asia/Kolkata the report for

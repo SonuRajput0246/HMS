@@ -18,10 +18,6 @@ class CommonRoute:
         result, status_code = self.common_service.get_login_slider_data()
         return jsonify(result), status_code
 
-    def get_instance_config(self):
-        result, status_code = self.common_service.get_instance_config()
-        return jsonify(result), status_code
-
     def get_all_countries(self):
         payload = request.get_json() or {}
         validated_data = GetAllCountriesSchema().load(payload)
@@ -56,7 +52,6 @@ common_service_instance = CommonService(db=db_session)
 common_route = CommonRoute(common_service=common_service_instance)
 ## Public. The frontend fetches this during APP_INITIALIZER, before any token
 ## exists, so jwt_required would deadlock the boot sequence.
-common_bp.add_url_rule('/instance-config', view_func=common_route.get_instance_config, methods=['GET'])
 common_bp.add_url_rule('/get-login-slider-data', view_func=common_route.get_login_slider_data, methods=['GET'])
 common_bp.add_url_rule('/get-all-countries', view_func=requires_module(SELF_SERVICE)(common_route.get_all_countries), methods=['POST'])
 common_bp.add_url_rule('/get-all-states', view_func=requires_module(SELF_SERVICE)(common_route.get_all_states), methods=['POST'])

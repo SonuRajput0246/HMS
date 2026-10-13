@@ -6,7 +6,7 @@ from src.api.models.common.role_module_access_model import RoleModuleAccess
 from datetime import datetime, timezone
 
 # ============================================
-# ROLE DEFINITIONS (Shared across instances)
+# ROLE DEFINITIONS
 # ============================================
 ROLE_DEFINITIONS = [
     {
@@ -28,14 +28,14 @@ ROLE_DEFINITIONS = [
         "role_code": "MANAGER",
         "description": "Management access",
         "is_system": False,
-        # Custom per instance via module patterns
+        # Custom, per the permission matrix below
     },
     {
         "role_name": "Front Desk",
         "role_code": "FRONT_DESK",
         "description": "Front desk operations",
         "is_system": False,
-        # HMS: Reservations, Guests, Folio | CMS: Orders, Tables, POS
+        # Reservations, Guests, Folio, Room
     },
     {
         "role_name": "Staff",
@@ -49,21 +49,7 @@ ROLE_DEFINITIONS = [
         "role_code": "HOUSEKEEPING",
         "description": "Housekeeping staff",
         "is_system": False,
-        # HMS only: Housekeeping module
-    },
-    {
-        "role_name": "Kitchen Staff",
-        "role_code": "KITCHEN_STAFF",
-        "description": "Kitchen operations",
-        "is_system": False,
-        # CMS only: KDS, Orders (prep)
-    },
-    {
-        "role_name": "Waiter",
-        "role_code": "WAITER",
-        "description": "Floor service staff",
-        "is_system": False,
-        # CMS only: Tables, Orders (serve), POS
+        # Housekeeping module
     },
 ]
 
@@ -100,43 +86,17 @@ ROLE_PERMISSIONS = {
         "GUEST": ["Create", "Edit", "View"],
         "FOLIO": ["View", "Create", "Payment"],
         "ROOM": ["View"],
-        # CMS modules (will only apply if module exists)
-        "TABLE": ["View", "Edit"],
-        "ORDER": ["Create", "Edit", "View", "Void"],
-        "CUSTOMER": ["Create", "Edit", "View"],
-        "POS": ["View", "Payment", "Split"],
-        "KDS": ["View"],
     },
     "STAFF": {
         "DASHBOARD": ["View"],
-        # HMS
         "RESERVATIONS": ["View"],
         "GUEST": ["View"],
         "FOLIO": ["View"],
-        # CMS
-        "TABLE": ["View"],
-        "ORDER": ["View"],
-        "CUSTOMER": ["View"],
-        "POS": ["View"],
     },
     "HOUSEKEEPING": {
         "DASHBOARD": ["View"],
         "HOUSEKEEPING": ["View", "Edit"],
         "ROOM": ["View"],
-    },
-    "KITCHEN_STAFF": {
-        "DASHBOARD": ["View"],
-        "KDS": ["View", "Edit"],
-        "ORDER": ["View", "Edit"],  # Update prep status
-        "INVENTORY_ITEM": ["View"],  # Check stock
-    },
-    "WAITER": {
-        "DASHBOARD": ["View"],
-        "TABLE": ["View", "Edit"],
-        "ORDER": ["Create", "Edit", "View", "Void"],
-        "CUSTOMER": ["View"],
-        "POS": ["View", "Payment"],
-        "KDS": ["View"],
     },
 }
 
@@ -153,13 +113,13 @@ REPORTS_ROLES = ("MANAGER",)
 def seed_roles():
     """Dynamic role seeder - assigns permissions based on existing modules"""
     try:
-        # 1. Get all active modules from DATABASE (instance-specific)
+        # 1. Get all active modules from the database
         modules = db_session.execute(
             select(Module).where(Module.is_active == True, Module.is_deleted == False)
         ).scalars().all()
 
         module_map = {m.module_name: m.id for m in modules}
-        print(f"Found {len(modules)} active modules in this instance")
+        print(f"Found {len(modules)} active modules")
 
         # 2. Create/Update Roles
         for role_def in ROLE_DEFINITIONS:
@@ -222,11 +182,11 @@ def _assign_role_permissions(role: Role, module_map: dict):
             # Super Admin / Admin: all modules
             target_modules = module_map.items()
         else:
-            # Specific module - check if it exists in THIS instance
+            # Specific module - check if it exists in the tree
             if module_pattern in module_map:
                 target_modules = [(module_pattern, module_map[module_pattern])]
             else:
-                continue  # Module doesn't exist in this instance, skip
+                continue  # Module doesn't exist in the tree, skip
 
         for module_name, module_id in target_modules:
             for operation in operations:

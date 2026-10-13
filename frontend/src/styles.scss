@@ -1,7 +1,5 @@
 @import "./scss/main.scss";
 
-
-
 html,
 body {
   height: 100%;
@@ -13,11 +11,7 @@ body {
   font-family: Roboto, "Helvetica Neue", sans-serif;
 }
 
-
-
 //-----------------------------UPDATED CSS------------------------------//
-
-
 
 //------- Scrollbar customization ------//
 
@@ -42,8 +36,6 @@ body {
 //   height: calc(100vh - 110px);
 //   overflow: auto;
 // }
-
-
 
 //---------- Snackbar customization ----------//
 //  Tinted card with a leading accent bar. Each state gets a soft background,
@@ -173,15 +165,6 @@ $snack-states: (
   }
 }
 
-
-
-
-
-
-
-
-
-
 //------------ Serach Bar Customization (For all lists) ----------//
 
 .top-sub-nav-controls {
@@ -231,7 +214,6 @@ $snack-states: (
   }
 }
 
-
 //------------ Manage page form customization ----------//
 
 .in_up_form {
@@ -274,8 +256,6 @@ $snack-states: (
   }
 
 }
-
-
 
 //---------- Confirmation dialog (SweetAlert2) ----------//
 //  Brand: navy #003366 / amber warning
@@ -472,13 +452,6 @@ div.swal2-container.swal-container-css {
   }
 }
 
-
-
-
-
-
-
- 
 //------------ Page blur on logout ----------//
 
 .logout-blur::before {
@@ -494,21 +467,12 @@ div.swal2-container.swal-container-css {
   pointer-events: none;
 }
 
-
-
-
-
-
 //------------ Button hover customization ----------//
 //// Hover Effect 1
 .mat-mdc-raised-button:hover {
   outline: 2px solid rgba(255, 255, 255, 0.6);
   outline-offset: -2px;
 }
-
-
-
-
 
 //-------------- Table Menu Options customization ----------//
 
@@ -536,8 +500,6 @@ div.swal2-container.swal-container-css {
     font-size: 13px !important;
   }
 }
-
-
 
 //============================================================================//
 //  Shared datepicker treatment (navy/teal, compact)                          //
@@ -678,13 +640,3 @@ div.swal2-container.swal-container-css {
     outline-offset: 2px;
   }
 }
-
-
-
-
-
-// ---------- CMS dialogs ----------
-// mat-dialog renders into a CDK overlay outside the component view, so these
-// styles cannot live in a component stylesheet.
-@import 'app/cms/cms-dialogs';
-

@@ -1,11 +1,11 @@
 /**
- * Browser storage keys shared by both instance types.
+ * Browser storage keys.
  *
- * These used to be named `hms_accessToken` / `hms_userData`, which was wrong
- * the moment a CMS instance existed: the same keys would carry an HMS-named
- * session on a cafe deployment. They are also read from more than one place
- * (the auth guard, the refresh interceptor, and both post-login flows), so a
- * typo in one of them silently drops the session rather than failing loudly.
+ * These used to be named `hms_accessToken` / `hms_userData`, which baked the
+ * product into a key that has nothing to do with the session inside it. They
+ * are also read from more than one place (the auth guard, the refresh
+ * interceptor, and the post-login flow), so a typo in one of them silently
+ * drops the session rather than failing loudly.
  */
 export const STORAGE_KEYS = {
   ACCESS_TOKEN: 'app_accessToken',

@@ -11,11 +11,8 @@ inventory_items = [
     {"name": "Cooking Oil", "unit_cost": "180.00", "category": "Food", "quantity": 50, "unit": "ltr"},
     {"name": "Sugar", "unit_cost": "50.00", "category": "Food", "quantity": 40, "unit": "kg"},
 
-    ## The rest of the kitchen. Added so CMS recipes have something to cost
-    ## against -- a recipe's cost is derived from its ingredient lines, and
-    ## with only rice/oil/sugar no realistic dish could be priced. The Food
-    ## category is shared with HMS, which is harmless: an unused stock line in
-    ## a hotel's inventory costs nothing.
+    ## The rest of the kitchen. Kept so stock valuation has a realistic
+    ## spread to report against rather than three staples.
     {"name": "Wheat Flour", "unit_cost": "40.00", "category": "Food", "quantity": 60, "unit": "kg"},
     {"name": "Paneer", "unit_cost": "320.00", "category": "Food", "quantity": 20, "unit": "kg"},
     {"name": "Chicken", "unit_cost": "280.00", "category": "Food", "quantity": 25, "unit": "kg"},
@@ -72,7 +69,7 @@ def seed_inventories():
                 ## purchase price is edited on the inventory screen, not here,
                 ## so overwriting keeps a re-seed from leaving a stale figure.
                 ## quantity is deliberately NOT touched: that is live stock,
-                ## and a deploy must not reset what the cafe has sold.
+                ## and a re-seed must not reset what the business has issued.
                 exists.unit_cost = item.get("unit_cost")
                 exists.updated_at = datetime.now(timezone.utc)
             else:
@@ -82,9 +79,8 @@ def seed_inventories():
                     category_id=category_id,
                     quantity=item["quantity"],
                     unit=item["unit"],
-                    ## Feeds Recipe.calculate_cost_from_ingredients. Left NULL
-                    ## it is read as 0, so every recipe prices at zero cost and
-                    ## margin_percent becomes meaningless.
+                    ## Left NULL, unit_cost is read as 0 and stock valuation
+                    ## silently reports the whole book as worthless.
                     unit_cost=item.get("unit_cost"),
                     is_active=True,
                     created_at=datetime.now(timezone.utc),

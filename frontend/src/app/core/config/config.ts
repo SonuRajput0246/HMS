@@ -40,16 +40,4 @@ export class AppConfig {
     }
     return this.config[key];
   }
-
-  /**
-   * Read an optional key, falling back instead of throwing.
-   *
-   * `get` is right for required values like BASE_URL, where a missing key means
-   * startup is genuinely broken. It is the wrong tool for `INSTANCE_TYPE`,
-   * which has a sensible default: config.json is a hand-edited file and an
-   * absent key should degrade to HMS, not take the whole app down.
-   */
-  getOr<T = any>(key: string, fallback: T): T {
-    return (key in this.config ? this.config[key] : fallback) as T;
-  }
 }

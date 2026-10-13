@@ -64,10 +64,10 @@
                     <ng-container matColumnDef="unit_cost">
                         <th mat-header-cell *matHeaderCellDef style="text-align: center; width: 11%;"> Unit Cost </th>
                         <td mat-cell *matCellDef="let element" style="text-align: center;">
-                            <!-- An unpriced item shows as a dash, not 0.00. The
-                                 recipe grid multiplies ingredient quantity by this
-                                 figure, and a 0 would read as a dish that costs
-                                 nothing to make. -->
+                            <!-- An unpriced item shows as a dash, not 0.00. Stock valuation
+                                 sums this figure, and a 0 would read as
+                                 stock that was given away rather than stock
+                                 nobody has costed yet. -->
                             <span *ngIf="element.unit_cost !== null && element.unit_cost !== undefined; else noCost">
                                 {{ element.unit_cost }}
                             </span>

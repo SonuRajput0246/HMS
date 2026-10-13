@@ -24,10 +24,7 @@ default, like prune_modules.py.
     python -m src.database.scripts.audit_authorization --apply
 """
 import argparse
-import os
 import sys
-
-os.environ.setdefault("INSTANCE_TYPE", "CMS")
 
 import app as flask_app  # noqa: E402
 from sqlalchemy import select  # noqa: E402
@@ -68,14 +65,13 @@ def main():
                         help="list the undeclared routes in detail")
     args = parser.parse_args()
 
-    instance = os.environ.get("INSTANCE_TYPE", "CMS")
     application = flask_app.create_app()
 
     declared, self_service, undeclared, public = classify(application)
 
-    ## Every module name a route names must exist in this instance's tree. A
-    ## typo would otherwise 403 everybody, the super admin included, and it
-    ## would do so silently -- nothing else in the system would say why.
+    ## Every module name a route names must exist in the seeded tree. A typo
+    ## would otherwise 403 everybody, the super admin included, and it would do
+    ## so silently -- nothing else in the system would say why.
     tree = {
         row.module_name
         for row in db_session.execute(
@@ -91,7 +87,6 @@ def main():
     for module, endpoint, methods in declared:
         by_module.setdefault(module, []).append(f"{','.join(methods):22} {endpoint}")
 
-    print(f"instance: {instance}")
     print("=" * 72)
     print(f"module tree rows      : {len(tree)}")
     print(f"declared routes       : {len(declared)}")
@@ -128,7 +123,7 @@ def main():
 
     if unknown:
         print("\n" + "!" * 72)
-        print("ROUTES NAME MODULES THAT DO NOT EXIST IN THIS INSTANCE")
+        print("ROUTES NAME MODULES THAT ARE NOT IN THE SEEDED TREE")
         print("!" * 72)
         for name in unknown:
             print(f"  {name}")
@@ -136,19 +131,18 @@ def main():
         print("These would 403 every caller, super admin included, because no")
         print("role holds a row for a module that is not in the tree.")
         print()
-        ## Distinguish "someone typo'd a module name" from "the database holds
-        ## another instance's module set". The second is the documented
-        ## shared-database problem and needs a seed run, not a code change --
+        ## Distinguish "someone typo'd a module name" from "the module tree was
+        ## never seeded". The second needs a seed run, not a code change --
         ## telling them apart here saves a long hunt.
         every_known = known_module_names()
         if set(unknown) <= every_known - tree:
-            print("Each is a real module of some instance, just not this one, so")
-            print("the database is holding another instance's module set.")
-            print(f"  tree here: {sorted(tree)}")
-            print(f"  all known: {sorted(every_known)}")
+            print("Each is a module the seeder knows about, so the database is")
+            print("missing a seeded module tree.")
+            print(f"  in the tree: {sorted(tree)}")
+            print(f"  all known  : {sorted(every_known)}")
             print()
-            print("Fix by seeding this instance, not by editing code:")
-            print(f"  INSTANCE_TYPE={instance} python -m src.database.seeders.run_base_seeders")
+            print("Fix by running the seeders, not by editing code:")
+            print("  python -m src.database.seeders.run_base_seeders")
         else:
             stray = sorted(set(unknown) - every_known)
             print(f"At least one is not a module name in any seeder: {stray}")
@@ -158,7 +152,7 @@ def main():
         return 1
 
     print("\nAll authenticated routes declare a module requirement,")
-    print("and every module they name exists in this instance's tree.")
+    print("and every module they name exists in the seeded tree.")
     return 0
 
 

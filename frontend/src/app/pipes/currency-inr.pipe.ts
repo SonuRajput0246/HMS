@@ -1,6 +1,24 @@
 import { Pipe, PipeTransform } from '@angular/core';
 
-import { toAmount } from '../models/ICms.model';
+/**
+ * Coerce a money value to a number for arithmetic.
+ *
+ * The backend sends Decimal columns as strings precisely so the value survives
+ * the JSON round trip intact, so anything doing arithmetic on money has to
+ * parse first. Anything unparseable -- null, undefined, a malformed backend
+ * value -- becomes 0 rather than NaN, because NaN poisons every total it
+ * touches and surfaces as a blank cell rather than an error.
+ */
+export function toAmount(value: string | number | null | undefined): number {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : 0;
+  }
+  if (value === null || value === undefined || value === '') {
+    return 0;
+  }
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
 
 /**
  * Formats a money string as a currency amount.

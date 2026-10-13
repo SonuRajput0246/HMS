@@ -58,11 +58,9 @@ private _instance = inject(InstanceService);
       category_id: ['', Validators.required],
       quantity: [null, Validators.required],
       unit: ['', Validators.required],
-      // Purchase cost per unit, and the price when the item is rung up without
-      // going through a recipe. Both optional: stock nobody has priced yet
-      // legitimately has no cost, and the backend treats null as "unknown"
-      // rather than "free". Both are what the CMS recipe grid costs a dish
-      // from, so a cafe cannot set a menu margin without them.
+      // Purchase cost per unit, and the default sell price. Both optional:
+      // stock nobody has priced yet legitimately has no cost, and the backend
+      // treats null as "unknown" rather than "free".
       unit_cost: [null],
       selling_price: [null],
       is_active: [true]

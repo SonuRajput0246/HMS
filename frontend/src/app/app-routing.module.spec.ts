@@ -3,22 +3,20 @@ import { TestBed } from '@angular/core/testing';
 import { Router, Routes, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 
-import { AppConfig } from './core/config/config';
-import { InstanceService } from './core/config/instance.service';
 import { InstanceHomeRedirectComponent } from './core/instance-home-redirect.component';
 import { routes as appRoutes } from './app-routing.module';
 import { PageNotFoundComponent } from './shared/page-not-found/page-not-found.component';
+import { UnauthorizedAccessComponent } from './shared/unauthorized-access/unauthorized-access.component';
 
 /**
- * Covers the two pieces of instance-aware routing logic: the canMatch gate and
- * the root redirect.
+ * Covers the root redirect and the structural invariants of the real route
+ * table.
  *
- * These tests use stub feature routes rather than the real hms/cms tables. The
- * real tables pull in lazy modules full of Material components and services that
+ * These tests use a stub feature route rather than the real hms table. The real
+ * table pulls in a lazy module full of Material components and services that
  * need HttpClient, and rendering an actual dashboard would test the dashboard.
- * The guards and the redirect component are the parts with logic in them; the
- * route shapes are covered separately by the structural tests below, which run
- * against the real exported table.
+ * The redirect component is the part with logic in it; the route shapes are
+ * covered by the structural tests below, which run against the real table.
  */
 @Component({ selector: 'app-stub', standalone: true, template: 'stub' })
 class StubDashboardComponent { }
@@ -26,40 +24,26 @@ class StubDashboardComponent { }
 @Component({ selector: 'app-stub-notfound', standalone: true, template: '404' })
 class StubNotFoundComponent { }
 
-describe('instance-aware routing', () => {
+describe('root routing', () => {
 
   /**
-   * Stubs the real route shapes: each instance route is a container with
-   * children, mirroring hms/cms which are `loadChildren` modules with their own
-   * child routes.
+   * Stubs the real route shape: `hms` is a container with children, mirroring
+   * the real module, which is `loadChildren` with its own child routes.
    *
    * The nesting matters. A bare leaf route (`path: 'hms'` + `loadComponent`)
    * cannot match `/hms/dashboard` at all -- it consumes only `hms` and leaves
    * `dashboard` unmatched, so it always falls through to `**`. Using a leaf
-   * would make the guard assertions pass for the wrong reason, and would hide a
-   * genuinely broken real route.
+   * would make the assertions pass for the wrong reason.
    */
   function stubRoutes(): Routes {
-    const activeInstance = (type: string) => () => injectType() === type;
-
     return [
       { path: '', pathMatch: 'full', component: InstanceHomeRedirectComponent },
       {
         path: 'hms',
-        canMatch: [activeInstance('HMS')],
-        children: [{ path: 'dashboard', component: StubDashboardComponent }]
-      },
-      {
-        path: 'cms',
-        canMatch: [activeInstance('CMS')],
         children: [{ path: 'dashboard', component: StubDashboardComponent }]
       },
       { path: '**', component: StubNotFoundComponent }
     ];
-  }
-
-  function injectType(): string {
-    return TestBed.inject(InstanceService).type;
   }
 
   /**
@@ -67,9 +51,7 @@ describe('instance-aware routing', () => {
    *
    * Asserted instead of the activated component because a route using
    * loadComponent resolves its component asynchronously, and the router's
-   * snapshot exposes it through a private field rather than `component`. The
-   * matched path is what actually distinguishes "the guard let this through"
-   * from "the router fell through to **", which is the property under test.
+   * snapshot exposes it through a private field rather than `component`.
    */
   function matchedPath(): string | undefined {
     let route = TestBed.inject(Router).routerState.snapshot.root;
@@ -89,77 +71,51 @@ describe('instance-aware routing', () => {
     return new Promise(resolve => setTimeout(resolve, 0));
   }
 
-  async function harnessFor(instanceType: 'HMS' | 'CMS'): Promise<RouterTestingHarness> {
-    const config = new AppConfig();
-    config.set('BASE_URL', 'http://localhost:5000');
-    config.set('INSTANCE_TYPE', instanceType);
-
-    TestBed.configureTestingModule({
-      providers: [provideRouter(stubRoutes()), { provide: AppConfig, useValue: config }]
-    });
-
+  async function harness(): Promise<RouterTestingHarness> {
+    TestBed.configureTestingModule({ providers: [provideRouter(stubRoutes())] });
     return RouterTestingHarness.create();
   }
 
   // ---- root redirect ----------------------------------------------------
 
-  it('redirects / to /hms/dashboard on an HMS deployment', async () => {
-    const harness = await harnessFor('HMS');
+  it('redirects / to /hms/dashboard', async () => {
+    const h = await harness();
     // Start elsewhere first: re-navigating to the URL the router already holds
     // is a same-URL navigation, which the router ignores -- the redirect
     // component would never run and the assertion would pass vacuously.
-    await harness.navigateByUrl('/hms/dashboard');
-    await harness.navigateByUrl('/');
+    await h.navigateByUrl('/hms/dashboard');
+    await h.navigateByUrl('/');
     await settle();
 
     expect(TestBed.inject(Router).url).toBe('/hms/dashboard');
   });
 
-  it('redirects / to /cms/dashboard on a CMS deployment', async () => {
-    const harness = await harnessFor('CMS');
-    await harness.navigateByUrl('/cms/dashboard');
-    await harness.navigateByUrl('/');
-    await settle();
-
-    expect(TestBed.inject(Router).url).toBe('/cms/dashboard');
-  });
-
   it('replaces the URL rather than pushing, so Back leaves the app', async () => {
-    const harness = await harnessFor('HMS');
-    await harness.navigateByUrl('/hms/dashboard');
-    await harness.navigateByUrl('/');
+    const h = await harness();
+    await h.navigateByUrl('/hms/dashboard');
+    await h.navigateByUrl('/');
     await settle();
 
     // One entry in history, not two.
     expect(TestBed.inject(Router).navigated).toBe(true);
   });
 
-  // ---- canMatch gate ----------------------------------------------------
+  // ---- hms tree ---------------------------------------------------------
 
-  it('matches the HMS route on an HMS deployment', async () => {
-    const harness = await harnessFor('HMS');
+  it('matches a route under /hms', async () => {
+    const h = await harness();
     await settle();
-    await harness.navigateByUrl('/hms/dashboard');
+    await h.navigateByUrl('/hms/dashboard');
     await settle();
 
     expect(matchedRootPath()).toBe('hms');
     expect(matchedPath()).toBe('dashboard');
   });
 
-  it('blocks the HMS route on a CMS deployment', async () => {
-    const harness = await harnessFor('CMS');
-    await harness.navigateByUrl('/hms/dashboard');
-
-    // canMatch returned false, so recognition fell through to **. Note the URL
-    // is still /hms/dashboard: a ** route matches any URL while leaving it in
-    // the address bar, which is why this asserts on the matched route rather
-    // than on router.url.
-    expect(matchedRootPath()).toBe('**');
-  });
-
-  it('blocks the CMS route on an HMS deployment', async () => {
-    const harness = await harnessFor('HMS');
-    await harness.navigateByUrl('/cms/dashboard');
+  it('still 404s an unknown path', async () => {
+    const h = await harness();
+    await h.navigateByUrl('/hms/nope');
+    await settle();
 
     expect(matchedRootPath()).toBe('**');
   });
@@ -200,9 +156,22 @@ describe('instance-aware routing', () => {
       .toBe(InstanceHomeRedirectComponent);
   });
 
-  it('both real instance routes are guarded', () => {
-    expect(appRoutes.find(r => r.path === 'hms')?.canMatch).toBeDefined();
-    expect(appRoutes.find(r => r.path === 'cms')?.canMatch).toBeDefined();
+  it('the real table mounts auth and hms lazily, and nothing else', () => {
+    expect(appRoutes.find(r => r.path === 'auth')?.loadChildren).toBeDefined();
+    expect(appRoutes.find(r => r.path === 'hms')?.loadChildren).toBeDefined();
+    expect(appRoutes.map(r => r.path).sort())
+      .toEqual(['', '**', 'auth', 'hms', 'unauthorized-access']);
+  });
+
+  it('the 403 route is declared before the catch-all', () => {
+    // A `**` route matches anything, so if it came first the 403 would render
+    // the 404 page and "no permission" would be indistinguishable from
+    // "no such page".
+    const paths = appRoutes.map(r => r.path);
+    expect(paths.indexOf('unauthorized-access'))
+      .toBeLessThan(paths.indexOf('**'));
+    expect(appRoutes.find(r => r.path === 'unauthorized-access')?.component)
+      .toBe(UnauthorizedAccessComponent);
   });
 
   it('the real table still 404s unmatched URLs', () => {

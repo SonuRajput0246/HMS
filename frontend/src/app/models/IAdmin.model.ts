@@ -44,11 +44,10 @@ export interface IInventory {
     category_name?: string;
     quantity?: number;
     unit?: string;
-    // Purchase cost per unit. CMS recipe costing multiplies each ingredient
-    // quantity by this, so a dish's margin depends on it. Null means the item
+    // Purchase cost per unit, used to value stock on hand. Null means the item
     // has never been priced -- distinct from 0, which is a real zero cost.
     unit_cost?: string | number | null;
-    // Price when the item is rung up directly rather than through a recipe.
+    // Default sell price for the item. Null means no price has been set.
     selling_price?: string | number | null;
     is_active?: boolean;
     is_deleted?: boolean;

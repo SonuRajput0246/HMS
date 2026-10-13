@@ -40,20 +40,11 @@ class UpsertInventorySchema(UpsertInventoryIdSchema, CategoryIdSchema):
     is_active = fields.Boolean(required=True)
     is_deleted = fields.Boolean(required=True)
 
-    ## Purchase cost per unit, and the price an item rings up at when it is
-    ## sold without being a recipe.
-    ##
-    ## Both are declared CMS-facing on the model and both are read by services:
-    ## Recipe.calculate_cost_from_ingredients() multiplies each ingredient
-    ## quantity by unit_cost, and OrderService reads selling_price when an
-    ## item_type='inventory' line is rung up directly. Neither was reachable
-    ## through this API, so the figures could only be set by editing the
-    ## database -- every recipe therefore costed from whatever the seeder left,
-    ## and a directly-sold item priced at zero.
+    ## Purchase cost per unit, and the price an item is sold at.
     ##
     ## Optional and nullable on purpose: stock nobody has priced yet still has
-    ## no cost, and null is how the cost model says "unknown" (it reads
-    ## `unit_cost or 0`) rather than "free".
+    ## no cost, and null is how the cost model says "unknown" rather than
+    ## "free".
     unit_cost = fields.Decimal(
         required=False,
         allow_none=True,

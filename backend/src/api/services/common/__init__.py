@@ -8,10 +8,9 @@ Import the specific module you need directly:
     from src.api.services.common.common_service import CommonService
 
 Bucket layout mirrors src/api/models:
-  common/  reachable from both instance trees
-  hms/     hotel only
-  cms/     cafe only
+  common/  shared infrastructure, reachable from the hotel tree
+  hms/     the hotel domain
 
-Bucket membership was derived from which blueprint gate in app.py reaches the
-module through the import graph, not from its filename.
+app.py registers every blueprint unconditionally, so membership is decided
+by what app.py imports and mounts.
 """

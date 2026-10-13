@@ -1,10 +1,9 @@
 import os
 
-from .base import InstanceType
 from .development import DevelopmentConfig
 from .production import ProductionConfig
 
-__all__ = ["get_config", "InstanceType", "DevelopmentConfig", "ProductionConfig"]
+__all__ = ["get_config", "DevelopmentConfig", "ProductionConfig"]
 
 
 def get_config():
