@@ -21,11 +21,9 @@ export class BookingStateService {
     sessionStorage.setItem(this.STORAGE_KEY, JSON.stringify(data));
   }
 
-  // updateGuestInfo(guestId: number, name: string, phone: string): void {
   updateGuestInfo(guestId: number, name: string): void {
     const current = this.draftBooking();
     if (current) {
-      // const updated = { ...current, guest_id: guestId, guest_name: name, guest_phone: phone };
       const updated = { ...current, guest_id: guestId, guest_name: name };
       this.draftBooking.set(updated);
       sessionStorage.setItem(this.STORAGE_KEY, JSON.stringify(updated));

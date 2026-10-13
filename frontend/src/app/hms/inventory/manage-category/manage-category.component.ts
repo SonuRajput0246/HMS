@@ -4,8 +4,6 @@ import { InventoryService } from '../../../services/inventory.service';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CustomSnackbarService } from '../../../shared/custom-snackbar/custom-snackbar.service';
 import { finalize } from 'rxjs/operators';
-import { InstanceService } from '../../../core/config/instance.service';
-
 @Component({
   selector: 'app-manage-category',
   templateUrl: './manage-category.component.html',
@@ -18,14 +16,10 @@ export class ManageCategoryComponent {
   private _router = inject(Router);
   private _snackbar = inject(CustomSnackbarService);
   private AR = inject(ActivatedRoute);
-private _instance = inject(InstanceService);
-
   /** Base URL for this screen within the active product, for template use. */
-  readonly invBase = `${this._instance.prefix}/inventory`;
 
   categoryForm!: FormGroup;
   breakpoint = 3;
-
   hidePassword = true;
   isLoading = false;
   isPageLoad = false;
@@ -33,7 +27,6 @@ private _instance = inject(InstanceService);
 
   isEditMode = false;
   categoryObj: any = { id: 0 };
-
   ngOnInit(): void {
     this.createForm();
     this.onResize();
@@ -44,7 +37,6 @@ private _instance = inject(InstanceService);
       this.GetCategoryById(categoryId);
     }
   }
-
   private createForm(): void {
     this.categoryForm = this.fb.group({
       name: ['', Validators.required],
@@ -56,7 +48,6 @@ private _instance = inject(InstanceService);
   onResize(): void {
     this.breakpoint = window.innerWidth <= 960 ? 1 : 3;
   }
-
 
   insertUpdateCategory(): void {
     if (this.categoryForm.invalid) {
@@ -77,7 +68,7 @@ private _instance = inject(InstanceService);
             this._snackbar.openSnackBar(res?.message || 'Category saved successfully', "success");
             /// Back to the list within the active product. A literal 'hms' here
             /// meant a save in the cafe deployment navigated to a gated route.
-            this._router.navigate([`${this._instance.prefix}/inventory/list-category`]);
+            this._router.navigate(['/hms/inventory/list-category']);
           } else {
             this._snackbar.openSnackBar(res?.message || 'Failed to save category', "error");
           }
@@ -89,11 +80,9 @@ private _instance = inject(InstanceService);
       });
   }
 
-
   private GetCategoryById(categoryId: number): void {
     if (categoryId > 0) {
       this.isPageLoad = true;
-
       this._inventoryService.getCategoryById(categoryId)
         .pipe(finalize(() => this.isPageLoad = false))
         .subscribe({

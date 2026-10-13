@@ -3,10 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { AppConfig } from '../core/config/config';
 import { IEntityResponse } from '../models/ICommon.model';
 import {
-  ITemplateCodeOption,
-  ITemplateDetail,
   ITemplateListRequest,
-  ITemplatePreview,
   ITemplateUpsert
 } from '../models/IAdmin.model';
 import { Observable } from 'rxjs';

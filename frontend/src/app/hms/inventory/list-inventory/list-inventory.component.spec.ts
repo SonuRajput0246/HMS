@@ -84,21 +84,13 @@ describe('ListInventoryComponent', () => {
     it('edits an item under /hms', async () => {
       component.onEdit({ id: 5 } as any);
 
-      expect(router.navigate).toHaveBeenCalledWith(['hms/inventory/update-inventory', 5]);
+      expect(router.navigate).toHaveBeenCalledWith(['/hms/inventory/update-inventory', 5]);
     });
 
-    it('exposes the prefix to the template for the Add button', () => {
-      expect(component.invBase).toBe('hms/inventory');
-    });
-
-    /// The Add and Back links live in the template as routerLink, which is a
-    /// separate defect from the TypeScript one and would be missed by fixing
-    /// only the navigate() calls.
-    ///
     /// Asserted through the RouterLink directive's resolved UrlTree rather than
     /// an href attribute: the control is a <button>, and RouterLink only writes
     /// href onto an <a>, so there is no href to read.
-    it('resolves the Add link within the prefix, not a hardcoded path', () => {
+    it('resolves the Add link to a real route', () => {
       fixture.detectChanges();
 
       const button = fixture.debugElement.query(By.css('button[mat-raised-button]'));

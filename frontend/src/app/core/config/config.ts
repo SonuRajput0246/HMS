@@ -1,28 +1,13 @@
-// import { Injectable } from '@angular/core';
-// import { InitialService } from '../../services/initial.service';
-
-// @Injectable({
-//     providedIn: 'root'
-// })
-
-// export class AppConfig {
-
-//   constructor(private _initial: InitialService) {}
-
-//   get(key: string): string {
-//     if (key === 'BASE_URL') {
-//       if (!this._initial.baseUrl) {
-//         throw new Error('BASE_URL not initialized');
-//       }
-//       return this._initial.baseUrl;
-//     }
-//     throw new Error(`Unknown config key: ${key}`);
-//   }
-// }
-
-
 import { Injectable } from '@angular/core';
 
+/**
+ * Runtime configuration store.
+ *
+ * `InitialService` populates this during APP_INITIALIZER, before anything can
+ * read it. `get` throws for an unknown key rather than returning undefined: a
+ * missing required value means startup is genuinely broken, and failing at the
+ * point of use beats a silent undefined that surfaces three screens later.
+ */
 @Injectable({
   providedIn: 'root'
 })

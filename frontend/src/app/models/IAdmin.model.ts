@@ -154,7 +154,3 @@ export interface ITemplatePreview {
     detected_variables?: string[];
 }
 
-export interface ITemplateCodeOption {
-    code?: string;
-    name?: string;
-}

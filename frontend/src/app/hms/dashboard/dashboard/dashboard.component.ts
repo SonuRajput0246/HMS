@@ -1,4 +1,4 @@
-import { Component, inject, Inject } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { INavigationaBar } from '../../../models/ICommon.model';
 import { Router } from '@angular/router';
 

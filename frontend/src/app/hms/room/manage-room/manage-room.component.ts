@@ -6,43 +6,34 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { IEnumOption, INavigationaBar } from '../../../models/ICommon.model';
 import { finalize } from 'rxjs/operators';
 import { IRoomType } from '../../../models/IReservation.model';
-
 @Component({
   selector: 'app-manage-room',
   templateUrl: './manage-room.component.html',
   styleUrl: './manage-room.component.scss'
 })
 export class ManageRoomComponent {
-
   private fb = inject(FormBuilder);
   private _roomService = inject(RoomService);
   private _snackbar = inject(CustomSnackbarService);
   private _router = inject(Router);
   private AR = inject(ActivatedRoute);
-
   navData: INavigationaBar[] = [];
   roomForm!: FormGroup;
   breakpoint = 3;
-
   roomTypesList: IRoomType[] = [];
   isRoomTypeLoading = false;
-
   roomStatusList: IEnumOption[] = [];
   isRoomStatusLoading = false;
-  
   isLoading = false;
   isPageLoad = false;
-  
   roomObj: any = { id: 0 };
   isEditMode = false;
-
   ngOnInit(): void {
     this.initNavigation();
     this.createForm();
     this.onResize();
     this.fetchRoomTypes();
     this.fetchRoomStatuses();
-
     const roomId = Number(this.AR.snapshot.paramMap.get('id'));
     if (roomId) {
       this.isEditMode = true;
@@ -58,14 +49,12 @@ export class ManageRoomComponent {
       ]
     }
   }
-
   private initNavigation(): void {
     this.navData = [
       { displayValue: 'Home', isClickable: true, isDashboard: false, redirectValue: '/hms/dashboard' },
       { displayValue: 'Room Management', isClickable: true, isDashboard: false, redirectValue: '/hms/rooms' }
     ];
   }
-
   private createForm(): void {
     this.roomForm = this.fb.group({
       room_number: ['', Validators.required],
@@ -77,11 +66,9 @@ export class ManageRoomComponent {
       is_active: [true]
     });
   }
-
   onResize(): void {
     this.breakpoint = window.innerWidth <= 960 ? 1 : 3;
   }
-
   fetchRoomStatuses(): void {
     this.isRoomStatusLoading = true;
     this._roomService.getEnumOptions('room_status')
@@ -100,7 +87,6 @@ export class ManageRoomComponent {
         }
       });
   }
-
 
   insertUpdateRoom(): void {
     if (this.roomForm.invalid) {
@@ -131,7 +117,6 @@ export class ManageRoomComponent {
       });
   }
 
-
   GetRoomById(roomId: number) {
     if (roomId > 0) {
       this.isPageLoad = true;
@@ -142,7 +127,6 @@ export class ManageRoomComponent {
             if (res?.status) {
               this.isEditMode = true;
               this.roomObj = res.data;
-
               this.roomForm.patchValue({
                 id: this.roomObj.id,
                 room_number: this.roomObj.room_number,
@@ -153,9 +137,6 @@ export class ManageRoomComponent {
                 notes: this.roomObj.notes,
                 is_active: this.roomObj.is_active
               });
-              // this.roomForm.get('room_number')?.disable();
-              // this.roomForm.get('room_type_id')?.disable();
-              // this.roomForm.get('floor_number')?.disable();
             } else {
               this._snackbar.openSnackBar(res?.message || 'Failed to fetch room', 'error');
             }
@@ -167,7 +148,6 @@ export class ManageRoomComponent {
         });
     }
   }
-
 
   fetchRoomTypes() {
     this.isRoomTypeLoading = true;
@@ -188,12 +168,10 @@ export class ManageRoomComponent {
       });
   }
 
-  
   allowOnlyNumbers(event: KeyboardEvent) {
     const charCode = event.which ?? event.keyCode;
     if (charCode < 48 || charCode > 57) {
       event.preventDefault();
     }
   }
-
 }

@@ -1,7 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { EventEmitter, inject, Injectable, signal } from '@angular/core';
-import { IAppSetting } from '../models/IAppSettings.model';
-import { catchError, Observable, of } from 'rxjs';
+import { Observable } from 'rxjs';
 import { IEntityResponse } from '../models/ICommon.model';
 import { AppConfig } from '../core/config/config';
 import { STORAGE_KEYS } from '../core/config/storage-keys';

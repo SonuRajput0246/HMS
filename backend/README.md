@@ -120,3 +120,8 @@ date
 
 ## if you want to insert fake data
 pip install faker
+
+-------------------------------
+
+PS D:\CODING\HMS\backend> python -m venv .venv
+PS D:\CODING\HMS\backend> (Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned) ; (& d:\CODING\HMS\backend\.venv\Scripts\Activate.ps1)

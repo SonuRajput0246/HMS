@@ -1,7 +1,5 @@
 import { NgModule } from '@angular/core';
 
-// import { AccordionAnchorDirective, AccordionLinkDirective, AccordionDirective } from './accordion';
-// import { MenuItems } from './menu-items';
 import { CustomSnackbarComponent } from './custom-snackbar/custom-snackbar.component';
 import { MaterialModule } from './material-module';
 import { NavigationBarComponent } from './navigation-bar/navigation-bar.component';
@@ -11,17 +9,22 @@ import { CommonModule } from '@angular/common';
 import { PageNotFoundComponent } from './page-not-found/page-not-found.component';
 import { RouterLink } from '@angular/router';
 import { SnakeToTitlePipe } from '../pipes/snake-to-title.pipe';
-import { CurrencyInrPipe } from '../pipes/currency-inr.pipe';
 import { NgxMatSelectSearchModule } from 'ngx-mat-select-search';
 
+/**
+ * Cross-cutting declarations every feature module imports.
+ *
+ * Kept deliberately small. Anything that only one feature uses belongs in that
+ * feature's own module instead -- a barrel that grows without limit makes it
+ * impossible to tell which module actually needs what.
+ */
 @NgModule({
   declarations: [
     CustomSnackbarComponent,
     NavigationBarComponent,
     PageLoaderComponent,
     PageNotFoundComponent,
-    SnakeToTitlePipe,
-    CurrencyInrPipe
+    SnakeToTitlePipe
   ],
   imports: [
     CommonModule,
@@ -30,7 +33,6 @@ import { NgxMatSelectSearchModule } from 'ngx-mat-select-search';
     ReactiveFormsModule,
     RouterLink,
     NgxMatSelectSearchModule
-    
   ],
   exports: [
     CommonModule,
@@ -41,9 +43,7 @@ import { NgxMatSelectSearchModule } from 'ngx-mat-select-search';
     FormsModule,
     ReactiveFormsModule,
     SnakeToTitlePipe,
-    CurrencyInrPipe,
     NgxMatSelectSearchModule
-   ],
-  providers: []
+  ],
 })
 export class SharedModule { }

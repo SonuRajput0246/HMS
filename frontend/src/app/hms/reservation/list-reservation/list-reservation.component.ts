@@ -9,34 +9,27 @@ import { MatTableDataSource } from '@angular/material/table';
 import { ConfirmationService } from '../../../services/confirmation.service';
 import { Router } from '@angular/router';
 
-
 @Component({
   selector: 'app-list-reservation',
   templateUrl: './list-reservation.component.html',
   styleUrl: './list-reservation.component.scss'
 })
 export class ListReservationComponent {
-
   private _reservationService = inject(ReservationService);
   private _commonService = inject(CommonService);
   private _snackbar = inject(CustomSnackbarService);
   private _confirmService = inject(ConfirmationService);
   private _router = inject(Router);
-
   private readonly STORAGE_KEY = 'hms_reservationList';
-
   navData: INavigationaBar[] = [];
   isPageLoad = false;
-  // gridSearch = '';
   reservationsList: IReservations[] = [];
   pageDet: IGenricGrid = { total_docs: 0, limit: 10 } as IGenricGrid;
   displayedColumns: string[] = ['sr', 'reservationNumber', 'roomNumber', 'checkInDate', 'checkOutDate', 'totalNights', 'totalAmount', 'status', 'createdBy', 'createdAt', 'actions'];
   dataSource = new MatTableDataSource<IReservations>();
-
   /** Status filter options, from the `reservation_status` enum definition. */
   statusList: IEnumOption[] = [];
   isStatusLoading = false;
-
   requestData: IFilterReservations = {
     page_number: 1,
     page_size: 10,
@@ -45,13 +38,11 @@ export class ListReservationComponent {
     reservation_status: ''
   } as IFilterReservations;
 
-
   ngOnInit(): void {
     this.initNavigation();
     this.fetchReservationStatuses();
     this.loadInitialData();
   }
-
 
   /**
    * Status filter options from the `reservation_status` enum definition.
@@ -78,7 +69,6 @@ export class ListReservationComponent {
       });
   }
 
-
   private initNavigation(): void {
     this.navData = [
       { displayValue: 'Home', isClickable: true, isDashboard: false, redirectValue: '/hms/dashboard' },
@@ -86,7 +76,6 @@ export class ListReservationComponent {
       { displayValue: 'Reservations', isClickable: false, isDashboard: false }
     ];
   }
-
   private loadInitialData(): void {
     const savedState = localStorage.getItem(this.STORAGE_KEY);
     if (savedState) {
@@ -94,7 +83,6 @@ export class ListReservationComponent {
     }
     this.fetchAllReservations();
   }
-
 
   private formatLocalDate(date: any): string | null {
     if (!date) return null;
@@ -105,18 +93,14 @@ export class ListReservationComponent {
     return `${year}-${month}-${day}`;
   }
 
-
   private fetchAllReservations(): void {
     this.isPageLoad = true;
-
     const payload = {
       ...this.requestData,
       from_date: this.formatLocalDate(this.requestData.from_date),
       to_date: this.formatLocalDate(this.requestData.to_date)
     }
-    
     localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.requestData));
-
     this._reservationService.getAllReservations(payload)
       .pipe(finalize(() => this.isPageLoad = false))
       .subscribe({
@@ -126,7 +110,6 @@ export class ListReservationComponent {
             this.pageDet.total_docs = res.meta?.total_records || 0;
             this.pageDet.limit = this.requestData.page_size!;
             this.dataSource.data = this.reservationsList;
-
             if (this.reservationsList.length === 0 && (this.requestData.page_number ?? 0) > 1) {
               this.requestData.page_number!--;
               this.fetchAllReservations();
@@ -141,21 +124,17 @@ export class ListReservationComponent {
         }
       });
   }
-
   onPaginateChange(e: any): void {
     this.requestData.page_number = e.pageIndex + 1;
     this.requestData.page_size = e.pageSize;
     this.fetchAllReservations();
   }
 
-
   applyFilter(): void {
     this.requestData.page_number = 1;
     this.fetchAllReservations();
   }
-
   clearFilter(): void {
-    // this.gridSearch = '';
     this.requestData.from_date = null;
     this.requestData.to_date = null;
     this.requestData.search_room_number_value = '';
@@ -164,18 +143,15 @@ export class ListReservationComponent {
     this.fetchAllReservations();
   }
 
-
   onView(item: IReservations): void {
     this._router.navigate(['hms/reservations', item.reservation_id, 'reservation-details']);
   }
-
 
   onEdit(item: IReservations): void {
     if (item.reservation_id !== undefined) {
       this._router.navigate(['hms/reservations/edit', item.reservation_id]);
     }
   }
-
   onDelete(item: IReservations): void {
     (document.activeElement as HTMLButtonElement)?.blur();
     this._confirmService.confirm('Do you want to delete this reservation?')
@@ -187,7 +163,6 @@ export class ListReservationComponent {
         }
       });
   }
-
   private executeDelete(reservationId: number): void {
     this.isPageLoad = true;
     this._reservationService.deleteReservation(reservationId)
@@ -209,5 +184,4 @@ export class ListReservationComponent {
         }
       })
   }
-
 }

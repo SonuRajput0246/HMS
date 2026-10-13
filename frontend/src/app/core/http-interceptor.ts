@@ -10,7 +10,6 @@ import {
 import { Observable, throwError, BehaviorSubject } from 'rxjs';
 import { catchError, filter, switchMap, take } from 'rxjs/operators';
 import { Router } from '@angular/router';
-// import { CommonService } from '../services/common.service';
 import { AppConfig } from '../core/config/config';
 import { STORAGE_KEYS } from './config/storage-keys';
 
@@ -24,7 +23,6 @@ export class HttpIntercept implements HttpInterceptor {
     constructor(
         private router: Router,
         private http: HttpClient,
-        // private _common: CommonService,
         private config: AppConfig,
     ) {}
 
@@ -37,12 +35,7 @@ export class HttpIntercept implements HttpInterceptor {
         const isPublicApi =
             req.url.includes('/auth/login') ||
             req.url.includes('/auth/get-fresh-token') ||
-            req.url.includes('/assets/') ||
-            //// Public by design, and called during APP_INITIALIZER before any
-            //// session exists. Attaching a stale token here would make the
-            //// instance check fail on a session that was meant to be
-            //// unauthenticated.
-            req.url.includes('/api/v1/common/instance-config');
+            req.url.includes('/assets/');
         
         let authReq = req;
 
@@ -64,10 +57,6 @@ export class HttpIntercept implements HttpInterceptor {
                     return this.handle401Error(authReq, next);
                 }
                 
-                // if (error.status === 403) {
-                //     this._snackbarService.openSnackBar('Access denied', 'error');
-                // }
-
                 return throwError(() => error);
             })
         );
@@ -107,11 +96,7 @@ export class HttpIntercept implements HttpInterceptor {
                         return next.handle(this.addToken(request, res.data.access_token));
                     }
                     return this.logout();
-                }),
-                // catchError(() => {
-                //     this.isRefreshing = false;
-                //     return this.logout();
-                // })
+                })
             );
         }
 

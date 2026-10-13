@@ -32,10 +32,6 @@ body {
   z-index: 10;
 }
 
-// .in_up_form {
-//   height: calc(100vh - 110px);
-//   overflow: auto;
-// }
 
 //---------- Snackbar customization ----------//
 //  Tinted card with a leading accent bar. Each state gets a soft background,
@@ -217,7 +213,6 @@ $snack-states: (
 //------------ Manage page form customization ----------//
 
 .in_up_form {
-  // margin: 0px -15px;
 
   .in_up_form_footer {
 
@@ -250,7 +245,6 @@ $snack-states: (
 
     .form_button:disabled {
       background-color: #003366 !important;
-      // color: #003366 !important;
       color: #E4E4E4 !important;
     }
   }

@@ -2,13 +2,11 @@ import { Component, inject, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { MatTableDataSource } from '@angular/material/table';
 import { finalize } from 'rxjs/operators';
-
 import { IGenricGrid, ISearchRequest } from '../../../models/ICommon.model';
 import { IInventoryCategory } from '../../../models/IAdmin.model';
 import { InventoryService } from '../../../services/inventory.service';
 import { CustomSnackbarService } from '../../../shared/custom-snackbar/custom-snackbar.service';
 import { ConfirmationService } from '../../../services/confirmation.service';
-import { InstanceService } from '../../../core/config/instance.service';
 
 @Component({
   selector: 'app-list-category',
@@ -21,14 +19,10 @@ export class ListCategoryComponent implements OnInit {
   private _router = inject(Router);
   private _snackbar = inject(CustomSnackbarService);
   private _confirmService = inject(ConfirmationService);
-private _instance = inject(InstanceService);
-
   /** Base URL for this screen within the active product, for template use. */
-  readonly invBase = `${this._instance.prefix}/inventory`;
 
   //// Constants
   private readonly STORAGE_KEY = 'hms_invCategoryList';
-
   //// State Properties
   isPageLoad = false;
   gridSearch = '';
@@ -43,7 +37,6 @@ private _instance = inject(InstanceService);
     page_size: 10,
     search_value: ''
   } as ISearchRequest;
-
   ngOnInit(): void {
     this.loadInitialData();
   }
@@ -57,15 +50,13 @@ private _instance = inject(InstanceService);
     }
     this.fetchCategoryList();
   }
-
   //// Core API call method
   private fetchCategoryList(): void {
     this.isPageLoad = true;
-    
+
     // Sync search value to request object
     this.requestData.search_value = this.gridSearch;
     localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.requestData));
-
     this._inventoryService.getCategories(this.requestData)
       .pipe(finalize(() => this.isPageLoad = false))
       .subscribe({
@@ -91,7 +82,6 @@ private _instance = inject(InstanceService);
         }
       });
   }
-
   //// UI Event Handlers
   onPaginateChange(e: any): void {
     this.requestData.page_number = e.pageIndex + 1;
@@ -106,7 +96,6 @@ private _instance = inject(InstanceService);
       this.fetchCategoryList();
     }
   }
-
   clearFilter(): void {
     this.gridSearch = '';
     this.requestData.page_number = 1;
@@ -116,13 +105,12 @@ private _instance = inject(InstanceService);
   onEdit(item: IInventoryCategory): void {
     /// Instance-aware prefix: this component is mounted by both products, and a
     /// literal 'hms' made every edit click 404 in the cafe deployment.
-    this._router.navigate([`${this._instance.prefix}/inventory/update-category`, item.id]);
+    this._router.navigate(['/hms/inventory/update-category', item.id]);
   }
-
   onDelete(item: IInventoryCategory): void {
     console.log('a', item);
     (document.activeElement as HTMLElement)?.blur();
-    
+
     this._confirmService.confirm('Do you want to delete this category?')
       .then((result) => {
         if (result.isConfirmed) {
@@ -130,7 +118,6 @@ private _instance = inject(InstanceService);
         }
       });
   }
-
   private executeDelete(item: IInventoryCategory): void {
     this.isPageLoad = true;
     const deletePayload = { ...item, is_active: false, is_deleted: true };

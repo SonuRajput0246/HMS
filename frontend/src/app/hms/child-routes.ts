@@ -1,5 +1,4 @@
 import { AuthGuard } from '../core/auth.guard';
-// import { RouteGuardService } from '../services/route-guard.service';
 
 export const childRoutes = [
     {
@@ -72,12 +71,4 @@ export const childRoutes = [
         data: { menuId: 10 },
         canActivate: [AuthGuard]
     },
-    // {
-    //     path: '404',
-    //     component: PageNotFoundComponent
-    // },
-    // {
-    //     path: 'unauthorized-access',
-    //     component: UnautherizedPageComponent
-    // }
 ];

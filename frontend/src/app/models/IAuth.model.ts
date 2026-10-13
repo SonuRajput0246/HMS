@@ -20,11 +20,6 @@ export interface LoginData {
   user_data: UserData;
 }
 
-export interface LoginResponse {
-  status: boolean;
-  data: LoginData;
-}
-
 export interface IChangePassword {
   userEmail?: string;
   current_password?:string;

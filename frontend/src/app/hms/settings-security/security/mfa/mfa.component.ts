@@ -1,6 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { INavigationaBar } from '../../../../models/ICommon.model';
-import { ActivatedRoute, Router } from '@angular/router';
+import { Router } from '@angular/router';
 import { CommonService } from '../../../../services/common.service';
 import { AuthService } from '../../../../services/auth.service';
 import { finalize } from 'rxjs';

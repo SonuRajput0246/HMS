@@ -1,37 +1,30 @@
 import { Component, inject } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { IResetPassword } from '../../models/IAuth.model';
-import { passwordDifferentValidator, passwordMatchValidator } from '../../validators/password-match.validator';
+import { passwordMatchValidator } from '../../validators/password-match.validator';
 import { finalize } from 'rxjs/operators';
 import { CustomSnackbarService } from '../../shared/custom-snackbar/custom-snackbar.service';
 import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
-
 @Component({
   selector: 'app-reset-password',
   templateUrl: './reset-password.component.html',
   styleUrl: './reset-password.component.scss'
 })
 export class ResetPasswordComponent {
-
   private fb = inject(FormBuilder);
   private _auth = inject(AuthService);
   private _snackbar = inject(CustomSnackbarService);
   private _router = inject(Router);
-
   resetPasswordForm!: FormGroup;
-
   hideNew = true;
   hideConfirm = true;
   isLoading = false;
   email: string = '';
   flowType: string = '';
-
   timerSeconds = 60;
   timerInterval: any;
   canResend = false;
-  
-  // resetPassObj: IResetPassword = {} as IResetPassword;
 
   constructor() {
     const navigation = this._router.getCurrentNavigation();
@@ -43,12 +36,10 @@ export class ResetPasswordComponent {
     this.email = state.email;
     this.flowType = state.type;
   }
-
   ngOnInit(): void {
     this.createForm();
     this.startTimer();
   }
-
   private createForm(): void {
     this.resetPasswordForm = this.fb.group({
       otp: ['', [Validators.required, Validators.pattern(/^\d{6}$/)]],
@@ -59,15 +50,12 @@ export class ResetPasswordComponent {
       validators: [passwordMatchValidator]
     });
   }
-
   toggleNewPassword(): void {
     this.hideNew = !this.hideNew;
   }
-
   toggleConfirmPassword(): void {
     this.hideConfirm = !this.hideConfirm;
   }
-
   startTimer(): void {
     this.canResend = false;
     this.timerSeconds = 60;
@@ -79,21 +67,18 @@ export class ResetPasswordComponent {
       }
     }, 1000);
   }
-
   allowOnlyNumbers(event: KeyboardEvent) {
     const charCode = event.which ?? event.keyCode;
     if (charCode < 48 || charCode > 57) {
       event.preventDefault();
     }
   }
-
   onOtpPaste(event: ClipboardEvent) {
     const pasted = event.clipboardData?.getData('text') ?? '';
     if (!/^\d+$/.test(pasted)) {
       event.preventDefault();
     }
   }
-
   resendOtp(): void {
     if (!this.canResend) return;
     this.isLoading = true;
@@ -114,17 +99,14 @@ export class ResetPasswordComponent {
         error: (err) => this._snackbar.openSnackBar(err.error?.message || 'Failed to resend OTP', 'error')
       });
   }
-
   ngOnDestroy(): void {
     if (this.timerInterval) clearInterval(this.timerInterval);
   }
-
   resetUserPassword(): void {
     if (this.resetPasswordForm.invalid) {
       this.resetPasswordForm.markAllAsTouched();
       return;
     }
-    // const { confirmed_password, ...payload } = this.resetPasswordForm.value;
     const { confirmed_password, new_password: password, ...formValue } = this.resetPasswordForm.value;
     const payload: IResetPassword = {
       email: this.email,
@@ -151,6 +133,5 @@ export class ResetPasswordComponent {
         }
       });
   }
-
 
 }

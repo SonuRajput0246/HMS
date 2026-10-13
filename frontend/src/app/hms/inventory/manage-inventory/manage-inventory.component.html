@@ -1,7 +1,7 @@
 <div class="inventory-form-page">
 
     <div class="top-sub-nav-controls">
-        <button type="button" mat-raised-button color="primary" [routerLink]="['/' + invBase, 'list-inventory']">
+        <button type="button" mat-raised-button color="primary" [routerLink]="['/hms/inventory', 'list-inventory']">
             <mat-icon>arrow_back</mat-icon> Back
         </button>
     </div>
@@ -154,7 +154,7 @@
 
                 <div class="footer-buttons">
                     <button mat-stroked-button type="button" class="btn-cancel"
-                        [routerLink]="['/' + invBase, 'list-inventory']">
+                        [routerLink]="['/hms/inventory', 'list-inventory']">
                         Cancel
                     </button>
                     <button mat-flat-button type="submit" class="btn-submit" [disabled]="isLoading">

@@ -1,5 +1,4 @@
 import { IGenericPagination } from "./ICommon.model";
-
 export interface IReservations {
     reservation_id?: number;
     check_in_date?: string;
@@ -23,14 +22,12 @@ export interface IReservations {
     created_by?: string | null;
     guests_added?: boolean;
 }
-
 export interface IFilterReservations extends IGenericPagination {
     from_date?: Date | string | null;
     to_date?: Date | string | null;
     search_room_number_value?: string;
     reservation_status?: string;
 }
-
 export interface IAvailableRooms {
     room_id?: number;
     room_number?: string;
@@ -42,7 +39,6 @@ export interface IAvailableRooms {
     max_children: number;
     amenities?: string[];
 }
-
 export interface IFilterAvailableRooms extends IGenericPagination {
     check_in?: Date | string | null;
     check_out?: Date | string | null;
@@ -60,7 +56,6 @@ export interface IFilterAvailableRooms extends IGenericPagination {
      */
     search_value?: string;
 }
-
 export interface IRoomType {
     id?: number;
     name?: string;
@@ -71,12 +66,10 @@ export interface IRoomType {
     max_adults?: number;
     max_children?: number;
 }
-
 // ============================================================================
 //  UPDATE RESERVATION — frontend-defined contract
 //  Mirrors docs/API-CONTRACT-reservation-update.md
 // ============================================================================
-
 /** PUT /api/v1/reservation/update */
 export interface IUpdateReservationPayload {
     reservation_id: number;
@@ -85,14 +78,10 @@ export interface IUpdateReservationPayload {
     check_out_date: string;         // YYYY-MM-DD
     total_nights: number;
     total_amount: number;
-    // adults_count: number;
-    // children_count: number;
-    // infants_count: number;
     total_amount_override?: boolean;
     total_amount_override_reason?: string;
     updated_at?: string | null;     // optimistic concurrency token
 }
-
 /**
  * One row of the payment ledger (read-only history).
  * Mirrors the backend `payments` table — see the Flask `Payment` model.
@@ -114,7 +103,6 @@ export interface IReservationPayment {
     paid_at?: string | null;          // ISO timestamp, nullable server-side
     verified_at?: string | null;
 }
-
 /** POST /api/v1/reservation/advance-payment-details */
 export interface IInsertPaymentPayload extends IReservationPayment {
     reservation_id: number;
@@ -127,7 +115,6 @@ export interface IInsertPaymentPayload extends IReservationPayment {
      */
     verified_by?: number;
 }
-
 export interface IDraftReservationData {
     reservation_id: number;
     // Step 1: Room Details
@@ -139,12 +126,10 @@ export interface IDraftReservationData {
     check_in_date?: string;
     check_out_date?: string;
     total_nights?: number;
-
     // Step 2: Guest Details (Added later)
     guest_id?: number;
     guest_name?: string;
     guest_phone?: string;
-
     // Step 3: Payment Details (Added later)
     advance_amount?: number;
     payment_mode?: string;

@@ -8,7 +8,6 @@ import { AdvancePaymentComponent } from './advance-payment/advance-payment.compo
 import { SelectGuestComponent } from './select-guest/select-guest.component';
 import { ReservationDetailsComponent } from './reservation-details/reservation-details.component';
 import { EditReservationComponent } from './edit-reservation/edit-reservation.component';
-
 const routes: Routes = [
   {
     path: '',
@@ -60,38 +59,7 @@ const routes: Routes = [
     canActivate: [AuthGuard]
   }
 
-
-  //   {
-  //   path: 'guest-details',
-  //   component: GuestDetailsComponent,
-  //   data: { menuId: 6 },
-  //   canActivate: [AuthGuard]
-  // },
-
-
-  // {
-  //   path: ':reservationId/select-guest',
-  //   component: SelectGuestComponent,
-  //   data: { menuId: 6 },
-  //   canActivate: [AuthGuard]
-  // },
-
-  // {
-  //   path: ':reservationId/guest-details',
-  //   component: GuestDetailsComponent,
-  //   data: { menuId: 6 },
-  //   canActivate: [AuthGuard]
-  // },
-
-  // {
-  //   path: ':reservationId/guest-details/:guestId',
-  //   component: GuestDetailsComponent,
-  //   data: { menuId: 6 },
-  //   canActivate: [AuthGuard]
-  // },
-
 ];
-
 @NgModule({
   imports: [RouterModule.forChild(routes)],
   exports: [RouterModule]

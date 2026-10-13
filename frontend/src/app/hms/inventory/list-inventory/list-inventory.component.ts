@@ -3,7 +3,6 @@ import { InventoryService } from '../../../services/inventory.service';
 import { Router } from '@angular/router';
 import { CustomSnackbarService } from '../../../shared/custom-snackbar/custom-snackbar.service';
 import { ConfirmationService } from '../../../services/confirmation.service';
-import { InstanceService } from '../../../core/config/instance.service';
 import { IInventory } from '../../../models/IAdmin.model';
 import { IGenricGrid, ISearchRequest } from '../../../models/ICommon.model';
 import { finalize } from 'rxjs/operators';
@@ -20,15 +19,6 @@ export class ListInventoryComponent {
   private _router = inject(Router);
   private _snackbar = inject(CustomSnackbarService);
   private _confirmService = inject(ConfirmationService);
-private _instance = inject(InstanceService);
-
-  /**
-   * Base URL for this screen, for template use.
-   *
-   * Built from InstanceService.prefix rather than a literal, so a template
-   * link cannot drift away from the route table the module declares.
-   */
-  readonly invBase = `${this._instance.prefix}/inventory`;
 
   //// Constants
   private readonly STORAGE_KEY = 'hms_inventoryList';
@@ -118,9 +108,7 @@ private _instance = inject(InstanceService);
   }
 
   onEdit(item: IInventory): void {
-    /// Prefix from InstanceService, not a literal 'hms', so this cannot
-    /// drift out of step with the route table.
-    this._router.navigate([`${this._instance.prefix}/inventory/update-inventory`, item.id]);
+    this._router.navigate(['/hms/inventory/update-inventory', item.id]);
   }
 
   onDelete(item: IInventory): void {

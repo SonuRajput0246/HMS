@@ -5,8 +5,6 @@ import { CustomSnackbarService } from '../../../shared/custom-snackbar/custom-sn
 import { ActivatedRoute, Router } from '@angular/router';
 import { finalize } from 'rxjs/operators';
 import { IGenericPagination } from '../../../models/ICommon.model';
-import { InstanceService } from '../../../core/config/instance.service';
-
 @Component({
   selector: 'app-manage-inventory',
   templateUrl: './manage-inventory.component.html',
@@ -19,14 +17,9 @@ export class ManageInventoryComponent {
   private _router = inject(Router);
   private _snackbar = inject(CustomSnackbarService);
   private AR = inject(ActivatedRoute);
-private _instance = inject(InstanceService);
-
-  /** Base URL for this screen within the active product, for template use. */
-  readonly invBase = `${this._instance.prefix}/inventory`;
 
   inventoryForm!: FormGroup;
   breakpoint = 3;
-
   hidePassword = true;
   isLoading = false;
   isPageLoad = false;
@@ -38,14 +31,12 @@ private _instance = inject(InstanceService);
   isEditMode = false;
   inventoryObj: any = { id: 0 };
 
-
   ngOnInit(): void {
     this.createForm();
     this.onResize();
     this.getCategories();
     this.getUnits();
     this.listenToUnitChange();
-
     const inventoryId = Number(this.AR.snapshot.paramMap.get('id'));
     if (inventoryId) {
       this.getAnInventoryById(inventoryId);
@@ -66,14 +57,12 @@ private _instance = inject(InstanceService);
       is_active: [true]
     });
   }
-
   onResize(): void {
     this.breakpoint = window.innerWidth <= 960 ? 1 : 3;
   }
 
   private getCategories(): void {
     const categoryControl = this.inventoryForm.get('category_id');
-
     this.isCategoryLoading = true;
     this.categoryList = [];
     this.inventoryForm.get('category_id')?.disable();  //// keep disabled while loading
@@ -100,7 +89,6 @@ private _instance = inject(InstanceService);
 
   private getUnits(): void {
     const unitControl = this.inventoryForm.get('unit');
-
     this.isUnitsLoading = true;
     this.inventoryForm.get('unit')?.disable();  //// keep disabled while loading
     this._inventoryService.getInventoryUnits()
@@ -124,7 +112,6 @@ private _instance = inject(InstanceService);
 
   listenToUnitChange() {
     const quantityCtrl = this.inventoryForm.get('quantity');
-
     this.inventoryForm.get('unit')?.valueChanges.subscribe(unit => {
       if (!quantityCtrl) return;
 
@@ -139,7 +126,6 @@ private _instance = inject(InstanceService);
           Validators.min(1)
         ]);
       }
-
       quantityCtrl.updateValueAndValidity();
     });
   }
@@ -151,7 +137,6 @@ private _instance = inject(InstanceService);
       event.target.value = parts[0] + '.' + parts[1].substring(0, 3);
     }
   }
-
   blockInvalidKeys(event: KeyboardEvent) {
     const invalidKeys = ['-', 'e', 'E', '+'];
     if (invalidKeys.includes(event.key)) {
@@ -188,7 +173,7 @@ private _instance = inject(InstanceService);
             this._snackbar.openSnackBar(res?.message || 'Inventory saved successfully', "success");
             /// Back to the list within the active product. A literal 'hms' here
             /// meant a save in the cafe deployment navigated to a gated route.
-            this._router.navigate([`${this._instance.prefix}/inventory/list-inventory`]);
+            this._router.navigate(['/hms/inventory/list-inventory']);
           } else {
             this._snackbar.openSnackBar(res?.message || 'Failed to save inventory', "error");
           }
@@ -199,7 +184,6 @@ private _instance = inject(InstanceService);
         }
       });
   }
-
   private getAnInventoryById(inventoryId: number): void {
     if (inventoryId > 0) {
       this.isPageLoad = true;
@@ -233,7 +217,5 @@ private _instance = inject(InstanceService);
         });
     }
   }
-
-
 
 }

@@ -1,6 +1,5 @@
 import { Injectable } from '@angular/core';
 import { ActivatedRouteSnapshot, Router } from '@angular/router';
-import { CommonService } from '../services/common.service';
 import { STORAGE_KEYS } from './config/storage-keys';
 
 

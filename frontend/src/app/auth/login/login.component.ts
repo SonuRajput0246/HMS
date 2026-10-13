@@ -8,14 +8,12 @@ import { ConfirmationService } from '../../services/confirmation.service';
 import { CommonService } from '../../services/common.service';
 import { InstanceService } from '../../core/config/instance.service';
 import { STORAGE_KEYS } from '../../core/config/storage-keys';
-
 @Component({
   selector: 'app-login',
   templateUrl: './login.component.html',
   styleUrl: './login.component.scss'
 })
 export class LoginComponent {
-
   private fb = inject(FormBuilder);
   private _auth = inject(AuthService);
   private _snackbar = inject(CustomSnackbarService);
@@ -23,39 +21,31 @@ export class LoginComponent {
   private _confirmService = inject(ConfirmationService);
   private _common = inject(CommonService);
   private _instance = inject(InstanceService);
-
   loginForm!: FormGroup;
   verifyMfaForm!: FormGroup;
   hidePassword = true;
   isLoading = false;
   isPageLoad = false;
-
   loginStage = signal<'credentials' | 'mfa'>('credentials');
   otpCode = signal<string>('');
-  // private tempUserId: number | null = null;
   private tempMfaToken: string = '';
-
   ngOnInit() {
     this.createForm();
   }
-
   private createForm(): void {
     this.loginForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
       password: ['', Validators.required],
     });
   }
-
   private createMfaForm(): void {
     this.verifyMfaForm = this.fb.group({
       totp: ['', [Validators.required, Validators.pattern(/^\d{6}$/)]]
     });
   }
-
   togglePasswordHide(): void {
     this.hidePassword = !this.hidePassword;
   }
-
 
   LoginUser(): void {
     if (this.loginForm.invalid) {
@@ -73,7 +63,6 @@ export class LoginComponent {
         next: (res) => {
           if (res?.status) {
             if (res.data?.mfa_enabled) {
-              // this.tempMfaToken = res.data.temp_token;
               this.tempMfaToken = res.data.temp_token;
               this.loginStage.set('mfa');
               this.createMfaForm();
@@ -88,13 +77,11 @@ export class LoginComponent {
         error: (err) => this.handleLoginError(err)
       })
   }
-
   verifyMfaLogin(): void {
     if (this.verifyMfaForm.invalid) {
       this.verifyMfaForm.markAllAsTouched();
       return;
     }
-
     if (!this.tempMfaToken) {
       this._snackbar.openSnackBar('Session expired. Please login again.', 'error');
       this.loginStage.set('credentials');
@@ -102,12 +89,10 @@ export class LoginComponent {
     }
     this.isLoading = true;
     this.isPageLoad = true;
-    
     const payload = {
       temp_token: this.tempMfaToken,
       totp: this.verifyMfaForm.value.totp
     };
-    
     this._auth.verifyTotpLogin(payload)
       .pipe(finalize(() => {
         this.isLoading = false;
@@ -128,7 +113,6 @@ export class LoginComponent {
         }
       });
   }
-
   private handleLoginSuccess(data: any): void {
     sessionStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, data.access_token);
     localStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(data));
@@ -136,7 +120,6 @@ export class LoginComponent {
     this._snackbar.openSnackBar(`Welcome to ${this._instance.label}`, 'success');
     this._router.navigateByUrl(this._instance.homeUrl);
   }
-
   private handleLoginError(err: any): void {
     const errorData = err.error;
     const msg = errorData?.message || 'An error occurred while logging in';
@@ -149,7 +132,6 @@ export class LoginComponent {
       this._snackbar.openSnackBar(msg, 'error');
     }
   }
-
   private handleInactiveAccount(serverMessage: string): void {
     this._confirmService.confirm(
       serverMessage,
@@ -180,30 +162,25 @@ export class LoginComponent {
     });
   }
 
-
   get passwordHasError(): boolean {
     const ctrl = this.loginForm.get('password');
     return !!(ctrl && ctrl.invalid && (ctrl.touched || ctrl.dirty));
   }
-
   resetToCredentials() {
     this.loginStage.set('credentials');
     this.otpCode.set('');
   }
-
   allowOnlyNumbers(event: KeyboardEvent) {
     const charCode = event.which ?? event.keyCode;
     if (charCode < 48 || charCode > 57) {
       event.preventDefault();
     }
   }
-
   onOtpPaste(event: ClipboardEvent) {
     const pasted = event.clipboardData?.getData('text') ?? '';
     if (!/^\d+$/.test(pasted)) {
       event.preventDefault();
     }
   }
-
 
 }

@@ -2,7 +2,7 @@ import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { AppConfig } from '../core/config/config';
 import { IAuthRequest } from '../models/IAuth.model';
-import { catchError, Observable, of } from 'rxjs';
+import { Observable } from 'rxjs';
 import { IEntityResponse } from '../models/ICommon.model';
 
 @Injectable({

@@ -9,14 +9,12 @@ import { ReservationService } from '../../../services/reservation.service';
 import { GuestService } from '../../../services/guest.service';
 import { minAgeValidator } from '../../../validators/minAgeValidator';
 import { BookingStateService } from '../../../services/booking-state.service';
-
 @Component({
   selector: 'app-guest-details',
   templateUrl: './guest-details.component.html',
   styleUrl: './guest-details.component.scss'
 })
 export class GuestDetailsComponent {
-  
   private fb = inject(FormBuilder);
   private _reservationService = inject(ReservationService);
   private _snackbar = inject(CustomSnackbarService);
@@ -25,21 +23,16 @@ export class GuestDetailsComponent {
   private _commonService = inject(CommonService);
   private _guestService = inject(GuestService);
   private _bookingStateService = inject(BookingStateService);
-
   private readonly DRAFT_RESERVATION_KEY = 'hms_draft_reservation';
-
   draftReservation = this._bookingStateService.draftBooking;
-
   navData: INavigationaBar[] = [];
   guestForm!: FormGroup;
   breakpoint = 3;
-
   isLoading = false;
   isPageLoad = false;
   isCountryLoading = false;
   isStateLoading = false;
   isCityLoading = false;
-
   /**
    * Enum-backed dropdowns, read from the `enum_definitions` / `enum_options`
    * tables so an option added in the admin UI appears here without a frontend
@@ -49,34 +42,20 @@ export class GuestDetailsComponent {
    */
   genderList: IEnumOption[] = [];
   idTypeList: IEnumOption[] = [];
-
   isGenderLoading = false;
   isIdTypeLoading = false;
-
   guestObj: any = { id: 0 };
   isEditMode = false;
-
   readonly startDate = new Date(2000, 0, 1);
   maxDate: Date = new Date(new Date().setFullYear(new Date().getFullYear() - 18));
-
   countryList: any[] = [];
   stateList: any[] = [];
   cityList: any[] = [];
-  // srCountry: string = '';
   countrySearchCtrl = new FormControl('');
   stateSearchCtrl = new FormControl('');
   citySearchCtrl = new FormControl('');
   selectedCountryId: number | null = null;
   selectedStateId: number | null = null;
-
-  // reservationId: number | null = null;
-
-  // requestData: ISearchRequest = {
-  //   page_number: 1,
-  //   page_size: 10,
-  //   search_value: ''
-  // } as ISearchRequest;
-
 
   ngOnInit(): void {
     this.createForm();
@@ -84,7 +63,6 @@ export class GuestDetailsComponent {
     this.getAllCountries();
     this.loadEnumOptions();
     this.verifyDraftReservation();
-
     this.countrySearchCtrl.valueChanges
       .pipe(
         debounceTime(400),
@@ -93,8 +71,7 @@ export class GuestDetailsComponent {
       .subscribe(search => {
         this.getAllCountries(search || '');
       });
-    
-    
+
       this.guestForm.get('country_id')?.valueChanges.subscribe(countryId => {
         const stateControl = this.guestForm.get('state_id');
         this.selectedCountryId = countryId;
@@ -107,7 +84,6 @@ export class GuestDetailsComponent {
           stateControl?.disable();    // ✅ disable again
         }
       });
-
     this.stateSearchCtrl.valueChanges
       .pipe(
         debounceTime(400),
@@ -118,7 +94,6 @@ export class GuestDetailsComponent {
           this.getAllStates(this.selectedCountryId, search || '');
         }
       });
-
     this.guestForm.get('state_id')?.valueChanges.subscribe(stateId => {
       const cityControl = this.guestForm.get('city_id');
       this.selectedStateId = stateId;
@@ -132,7 +107,6 @@ export class GuestDetailsComponent {
       }
     });
 
-
     this.citySearchCtrl.valueChanges
       .pipe(
         debounceTime(400),
@@ -143,10 +117,7 @@ export class GuestDetailsComponent {
           this.getAllCities(this.selectedStateId, search || '');
         }
       });
-
-    // this.reservationId = Number(this.AR.snapshot.paramMap.get('reservationId'));
     this.initNavigation();
-
     const guestId = Number(this.AR.snapshot.paramMap.get('guestId'));
     if (guestId) {
       this.isEditMode = true;
@@ -162,9 +133,7 @@ export class GuestDetailsComponent {
       ];
     }
 
-
   }
-
 
   initNavigation() {
     this.navData = [
@@ -173,18 +142,15 @@ export class GuestDetailsComponent {
       { displayValue: 'Select or Create Guest', isClickable: true, isDashboard: false, redirectValue: `/hms/reservations/select-guest` },
     ]
   }
-
   private verifyDraftReservation(): void {
     if (!this.draftReservation()) {
       this._snackbar.openSnackBar('No draft booking found. Please select a room first.', 'error');
       this._router.navigate(['hms/reservations/available-rooms']);
     }
   }
-
   onResize() {
     this.breakpoint = window.innerWidth <= 960 ? 1 : 3;
   }
-
   createForm() {
     this.guestForm = this.fb.group({
       first_name: ['', Validators.required],
@@ -204,11 +170,9 @@ export class GuestDetailsComponent {
       vip_status: [false],
       blacklist_status: [false],
       is_active: [true],
-
       additional_guests: this.fb.array([])
     });
   }
-
   private getGuestById(guestId: number): void {
     if (guestId > 0) {
       this.isPageLoad = true;
@@ -229,8 +193,6 @@ export class GuestDetailsComponent {
                 email: this.guestObj.email,
                 phone_number: this.guestObj.phone_number,
                 address: this.guestObj.address,
-                // city_id: this.guestObj.city_id,
-                // state_id: this.guestObj.state_id,
                 country_id: this.guestObj.country_id,
                 nationality_id: this.guestObj.nationality_id,
                 id_type: this.guestObj.id_type,
@@ -240,7 +202,6 @@ export class GuestDetailsComponent {
                 blacklist_status: this.guestObj.blacklist_status,
                 is_active: this.guestObj.is_active,
               });
-
               this.additionalGuests.clear();
               if (this.guestObj.additional_guests?.length) {
                 this.guestObj.additional_guests.forEach((g: any) => {
@@ -261,11 +222,9 @@ export class GuestDetailsComponent {
               } else {
                 this.addGuest();
               }
-
               // The enum lists may still be in flight when this runs; whichever
               // response lands last has to do the reconcile.
               this.reconcileEnumValues();
-
               this.getAllStates(this.guestObj.country_id);
               this._commonService.getStatesList({ country_id: this.guestObj.country_id })
                 .subscribe(res => {
@@ -277,7 +236,6 @@ export class GuestDetailsComponent {
                       this.guestForm.patchValue({ city_id: this.guestObj.city_id });
                     });
                 });
-
             } else {
               this._snackbar.openSnackBar(res?.message || 'Failed to fetch guest', 'error');
             }
@@ -290,34 +248,18 @@ export class GuestDetailsComponent {
     }
   }
 
-  // private loadDraftReservation(): void {
-  //   const routerState = history.state?.draftReservation;
-  //   const sessionData = sessionStorage.getItem(this.DRAFT_RESERVATION_KEY);
-  //   this.draftReservation = routerState || (sessionData ? JSON.parse(sessionData) : null);
-
-  //   if (!this.draftReservation) {
-  //     this._snackbar.openSnackBar('No draft booking found. Please select a room first.', 'error');
-  //     this._router.navigate(['hms/reservations/available-rooms']);
-  //   }
-  // }
-
-
   insertGuestAndReservation(): void {
     if (this.guestForm.invalid) {
       this.guestForm.markAllAsTouched();
       return;
     }
-
     const draft = this.draftReservation();
-
     if (!draft) {
       this._snackbar.openSnackBar('Draft booking session expired. Please restart booking.', 'error');
       this._router.navigate(['hms/reservations/available-rooms']);
       return;
     }
-
     let formValue = this.guestForm.getRawValue();
-
     const payload = {
       guest_details: {
         ...formValue,
@@ -335,7 +277,6 @@ export class GuestDetailsComponent {
         check_out_date: draft.check_out_date
       }
     };
-
     this.isLoading = true;
     this._reservationService.insertGuestAndReservation(payload)
       .pipe(finalize(() => this.isLoading = false))
@@ -356,9 +297,6 @@ export class GuestDetailsComponent {
       })
   }
 
-  
-
-
   getAllCountries(searchValue: string = ''): void {
     this.isCountryLoading = true;
     this._commonService.getCountriesList({"search_value": searchValue})
@@ -378,8 +316,6 @@ export class GuestDetailsComponent {
       })
   }
 
-
-  
   getAllStates(countryId: number, searchValue: string = ''): void {
     this.isStateLoading = true;
     this._commonService.getStatesList({
@@ -389,7 +325,6 @@ export class GuestDetailsComponent {
       .pipe(finalize(() => this.isStateLoading = false))
       .subscribe({
         next: (res) => {
-
           if (res?.status) {
             this.stateList = res?.data || [];
           } else {
@@ -398,22 +333,16 @@ export class GuestDetailsComponent {
               'error'
             );
           }
-
         },
         error: (err) => {
-
           const msg = err?.error?.message || 'An error occurred while fetching states';
           this._snackbar.openSnackBar(msg, 'error');
-
         }
       });
   }
 
-
   getAllCities(stateId: number, searchValue: string = ''): void {
-
     this.isCityLoading = true;
-
     this._commonService.getCitiesList({
         state_id: stateId,
         search_value: searchValue
@@ -421,7 +350,6 @@ export class GuestDetailsComponent {
       .pipe(finalize(() => this.isCityLoading = false))
       .subscribe({
         next: (res) => {
-
           if (res?.status) {
             this.cityList = res?.data || [];
           } else {
@@ -430,17 +358,13 @@ export class GuestDetailsComponent {
               'error'
             );
           }
-
         },
         error: (err) => {
-
           const msg = err?.error?.message || 'An error occurred while fetching cities';
           this._snackbar.openSnackBar(msg, 'error');
-
         }
       });
   }
-
 
   /**
    * Loads one enum's options into `listProp` and flips `loadingProp` while in
@@ -471,18 +395,15 @@ export class GuestDetailsComponent {
       });
   }
 
-
   private loadEnumOptions(): void {
     this.fetchEnumOptions('gender', 'genderList', 'isGenderLoading', 'genders');
     this.fetchEnumOptions('guests_id_type', 'idTypeList', 'isIdTypeLoading', 'id types');
   }
 
-
   /** True while either enum-backed dropdown is still populating. */
   get isEnumLoading(): boolean {
     return this.isGenderLoading || this.isIdTypeLoading;
   }
-
 
   /**
    * Drops stored enum values the table no longer offers.
@@ -501,30 +422,25 @@ export class GuestDetailsComponent {
   private reconcileEnumValues(): void {
     this.reconcileControl(this.guestForm.get('gender'), this.genderList);
     this.reconcileControl(this.guestForm.get('id_type'), this.idTypeList);
-
     this.additionalGuests.controls.forEach(guest => {
       this.reconcileControl(guest.get('gender'), this.genderList);
       this.reconcileControl(guest.get('id_type'), this.idTypeList);
     });
   }
 
-
   private reconcileControl(control: AbstractControl | null, options: IEnumOption[]): void {
     if (!control || !options.length) {
       return;
     }
-
     const value = control.value;
     if (value && !options.some(option => option.option_key === value)) {
       control.setValue('');
     }
   }
 
-
   get additionalGuests(): FormArray {
     return this.guestForm.get('additional_guests') as FormArray;
   }
-
   addGuest() {
     const lastGuest = this.additionalGuests.at(this.additionalGuests.length - 1);
     if (lastGuest && lastGuest.invalid) {
@@ -533,11 +449,9 @@ export class GuestDetailsComponent {
     }
     this.additionalGuests.push(this.createGuest());
   }
-
   removeGuest(index:number){
     this.additionalGuests.removeAt(index);
   }
-
   private createGuest(): FormGroup {
     return this.fb.group({
       full_name: ['', Validators.required],

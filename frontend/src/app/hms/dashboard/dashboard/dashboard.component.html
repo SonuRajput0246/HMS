@@ -1,5 +1,3 @@
-<!-- <app-navigation-bar [navData]="navData"></app-navigation-bar> -->
-
 <div class="dashboard-grid">
   <mat-card
     *ngFor="let card of dashboardCards"
@@ -18,7 +16,6 @@
         </div>
         <span class="stat-label">{{ card.title }}</span>
       </div>
-
       <div class="stat-value">{{ card.value }}</div>
     </mat-card-content>
   </mat-card>

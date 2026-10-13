@@ -6,25 +6,21 @@ import { INavigationaBar, IEnumOption } from '../../../models/ICommon.model';
 import { GuestService } from '../../../services/guest.service';
 import { debounceTime, distinctUntilChanged, finalize } from 'rxjs/operators';
 import { CommonService } from '../../../services/common.service';
-
 @Component({
   selector: 'app-manage-guest',
   templateUrl: './manage-guest.component.html',
   styleUrl: './manage-guest.component.scss'
 })
 export class ManageGuestComponent {
-
   private fb = inject(FormBuilder);
   private _guestService = inject(GuestService);
   private _snackbar = inject(CustomSnackbarService);
   private _router = inject(Router);
   private AR = inject(ActivatedRoute);
   private _commonService = inject(CommonService);
-
   navData: INavigationaBar[] = [];
   guestForm!: FormGroup;
   breakpoint = 3;
-
   isLoading = false;
   isPageLoad = false;
   isCountryLoading = false;
@@ -32,33 +28,21 @@ export class ManageGuestComponent {
   isCityLoading = false;
   isIdTypeLoading = false;
   isGenderLoading = false;
-
   /** Sourced from the `guests_id_type` / `gender` enum definitions. */
   idTypeList: IEnumOption[] = [];
   genderList: IEnumOption[] = [];
-
   guestObj: any = { id: 0 };
   isEditMode = false;
-
   readonly startDate = new Date(2000, 0, 1);
-
   countryList: any[] = [];
   stateList: any[] = [];
   cityList: any[] = [];
   nationalityList: any[] = [];
-  // srCountry: string = '';
   countrySearchCtrl = new FormControl('');
   stateSearchCtrl = new FormControl('');
   citySearchCtrl = new FormControl('');
   selectedCountryId: number | null = null;
   selectedStateId: number | null = null;
-
-  // requestData: ISearchRequest = {
-  //   page_number: 1,
-  //   page_size: 10,
-  //   search_value: ''
-  // } as ISearchRequest;
-
 
   ngOnInit(): void {
     this.initNavigation();
@@ -67,7 +51,6 @@ export class ManageGuestComponent {
     this.getAllCountries();
     this.getEnumOptions('guests_id_type', 'idTypeList', 'isIdTypeLoading', 'id types');
     this.getEnumOptions('gender', 'genderList', 'isGenderLoading', 'genders');
-
     this.countrySearchCtrl.valueChanges
       .pipe(
         debounceTime(400),
@@ -76,8 +59,7 @@ export class ManageGuestComponent {
       .subscribe(search => {
         this.getAllCountries(search || '');
       });
-    
-    
+
     this.guestForm.get('country_id')?.valueChanges.subscribe(countryId => {
       const stateControl = this.guestForm.get('state_id');
       this.selectedCountryId = countryId;
@@ -90,7 +72,6 @@ export class ManageGuestComponent {
         stateControl?.disable();    // ✅ disable again
       }
     });
-
     this.stateSearchCtrl.valueChanges
       .pipe(
         debounceTime(400),
@@ -101,7 +82,6 @@ export class ManageGuestComponent {
           this.getAllStates(this.selectedCountryId, search || '');
         }
       });
-
     this.guestForm.get('state_id')?.valueChanges.subscribe(stateId => {
       const cityControl = this.guestForm.get('city_id');
       this.selectedStateId = stateId;
@@ -115,7 +95,6 @@ export class ManageGuestComponent {
       }
     });
 
-
     this.citySearchCtrl.valueChanges
       .pipe(
         debounceTime(400),
@@ -126,7 +105,6 @@ export class ManageGuestComponent {
           this.getAllCities(this.selectedStateId, search || '');
         }
       });
-
     const guestId = Number(this.AR.snapshot.paramMap.get('id'));
     if (guestId) {
       this.isEditMode = true;
@@ -143,18 +121,15 @@ export class ManageGuestComponent {
     }
   }
 
-
   initNavigation() {
     this.navData = [
       { displayValue: 'Home', isClickable: true, isDashboard: false, redirectValue: '/hms/dashboard' },
       { displayValue: 'Guest Management', isClickable: true, isDashboard: false, redirectValue: '/hms/guests' }
     ]
   }
-
   onResize() {
     this.breakpoint = window.innerWidth <= 960 ? 1 : 3;
   }
-
   createForm() {
     this.guestForm = this.fb.group({
       first_name: ['', Validators.required],
@@ -176,7 +151,6 @@ export class ManageGuestComponent {
       is_active: [true]
     });
   }
-
   private getGuestById(guestId: number): void {
     if (guestId > 0) {
       this.isPageLoad = true;
@@ -197,8 +171,6 @@ export class ManageGuestComponent {
                 email: this.guestObj.email,
                 phone_number: this.guestObj.phone_number,
                 address: this.guestObj.address,
-                // city: this.guestObj.city,
-                // state: this.guestObj.state,
                 country_id: this.guestObj.country_id,
                 nationality_id: this.guestObj.nationality_id,
                 id_type: this.guestObj.id_type,
@@ -208,7 +180,6 @@ export class ManageGuestComponent {
                 blacklist_status: this.guestObj.blacklist_status,
                 is_active: this.guestObj.is_active
               });
-
               this.getAllStates(this.guestObj.country_id);
               this._commonService.getStatesList({ country_id: this.guestObj.country_id })
                 .subscribe(res => {
@@ -231,7 +202,6 @@ export class ManageGuestComponent {
         })
     }
   }
-
   insertUpdateGuest(): void {
     if (this.guestForm.invalid) {
       this.guestForm.markAllAsTouched();
@@ -264,9 +234,6 @@ export class ManageGuestComponent {
       })
   }
 
-  
-
-
   /**
    * Load one enum definition's options into a component field.
    *
@@ -297,7 +264,6 @@ export class ManageGuestComponent {
       });
   }
 
-
   getAllCountries(searchValue: string = ''): void {
     this.isCountryLoading = true;
     this._commonService.getCountriesList({"search_value": searchValue})
@@ -317,12 +283,8 @@ export class ManageGuestComponent {
       })
   }
 
-
-  
   getAllStates(countryId: number, searchValue: string = ''): void {
-
     this.isStateLoading = true;
-
     this._commonService.getStatesList({
         country_id: countryId,
         search_value: searchValue
@@ -330,7 +292,6 @@ export class ManageGuestComponent {
       .pipe(finalize(() => this.isStateLoading = false))
       .subscribe({
         next: (res) => {
-
           if (res?.status) {
             this.stateList = res?.data || [];
           } else {
@@ -339,22 +300,16 @@ export class ManageGuestComponent {
               'error'
             );
           }
-
         },
         error: (err) => {
-
           const msg = err?.error?.message || 'An error occurred while fetching states';
           this._snackbar.openSnackBar(msg, 'error');
-
         }
       });
   }
 
-
   getAllCities(stateId: number, searchValue: string = ''): void {
-
     this.isCityLoading = true;
-
     this._commonService.getCitiesList({
         state_id: stateId,
         search_value: searchValue
@@ -362,7 +317,6 @@ export class ManageGuestComponent {
       .pipe(finalize(() => this.isCityLoading = false))
       .subscribe({
         next: (res) => {
-
           if (res?.status) {
             this.cityList = res?.data || [];
           } else {
@@ -371,15 +325,11 @@ export class ManageGuestComponent {
               'error'
             );
           }
-
         },
         error: (err) => {
-
           const msg = err?.error?.message || 'An error occurred while fetching cities';
           this._snackbar.openSnackBar(msg, 'error');
-
         }
       });
   }
-
 }

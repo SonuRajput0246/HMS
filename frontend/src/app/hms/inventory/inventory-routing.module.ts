@@ -7,47 +7,6 @@ import { ManageCategoryComponent } from './manage-category/manage-category.compo
 import { ListInventoryComponent } from './list-inventory/list-inventory.component';
 import { ManageInventoryComponent } from './manage-inventory/manage-inventory.component';
 
-
-// const routes: Routes = [
-//   {
-//     path: '',
-//     component: InventoryDashboardComponent,
-//     data: { menuId: 3 },
-//     canActivate: [AuthGuard],
-//     children: [
-//       {
-//         path: '',
-//         redirectTo: 'list-category',
-//         pathMatch: 'full'
-//       },
-//       {
-//         path: 'list-category',
-//         component: ListCategoryComponent,
-//         data: { menuId: 3 }
-//       },
-//       {
-//         path: 'manage-category',
-//         component: ManageCategoryComponent,
-//         data: { menuId: 3 }
-//       },
-//       {
-//         path: 'list-inventory',
-//         component: ListInventoryComponent,
-//         data: { menuId: 3 }
-//       },
-//       {
-//         path: 'manage-inventory',
-//         component: ManageInventoryComponent,
-//         data: { menuId: 3 }
-//       }
-//     ]
-//   }
-// ];
-
-
-
-
-
 const routes: Routes = [
   {
     path: '',
@@ -93,7 +52,6 @@ const routes: Routes = [
     ]
   }
 ];
-
 
 @NgModule({
   imports: [RouterModule.forChild(routes)],

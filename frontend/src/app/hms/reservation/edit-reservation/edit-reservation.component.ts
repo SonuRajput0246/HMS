@@ -3,7 +3,6 @@ import { AbstractControl, FormArray, FormBuilder, FormControl, FormGroup, Valida
 import { ActivatedRoute, Router } from '@angular/router';
 import { Observable, of, Subscription } from 'rxjs';
 import { catchError, debounceTime, distinctUntilChanged, finalize, switchMap } from 'rxjs/operators';
-
 import { IEnumOption, INavigationaBar } from '../../../models/ICommon.model';
 import {
   IAvailableRooms,
@@ -17,25 +16,20 @@ import { GuestService } from '../../../services/guest.service';
 import { ReservationService } from '../../../services/reservation.service';
 import { CustomSnackbarService } from '../../../shared/custom-snackbar/custom-snackbar.service';
 import { minAgeValidator } from '../../../validators/minAgeValidator';
-
 interface CanDeactivate {
   canDeactivate(): boolean | Promise<boolean>;
 }
-
 /**
  * Age bands used to bucket the guest roster into the reservation's
  * adults / children / infants counts. Adjust to match your hotel's policy.
  */
 const INFANT_MAX_AGE = 2;
 const CHILD_MAX_AGE = 12;
-
 type SectionState = 'idle' | 'saving' | 'saved' | 'error';
-
 interface IPaymentTypeOption {
   value: string;
   label: string;
 }
-
 /**
  * Frozen and module-level so the option objects handed to `*ngFor` keep a
  * stable identity. A fresh array of fresh literals per change-detection pass
@@ -45,7 +39,6 @@ const PAYMENT_TYPE_OPTIONS: ReadonlyArray<IPaymentTypeOption> = Object.freeze([
   Object.freeze({ value: 'advance', label: 'Advance' }),
   Object.freeze({ value: 'additional_advance', label: 'Additional Advance' })
 ]);
-
 /**
  * `min` is an input of `MatDatepickerInput` (the `[matDatepicker]` directive on
  * the input), and the panel's calendar picks it up through
@@ -58,24 +51,20 @@ function stayWindowValidator(checkInKey: string, checkOutKey: string): Validator
     const checkIn = group.get(checkInKey)?.value;
     const checkOut = group.get(checkOutKey)?.value;
     if (!checkIn || !checkOut) return null;
-
     const start = new Date(checkIn).setHours(0, 0, 0, 0);
     const end = new Date(checkOut).setHours(0, 0, 0, 0);
     const today = new Date().setHours(0, 0, 0, 0);
-
     if (end <= start) return { stayWindow: true };
     if (end < today) return { stayWindowInPast: true };
     return null;
   };
 }
-
 @Component({
   selector: 'app-edit-reservation',
   templateUrl: './edit-reservation.component.html',
   styleUrl: './edit-reservation.component.scss'
 })
 export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivate {
-
   private fb = inject(FormBuilder);
   private _reservationService = inject(ReservationService);
   private _guestService = inject(GuestService);
@@ -84,7 +73,6 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
   private _confirmService = inject(ConfirmationService);
   private _router = inject(Router);
   private AR = inject(ActivatedRoute);
-
   // ---------------------------------------------------------------
   //  Reservation-level data
   // ---------------------------------------------------------------
@@ -92,17 +80,14 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
   reservationId = 0;
   reservation: any = null;
   isLoading = false;
-
   /** DOB picker ceiling — today, so nobody picks a future birth date */
   readonly maxDob = new Date();
-
   // ---------------------------------------------------------------
   //  Forms
   // ---------------------------------------------------------------
   stayForm!: FormGroup;
   guestForm!: FormGroup;
   paymentForm!: FormGroup;
-
   // ---------------------------------------------------------------
   //  Lookup data
   // ---------------------------------------------------------------
@@ -110,17 +95,14 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
   stateList: any[] = [];
   cityList: any[] = [];
   currencyList: any[] = [];
-
   countrySearchCtrl = new FormControl('');
   stateSearchCtrl = new FormControl('');
   citySearchCtrl = new FormControl('');
   currencySearchCtrl = new FormControl('');
-
   isCountryLoading = false;
   isStateLoading = false;
   isCityLoading = false;
   isCurrencyLoading = false;
-
   /**
    * Enum-backed dropdowns, read from the `enum_definitions` / `enum_options`
    * tables so an option added in the admin UI appears here without a frontend
@@ -133,12 +115,10 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
   idTypeList: IEnumOption[] = [];
   paymentMethodList: IEnumOption[] = [];
   paymentStatusList: IEnumOption[] = [];
-
   isGenderLoading = false;
   isIdTypeLoading = false;
   isPaymentMethodLoading = false;
   isPaymentStatusLoading = false;
-
   // ---------------------------------------------------------------
   //  Room picker — paginated, searchable, bounded height
   // ---------------------------------------------------------------
@@ -147,24 +127,20 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
   availableRooms: IAvailableRooms[] = [];
   availabilityChecked = false;
   selectedRoom: IAvailableRooms | null = null;
-
   readonly roomPageSize = 10;
   roomPageNumber = 1;
   roomTotalDocs = 0;
   roomSearchCtrl = new FormControl('');
   roomTypeFilterCtrl = new FormControl('all');
-
   get roomTypeFilter(): string {
     return String(this.roomTypeFilterCtrl.value || 'all');
   }
-
   // ---------------------------------------------------------------
   //  Payment ledger
   // ---------------------------------------------------------------
   payments: IReservationPayment[] = [];
   showPaymentForm = false;
   isSavingPayment = false;
-
   /**
    * The payment type is not a free choice. The first advance is collected once
    * at booking, so before it exists only `advance` is offered; once it has been
@@ -179,7 +155,6 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
    * passes, so it is recomputed only when `payments` actually changes.
    */
   availablePaymentTypes: IPaymentTypeOption[] = [PAYMENT_TYPE_OPTIONS[0]];
-
   /**
    * Recompute the allowed set from the ledger and keep the control on a legal
    * value. A control left on a now-invalid option would fail the `required`
@@ -188,13 +163,11 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
   private refreshPaymentTypes(): void {
     const hasAdvance = this.payments.some(p => String(p.payment_type) === 'advance');
     this.availablePaymentTypes = [hasAdvance ? PAYMENT_TYPE_OPTIONS[1] : PAYMENT_TYPE_OPTIONS[0]];
-
     const control = this.paymentForm.get('payment_type');
     if (control && !this.availablePaymentTypes.some(o => o.value === control.value)) {
       control.setValue(this.availablePaymentTypes[0].value);
     }
   }
-
   // ---------------------------------------------------------------
   //  Save state
   // ---------------------------------------------------------------
@@ -203,20 +176,16 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
   isSavingAll = false;
   roomState: SectionState = 'idle';
   guestState: SectionState = 'idle';
-
   /** guest identity fields — frozen once the guest has arrived */
   private readonly identityFields = [
     'first_name', 'last_name', 'gender', 'date_of_birth', 'id_type', 'id_number'
   ];
-
   private roomDirty = false;
   private guestDirty = false;
   private roomSnapshot = '';
   private guestSnapshot = '';
   private suppressDirtyCheck = false;
-
   private subs = new Subscription();
-
   // ---------------------------------------------------------------
   //  Status locks — business rules
   // ---------------------------------------------------------------
@@ -226,39 +195,30 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
   readonly dateLockedStatuses = ['checked_in', 'checked_out'];
   /** Identity is frozen once the guest has physically arrived */
   readonly identityLockedStatuses = ['checked_in', 'checked_out'];
-
   get status(): string {
     return String(this.reservation?.reservation_status || '').toLowerCase();
   }
-
   get isReadOnly(): boolean {
     return this.readOnlyStatuses.includes(this.status);
   }
-
   get areDatesLocked(): boolean {
     return this.isReadOnly || this.dateLockedStatuses.includes(this.status);
   }
-
   get isIdentityLocked(): boolean {
     return this.isReadOnly || this.identityLockedStatuses.includes(this.status);
   }
-
   get isRoomDirty(): boolean {
     return this.roomDirty;
   }
-
   get isGuestDirty(): boolean {
     return this.guestDirty;
   }
-
   get hasUnsavedChanges(): boolean {
     return this.roomDirty || this.guestDirty;
   }
-
   get canSaveAll(): boolean {
     return !this.isReadOnly && (this.roomDirty || this.guestDirty) && !this.isSavingAll;
   }
-
   // ---------------------------------------------------------------
   //  Date guards
   // ---------------------------------------------------------------
@@ -268,7 +228,6 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
     d.setHours(0, 0, 0, 0);
     return d;
   }
-
   /**
    * Past days are not selectable. Note this only restricts what can be
    * *picked* — a stale `reserved` booking whose check-in already lapsed
@@ -277,7 +236,6 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
   get minCheckInDate(): Date {
     return this.today;
   }
-
   /**
    * Earliest legal check-out for a given check-in: the day after it, and never
    * a past date. Shared by the calendar floor and the auto-correct so the two
@@ -288,7 +246,6 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
     earliest.setDate(earliest.getDate() + 1);
     return earliest > this.today ? earliest : this.today;
   }
-
   /**
    * Check-out can never precede check-in. A same-day selection is not
    * offered because it yields a 0-night stay (nights drive the total);
@@ -298,7 +255,6 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
     const checkIn = this.toDate(this.stayForm?.get('check_in_date')?.value);
     return checkIn ? this.earliestLegalCheckout(checkIn) : this.today;
   }
-
   // ---------------------------------------------------------------
   //  Derived stay / money values
   // ---------------------------------------------------------------
@@ -308,35 +264,28 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
     const diff = new Date(check_out_date).getTime() - new Date(check_in_date).getTime();
     return diff > 0 ? Math.round(diff / 86400000) : 0;
   }
-
   get pricePerNight(): number {
     return this.selectedRoom?.price ?? this.reservation?.room?.price ?? 0;
   }
-
   /** auto total — ignored while a manual override is active */
   get computedTotal(): number {
     return this.totalNights * (Number(this.pricePerNight) || 0);
   }
-
   get effectiveTotal(): number {
     if (this.stayForm?.get('total_amount_override')?.value) {
       return Number(this.stayForm.get('total_amount')?.value) || 0;
     }
     return this.computedTotal;
   }
-
   get paidAmount(): number {
     return this.payments.reduce((sum, p) => sum + this.signedAmount(p), 0);
   }
-
   get balanceAmount(): number {
     return this.effectiveTotal - this.paidAmount;
   }
-
   get isOverCollected(): boolean {
     return this.balanceAmount < 0;
   }
-
   /**
    * Occupancy is derived from the guest roster, never entered separately.
    * The primary guest is one adult; each additional guest is bucketed by age.
@@ -347,7 +296,6 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
     let adults = 1;   // the primary guest
     let children = 0;
     let infants = 0;
-
     const roster = this.guestForm?.get('additional_guests') as FormArray | null;
     for (const ctrl of roster?.controls || []) {
       const age = Number(ctrl.get('age')?.value);
@@ -355,10 +303,8 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
       else if (age > INFANT_MAX_AGE && age <= CHILD_MAX_AGE) children++;
       else adults++;   // an unset age counts as adult until it is corrected
     }
-
     return { adults, children, infants };
   }
-
   get occupancyLabel(): string {
     const { adults, children, infants } = this.guestCounts;
     const parts: string[] = [];
@@ -367,31 +313,25 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
     if (infants) parts.push(`${infants} infant${infants > 1 ? 's' : ''}`);
     return parts.join(', ');
   }
-
   /** infants do not occupy a bed, so capacity is adults + children */
   get guestOccupancy(): number {
     const { adults, children } = this.guestCounts;
     return adults + children;
   }
-
   get roomCapacity(): number {
     const room: any = this.selectedRoom || this.reservation?.room;
     return (Number(room?.max_adults) || 0) + (Number(room?.max_children) || 0);
   }
-
   get isOverCapacity(): boolean {
     const capacity = this.roomCapacity;
     return capacity > 0 && this.guestOccupancy > capacity;
   }
-
   get selectedRoomNumber(): string {
     return this.selectedRoom?.room_number || this.reservation?.room?.room_number || '—';
   }
-
   get selectedRoomType(): string {
     return this.selectedRoom?.room_type || this.reservation?.room?.room_type || '—';
   }
-
   // ===============================================================
   //  Lifecycle
   // ===============================================================
@@ -399,22 +339,18 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
     this.initNavigation();
     this.createForms();
     this.wireFormEvents();
-
     this.reservationId = Number(this.AR.snapshot.paramMap.get('reservationId'));
     if (!this.reservationId) {
       this.onBack();
       return;
     }
-
     this.getAllCountries();
     this.loadEnumOptions();
     this.loadReservation();
   }
-
   ngOnDestroy(): void {
     this.subs.unsubscribe();
   }
-
   initNavigation(): void {
     this.navData = [
       { displayValue: 'Home', isClickable: true, isDashboard: false, redirectValue: '/hms/dashboard' },
@@ -422,21 +358,18 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
       { displayValue: 'Edit Reservation', isClickable: false, isDashboard: false }
     ];
   }
-
   private wireFormEvents(): void {
     // stay form: live totals + dirty flag
     this.subs.add(this.stayForm.valueChanges.subscribe(() => {
       this.refreshAutoTotal();
       this.syncRoomDirty();
     }));
-
     // A check-in moved forward can strand the check-out behind it. Push the
     // check-out to the earliest legal day rather than leaving an error the
     // user has to reason about.
     this.subs.add(this.stayForm.get('check_in_date')!.valueChanges.subscribe(() => {
       this.enforceCheckoutAfterCheckin();
     }));
-
     // re-check availability whenever the stay window moves
     this.subs.add(this.stayForm.get('check_in_date')!.valueChanges
       .pipe(debounceTime(400), distinctUntilChanged())
@@ -444,30 +377,23 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
     this.subs.add(this.stayForm.get('check_out_date')!.valueChanges
       .pipe(debounceTime(400), distinctUntilChanged())
       .subscribe(() => this.checkAvailability()));
-
     this.subs.add(this.guestForm.valueChanges.subscribe(() => this.syncGuestDirty()));
-
     this.subs.add(this.countrySearchCtrl.valueChanges
       .pipe(debounceTime(400), distinctUntilChanged())
       .subscribe(search => this.getAllCountries(search || '')));
-
     this.subs.add(this.stateSearchCtrl.valueChanges
       .pipe(debounceTime(400), distinctUntilChanged())
       .subscribe(search => this.getAllStates(Number(this.guestForm.value.state_id) || 0, search || '')));
-
     this.subs.add(this.citySearchCtrl.valueChanges
       .pipe(debounceTime(400), distinctUntilChanged())
       .subscribe(search => this.getAllCities(Number(this.guestForm.value.city_id) || 0, search || '')));
-
     this.subs.add(this.currencySearchCtrl.valueChanges
       .pipe(debounceTime(400), distinctUntilChanged())
       .subscribe(search => this.getAllCurrencies(search || '')));
-
     this.subs.add(this.roomSearchCtrl.valueChanges
       .pipe(debounceTime(400), distinctUntilChanged())
       .subscribe(() => this.onRoomSearch()));
   }
-
   // ===============================================================
   //  Forms
   // ===============================================================
@@ -482,7 +408,6 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
       total_amount: [0, [Validators.required, Validators.min(0)]],
       total_amount_override_reason: ['']
     }, { validator: stayWindowValidator('check_in_date', 'check_out_date') });
-
     this.guestForm = this.fb.group({
       first_name: ['', Validators.required],
       last_name: ['', Validators.required],
@@ -503,7 +428,6 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
       is_active: [true],
       additional_guests: this.fb.array([])
     });
-
     this.paymentForm = this.fb.group({
       payment_type: ['advance', Validators.required],
       amount: [null, [Validators.required, Validators.min(0.01)]],
@@ -514,16 +438,13 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
       transaction_ref: [''],
       remarks: ['']
     });
-
     // seed the control off the same constant the options list uses, so the
     // initial value can never be one the dropdown is not offering
     this.refreshPaymentTypes();
   }
-
   get additionalGuests(): FormArray {
     return this.guestForm.get('additional_guests') as FormArray;
   }
-
   // ===============================================================
   //  Load
   // ===============================================================
@@ -550,11 +471,9 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
         }
       });
   }
-
   private patchStayForm(): void {
     const r = this.reservation;
     const room: any = r.room || {};
-
     // Rate fallback: older get-by-id responses have no `room.price`, so derive
     // it from the stored total instead of showing a 0 total.
     const storedTotal = Number(r.total_amount) || 0;
@@ -564,7 +483,6 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
       ? Math.round((checkOut.getTime() - checkIn.getTime()) / 86400000)
       : 0;
     const price = Number(room.price) || (storedNights > 0 ? Math.round(storedTotal / storedNights) : 0);
-
     this.selectedRoom = {
       room_id: room.room_id ?? r.room_id,
       room_number: room.room_number,
@@ -575,7 +493,6 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
       extra_bed_allowed: !!room.extra_bed_allowed,
       extra_bed_price: room.extra_bed_price ?? 0
     };
-
     this.suppressDirtyCheck = true;
     this.stayForm.patchValue({
       check_in_date: checkIn,
@@ -585,7 +502,6 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
       total_amount: storedTotal
     });
     this.refreshAutoTotal();
-
     // A stored total that disagrees with nights x rate was priced by hand —
     // surface it as an override so loading the page never silently rewrites it.
     if (!r.total_amount_override && storedTotal > 0 && storedTotal !== this.computedTotal) {
@@ -596,16 +512,13 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
       }, { emitEvent: false });
     }
     this.suppressDirtyCheck = false;
-
     // Self-heal legacy rows where check-out never followed check-in, otherwise
     // the form would be permanently invalid with no way to save.
     this.suppressDirtyCheck = true;
     this.enforceCheckoutAfterCheckin(true);
     this.suppressDirtyCheck = false;
-
     this.syncRoomSnapshot();
   }
-
   /**
    * The ledger comes entirely from `get-by-id`'s `payments[]`, which is always
    * present (empty when nothing has been collected). The old `advance_payment`
@@ -617,7 +530,6 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
     this.payments = Array.isArray(this.reservation?.payments) ? this.reservation.payments : [];
     this.refreshPaymentTypes();
   }
-
   /**
    * The guest master record holds the full profile; the reservation
    * payload only carries a summary. Prefer the master record, fall back
@@ -629,7 +541,6 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
       this.patchGuestForm(this.reservation?.primary_guest || {});
       return;
     }
-
     this._guestService.getGuestById(guestId)
       .subscribe({
         next: (res: any) => {
@@ -638,10 +549,8 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
         error: () => this.patchGuestForm(this.reservation?.primary_guest || {})
       });
   }
-
   private patchGuestForm(guest: any): void {
     this.suppressDirtyCheck = true;
-
     this.guestForm.patchValue({
       first_name: guest.first_name || '',
       last_name: guest.last_name || '',
@@ -659,24 +568,19 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
       blacklist_status: !!guest.blacklist_status,
       is_active: guest.is_active === undefined ? true : !!guest.is_active
     });
-
     this.additionalGuests.clear();
     const extras: any[] = guest.additional_guests?.length
       ? guest.additional_guests
       : (this.reservation?.additional_guests || []);
     extras.forEach(g => this.additionalGuests.push(this.createGuest(g)));
-
     // The enum lists may still be in flight when this runs; whichever response
     // lands last has to do the reconcile.
     this.reconcileEnumValues();
-
     this.suppressDirtyCheck = false;
     this.syncGuestSnapshot();
-
     // location cascade: country -> state -> city
     const countryId = guest.country_id;
     if (!countryId) return;
-
     this.getAllStates(countryId, '', () => {
       this.guestForm.patchValue({ state_id: guest.state_id ?? '' }, { emitEvent: false });
       const stateId = guest.state_id;
@@ -686,7 +590,6 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
       });
     });
   }
-
   // ===============================================================
   //  Status locks
   // ===============================================================
@@ -697,18 +600,15 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
       this.paymentForm.disable({ emitEvent: false });
       return;
     }
-
     if (this.areDatesLocked) {
       ['check_in_date', 'check_out_date'].forEach(k =>
         this.stayForm.get(k)?.disable({ emitEvent: false }));
     }
-
     if (this.isIdentityLocked) {
       this.identityFields.forEach(k =>
         this.guestForm.get(k)?.disable({ emitEvent: false }));
     }
   }
-
   // ===============================================================
   //  Availability
   // ===============================================================
@@ -716,12 +616,10 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
     if (this.stayForm.get('total_amount_override')?.value) return;
     this.stayForm.get('total_amount')?.setValue(this.computedTotal, { emitEvent: false });
   }
-
   toggleRoomPicker(): void {
     this.showRoomPicker = !this.showRoomPicker;
     if (this.showRoomPicker) this.checkAvailability();
   }
-
   /**
    * Fetches one page of available rooms for the current stay window.
    * `exclude_reservation_id` (a new contract field) keeps the currently
@@ -729,7 +627,6 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
    */
   checkAvailability(page: number = 1): void {
     if (this.areDatesLocked) return;
-
     const { check_in_date, check_out_date } = this.stayForm.getRawValue();
     if (!check_in_date || !check_out_date) {
       this.availableRooms = [];
@@ -737,7 +634,6 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
       this.roomTotalDocs = 0;
       return;
     }
-
     this.roomPageNumber = page;
     this.isAvailabilityLoading = true;
     this._reservationService.getAvailableRooms({
@@ -766,7 +662,6 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
         }
       });
   }
-
   /** search / type filter narrowed on top of the fetched page */
   get filteredRooms(): IAvailableRooms[] {
     const term = (this.roomSearchCtrl.value || '').trim().toLowerCase();
@@ -778,7 +673,6 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
         || String(room.room_type || '').toLowerCase().includes(term);
     });
   }
-
   /** room types present in the current result set, for the filter dropdown */
   get roomTypeOptions(): string[] {
     const types = this.availableRooms
@@ -786,15 +680,12 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
       .filter((t): t is string => !!t);
     return Array.from(new Set(types)).sort();
   }
-
   get hasActiveRoomFilter(): boolean {
     return this.roomTypeFilter !== 'all' || !!(this.roomSearchCtrl.value || '').trim();
   }
-
   trackByRoomId(_index: number, room: IAvailableRooms): number | undefined {
     return room.room_id;
   }
-
   get roomRangeLabel(): string {
     const total = this.roomTotalDocs;
     if (!total) return '';
@@ -802,56 +693,46 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
     const to = Math.min(this.roomPageNumber * this.roomPageSize, total);
     return `${from}-${to} of ${total}`;
   }
-
   onRoomSearch(): void {
     // the search term is sent to the server, so page 1 is where it starts
     this.checkAvailability(1);
   }
-
   onRoomTypeFilter(): void {
     this.checkAvailability(1);
   }
-
   onRoomPageChange(e: any): void {
     this.checkAvailability(e.pageIndex + 1);
   }
-
   clearRoomFilters(): void {
     this.roomSearchCtrl.setValue('');
     this.roomTypeFilterCtrl.setValue('all');
     this.checkAvailability(1);
   }
-
   selectRoom(room: IAvailableRooms): void {
     this.selectedRoom = room;
     this.stayForm.patchValue({ room_id: room.room_id });
     this.showRoomPicker = false;
     this._snackbar.openSnackBar(`Room ${room.room_number} assigned to this reservation`, 'success');
   }
-
   isCurrentRoom(room: IAvailableRooms): boolean {
     return this.reservation?.room?.room_id === room.room_id
       || this.reservation?.room_id === room.room_id;
   }
-
   isAssignedRoom(room: IAvailableRooms): boolean {
     return this.stayForm.get('room_id')?.value === room.room_id;
   }
-
   // ===============================================================
   //  Save — Stay & Room
   // ===============================================================
   saveRoom(): void {
     this.persistRoom().subscribe();
   }
-
   private persistRoom(): Observable<boolean> {
     if (this.stayForm.invalid) {
       this.stayForm.markAllAsTouched();
       this._snackbar.openSnackBar('Please fix the highlighted stay details', 'error');
       return of(false);
     }
-
     if (this.isOverCollected) {
       this._snackbar.openSnackBar(
         `Payments (${this.paidAmount}) already exceed the new total (${this.effectiveTotal}). Record a refund first.`,
@@ -859,19 +740,16 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
       );
       return of(false);
     }
-
     if (this.isOverCapacity) {
       this._snackbar.openSnackBar('Guest count exceeds the capacity of this room', 'error');
       return of(false);
     }
-
     // NOTE: no availability pre-check here. `get-available-rooms` cannot judge
     // this reservation's own room until the backend honours
     // `exclude_reservation_id` — without it the room always conflicts with its
     // own booking, which is what produced the bogus "Room 201 is not
     // available" error. `PUT /reservation/update` re-validates on the server and
     // returns 400 if the room was genuinely taken, so that is the real gate.
-
     const v = this.stayForm.getRawValue();
     const payload: IUpdateReservationPayload = {
       reservation_id: this.reservationId,
@@ -881,17 +759,12 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
       total_nights: this.totalNights,
       total_amount: Number(this.effectiveTotal),
       // occupancy is owned by the guest section, so it is not sent from here
-      // adults_count: this.guestCounts.adults,
-      // children_count: this.guestCounts.children,
-      // infants_count: this.guestCounts.infants,
       total_amount_override: !!v.total_amount_override,
       total_amount_override_reason: v.total_amount_override_reason || '',
       updated_at: this.reservation?.updated_at || null
     };
-
     this.isSavingRoom = true;
     this.roomState = 'saving';
-
     return this._reservationService.updateReservation(payload)
       .pipe(
         finalize(() => this.isSavingRoom = false),
@@ -921,23 +794,19 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
         })
       );
   }
-
   // ===============================================================
   //  Save — Guest
   // ===============================================================
   saveGuest(): void {
     this.persistGuest().subscribe();
   }
-
   private persistGuest(): Observable<boolean> {
     if (this.guestForm.invalid) {
       this.guestForm.markAllAsTouched();
       this._snackbar.openSnackBar('Please fix the highlighted guest details', 'error');
       return of(false);
     }
-
     const formValue = this.guestForm.getRawValue();
-
     const payload = {
       guest_details: {
         ...formValue,
@@ -950,10 +819,8 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
       },
       reservation_id: this.reservationId
     };
-
     this.isSavingGuest = true;
     this.guestState = 'saving';
-
     return this._reservationService.updateReservationGuests(payload)
       .pipe(finalize(() => this.isSavingGuest = false))
       .pipe(
@@ -978,17 +845,14 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
         })
       );
   }
-
   // ===============================================================
   //  Save — combined (stay & room first, then guest)
   // ===============================================================
   saveAll(): void {
     if (!this.canSaveAll) return;
-
     this.isSavingAll = true;
     const saveRoom = this.roomDirty;
     const saveGuest = this.guestDirty;
-
     let chain$: Observable<boolean> = of(true);
     if (saveRoom) chain$ = chain$.pipe(switchMap(() => this.persistRoom()));
     if (saveGuest) {
@@ -996,14 +860,12 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
         switchMap(ok => ok ? this.persistGuest() : of(false))
       );
     }
-
     chain$
       .pipe(finalize(() => this.isSavingAll = false))
       .subscribe(ok => {
         if (ok) this._snackbar.openSnackBar('All changes for reservation saved successfully.', 'success');
       });
   }
-
   // ===============================================================
   //  Payments
   // ===============================================================
@@ -1011,15 +873,12 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
     this.showPaymentForm = !this.showPaymentForm;
     if (this.showPaymentForm && this.currencyList.length === 0) this.getAllCurrencies();
   }
-
   async addPayment(): Promise<void> {
     if (this.paymentForm.invalid) {
       this.paymentForm.markAllAsTouched();
       return;
     }
-
     const v = this.paymentForm.getRawValue();
-
     // Over-collection is legitimate (a guest settling a stay in cash beyond
     // the invoice, a goodwill charge), so it is warned about rather than
     // blocked. The warning covers the payment as a whole -- the entered amount
@@ -1034,10 +893,8 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
       );
       if (!result.isConfirmed) return;
     }
-
     this.submitPayment(v);
   }
-
   /**
    * True when adding `amount` pushes the running paid total past the
    * reservation total. A total of 0 means nothing has been priced yet, so there
@@ -1048,23 +905,19 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
     if (total <= 0) return false;
     return this.paidAmount + amount > total;
   }
-
   private overCollectMessage(amount: number): string {
     const total = this.effectiveTotal;
     const after = this.paidAmount + amount;
     const rupees = (n: number) => `₹${n.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
     const excess = after - total;
-
     // Nothing paid yet -> the entered amount itself is the problem.
     if (this.paidAmount <= 0) {
       return `This payment is ${rupees(amount)}, which is more than the reservation total of ${rupees(total)}. `
         + `Recording it will make the reservation over-collected by ${rupees(excess)}.`;
     }
-
     return `Payments already recorded total ${rupees(this.paidAmount)}. Adding ${rupees(amount)} brings them to `
       + `${rupees(after)}, which exceeds the reservation total of ${rupees(total)} by ${rupees(excess)}.`;
   }
-
   /** the shape `paymentForm.getRawValue()` hands back, derived not restated */
   private submitPayment(v: ReturnType<typeof this.paymentForm.getRawValue>): void {
     // `paid_at` is a DateTime column, so send a full local timestamp rather
@@ -1082,7 +935,6 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
       transaction_ref: v.transaction_ref || null,
       remarks: v.remarks || null
     };
-
     this.isSavingPayment = true;
     this._reservationService.insertPaymentDetails(payload)
       .pipe(finalize(() => this.isSavingPayment = false))
@@ -1122,16 +974,13 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
         }
       });
   }
-
   signedAmount(payment: IReservationPayment): number {
     const amount = Number(payment.amount) || 0;
     return payment.payment_type === 'refund' ? -amount : amount;
   }
-
   absAmount(payment: IReservationPayment): number {
     return Math.abs(Number(payment.amount) || 0);
   }
-
   sectionStateLabel(state: SectionState): string {
     const map: Record<SectionState, string> = {
       idle: 'Unchanged',
@@ -1141,7 +990,6 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
     };
     return map[state];
   }
-
   // ===============================================================
   //  Additional guests
   // ===============================================================
@@ -1153,11 +1001,9 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
     }
     this.additionalGuests.push(this.createGuest());
   }
-
   removeGuest(index: number): void {
     this.additionalGuests.removeAt(index);
   }
-
   private createGuest(g: any = {}): FormGroup {
     return this.fb.group({
       full_name: [g.full_name || '', Validators.required],
@@ -1167,7 +1013,6 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
       id_number: [g.id_number || '']
     });
   }
-
   // ===============================================================
   //  Lookups
   // ===============================================================
@@ -1201,14 +1046,12 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
       });
   }
 
-
   private loadEnumOptions(): void {
     this.fetchEnumOptions('gender', 'genderList', 'isGenderLoading', 'genders');
     this.fetchEnumOptions('guests_id_type', 'idTypeList', 'isIdTypeLoading', 'id types');
     this.fetchEnumOptions('payment_method', 'paymentMethodList', 'isPaymentMethodLoading', 'payment methods');
     this.fetchEnumOptions('payment_status', 'paymentStatusList', 'isPaymentStatusLoading', 'payment statuses');
   }
-
 
   /**
    * Drops stored enum values the table no longer offers.
@@ -1233,25 +1076,21 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
     this.reconcileControl(this.guestForm.get('id_type'), this.idTypeList);
     this.reconcileControl(this.paymentForm.get('payment_method'), this.paymentMethodList);
     this.reconcileControl(this.paymentForm.get('payment_status'), this.paymentStatusList);
-
     this.additionalGuests.controls.forEach(guest => {
       this.reconcileControl(guest.get('gender'), this.genderList);
       this.reconcileControl(guest.get('id_type'), this.idTypeList);
     });
   }
 
-
   private reconcileControl(control: AbstractControl | null, options: IEnumOption[]): void {
     if (!control || !options.length) {
       return;
     }
-
     const value = control.value;
     if (value && !options.some(option => option.option_key === value)) {
       control.setValue('');
     }
   }
-
 
   getAllCountries(searchValue: string = ''): void {
     this.isCountryLoading = true;
@@ -1264,7 +1103,6 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
         error: () => this.countryList = this.countryList
       });
   }
-
   getAllStates(countryId: number, searchValue: string = '', onDone?: () => void): void {
     if (!countryId) {
       this.stateList = [];
@@ -1282,7 +1120,6 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
         error: () => onDone?.()
       });
   }
-
   getAllCities(stateId: number, searchValue: string = '', onDone?: () => void): void {
     if (!stateId) {
       this.cityList = [];
@@ -1300,7 +1137,6 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
         error: () => onDone?.()
       });
   }
-
   onCountryChange(): void {
     const countryId = Number(this.guestForm.value.country_id) || 0;
     this.stateList = [];
@@ -1308,14 +1144,12 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
     this.guestForm.patchValue({ state_id: '', city_id: '' });
     if (countryId) this.getAllStates(countryId);
   }
-
   onStateChange(): void {
     const stateId = Number(this.guestForm.value.state_id) || 0;
     this.cityList = [];
     this.guestForm.patchValue({ city_id: '' });
     if (stateId) this.getAllCities(stateId);
   }
-
   getAllCurrencies(searchValue: string = ''): void {
     this.isCurrencyLoading = true;
     this._commonService.getCurrenciesList({ search_value: searchValue })
@@ -1327,7 +1161,6 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
         error: () => this.currencyList = this.currencyList
       });
   }
-
   // ===============================================================
   //  Dirty tracking
   // ===============================================================
@@ -1336,25 +1169,21 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
     this.roomDirty = JSON.stringify(this.stayForm.getRawValue()) !== this.roomSnapshot;
     if (this.roomDirty && this.roomState === 'saved') this.roomState = 'idle';
   }
-
   private syncGuestDirty(): void {
     if (this.suppressDirtyCheck) return;
     this.guestDirty = JSON.stringify(this.guestForm.getRawValue()) !== this.guestSnapshot;
     if (this.guestDirty && this.guestState === 'saved') this.guestState = 'idle';
   }
-
   private syncRoomSnapshot(): void {
     this.roomSnapshot = JSON.stringify(this.stayForm.getRawValue());
     this.roomDirty = false;
     this.roomState = 'idle';
   }
-
   private syncGuestSnapshot(): void {
     this.guestSnapshot = JSON.stringify(this.guestForm.getRawValue());
     this.guestDirty = false;
     this.guestState = 'idle';
   }
-
   /**
    * Nudges check-out forward when check-in lands on or past it. Also used as
    * a self-heal: if the reservation was loaded with an already-invalid window
@@ -1367,11 +1196,9 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
   /** Mirrors the server's CANCELLABLE_STATUSES */
   private readonly cancellableStatuses = ['created', 'reserved', 'checked_in'];
   isCancelling = false;
-
   get isCancellable(): boolean {
     return this.cancellableStatuses.includes(this.status);
   }
-
   onCancel(): void {
     // never leave this page mid-edit and then cancel -- the changes would be
     // silently thrown away along with the booking
@@ -1385,10 +1212,8 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
     }
     this.promptCancelReason();
   }
-
   private promptCancelReason(): void {
     const label = this.reservation?.reservation_number || `reservation #${this.reservationId}`;
-
     this._confirmService
       .confirmWithReason(
         'Cancel reservation',
@@ -1398,7 +1223,6 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
       )
       .then(({ confirmed, reason }) => { if (confirmed) this.submitCancellation(reason); });
   }
-
   private submitCancellation(reason: string): void {
     this.isCancelling = true;
     this._reservationService.cancelReservation(this.reservationId, reason)
@@ -1427,15 +1251,12 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
         }
       });
   }
-
   private enforceCheckoutAfterCheckin(silent = false): void {
     const checkIn = this.toDate(this.stayForm.get('check_in_date')?.value);
     const checkOut = this.toDate(this.stayForm.get('check_out_date')?.value);
     if (!checkIn || !checkOut) return;
-
     const earliest = this.earliestLegalCheckout(checkIn);
     if (checkOut.getTime() >= earliest.getTime()) return;
-
     this.suppressDirtyCheck = true;
     this.stayForm.patchValue({ check_out_date: earliest }, { emitEvent: false });
     this.suppressDirtyCheck = false;
@@ -1447,7 +1268,6 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
       );
     }
   }
-
   // ===============================================================
   //  Helpers
   // ===============================================================
@@ -1456,7 +1276,6 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
     const d = new Date(value);
     return isNaN(d.getTime()) ? null : d;
   }
-
   private formatLocalDate(date: any): string | null {
     if (!date) return null;
     const d = new Date(date);
@@ -1467,7 +1286,6 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
       String(d.getDate()).padStart(2, '0')
     ].join('-');
   }
-
   /**
    * Local wall-clock timestamp (`YYYY-MM-DDTHH:mm:ss`). Deliberately not
    * `toISOString()`, which would shift the date across midnight for anyone east
@@ -1480,7 +1298,6 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
     const pad = (n: number) => String(n).padStart(2, '0');
     return `${this.formatLocalDate(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
   }
-
   methodLabel(method?: string): string {
     const map: Record<string, string> = {
       cash: 'Cash',
@@ -1491,7 +1308,6 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
     };
     return map[String(method)] || String(method || 'N/A');
   }
-
   typeLabel(type?: string): string {
     const map: Record<string, string> = {
       advance: 'Advance',
@@ -1502,7 +1318,6 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
     };
     return map[String(type)] || String(type || '—');
   }
-
   statusLabel(status?: string): string {
     const map: Record<string, string> = {
       pending: 'Pending',
@@ -1513,15 +1328,12 @@ export class EditReservationComponent implements OnInit, OnDestroy, CanDeactivat
     const key = String(status || '');
     return map[key] || key.replace(/_/g, ' ');
   }
-
   onBack(): void {
     this._router.navigate(['/hms/reservations']);
   }
-
   onViewDetails(): void {
     this._router.navigate(['hms/reservations', this.reservationId, 'reservation-details']);
   }
-
   // ===============================================================
   //  Unsaved-changes guard
   // ===============================================================
