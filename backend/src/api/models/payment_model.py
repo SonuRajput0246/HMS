@@ -5,6 +5,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from typing import TYPE_CHECKING
 
 from src.database.base_model import BaseModel
+from src.database.tenant_scoped import TenantScoped
 
 
 if TYPE_CHECKING:
@@ -12,7 +13,7 @@ if TYPE_CHECKING:
 
 
 ### MODEL
-class Payment(BaseModel):
+class Payment(BaseModel, TenantScoped):
     __tablename__ = "payments"
 
     id: Mapped[int] = mapped_column(primary_key=True)

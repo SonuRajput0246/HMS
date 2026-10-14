@@ -1,6 +1,7 @@
 from datetime import date
 from typing import TYPE_CHECKING
 from src.database.base_model import BaseModel
+from src.database.tenant_scoped import TenantScoped
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import String, Boolean, Date, Index, ForeignKey
 
@@ -11,7 +12,7 @@ if TYPE_CHECKING:
     from src.api.models.country_model import Country
     from src.api.models.reservation_primary_guest_model import ReservationPrimaryGuest
 
-class Guest(BaseModel):
+class Guest(BaseModel, TenantScoped):
     __tablename__ = "guests"
 
     id: Mapped[int] = mapped_column(primary_key=True)

@@ -1,13 +1,14 @@
 from typing import List, TYPE_CHECKING
 from sqlalchemy import String, Boolean, Index
 from src.database.base_model import BaseModel
+from src.database.tenant_scoped import TenantScoped
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 
 
 if TYPE_CHECKING:
     from src.api.models.inventory_model import Inventory
 
-class InventoryCategory(BaseModel):
+class InventoryCategory(BaseModel, TenantScoped):
     __tablename__ = "inventory_categories"
 
     id: Mapped[int] = mapped_column(primary_key=True)

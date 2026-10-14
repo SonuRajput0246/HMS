@@ -3,7 +3,9 @@ from flask_cors import CORS
 from src.config import get_config
 from src.api.extensions import bcrypt
 from src.database.session import db_session
+from src.database.tenant_context import clear_tenant_context
 from src.api.utils.error_handlers import register_error_handlers
+from src.api.middlewares.tenant_resolver import init_tenant_resolver
 
 ## Routes. Every blueprint below is registered unconditionally -- there is no
 ## instance switch, so an endpoint either exists here or was never written.
@@ -34,6 +36,8 @@ import src.api.events.room_events
 import src.api.events.reservation_events
 import src.api.events.guest_events
 import src.api.events.payment_events
+import src.api.events.tenant_events
+import src.api.events.platform_user_events
 
 def create_app():
     app = Flask(__name__)
@@ -50,6 +54,11 @@ def create_app():
 
     ## Initialize extensions
     bcrypt.init_app(app)
+
+    ## Resolve the tenant onto flask.g before any route runs. Registered before
+    ## the blueprints so that every one of them, present and future, is covered
+    ## by the same hook rather than each having to opt in.
+    init_tenant_resolver(app)
 
     ## Register blueprints
     ##
@@ -73,6 +82,10 @@ def create_app():
         Ensures that the database session is removed at the end of every request.
         This releases the connection back to the SQLAlchemy pool.
         """
+        ## Drop the tenant scope as well. Both the session and the worker thread
+        ## are pooled, so a tenant left set here would silently scope whichever
+        ## request landed on this thread next.
+        clear_tenant_context()
         db_session.remove()
 
     ## Error Handler

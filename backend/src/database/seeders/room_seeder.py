@@ -1,5 +1,6 @@
 from sqlalchemy import select
 from datetime import datetime, timezone
+from src.database.seeders._seeding import resolve_tenant_id, safe_error
 from src.api.models import RoomType
 from src.api.models.room_model import Room
 from src.database.session import db_session
@@ -24,12 +25,14 @@ rooms_data = [
 ]
 
 
-def seed_rooms():
+def seed_rooms(tenant_id: int | None = None):
+    tenant_id = resolve_tenant_id(tenant_id)
     try:
         for data in rooms_data:
 
-            # Fetch room type
+            # Fetch room type. Scoped, so "Suite" is this hotel's Suite.
             room_type_stmt = select(RoomType).filter_by(
+                tenant_id=tenant_id,
                 name=data["room_type"],
                 is_deleted=False
             )
@@ -38,8 +41,12 @@ def seed_rooms():
             if not room_type:
                 continue
 
-            # Check if room already exists
+            # Check if room already exists.
+            # Room 101 exists in nearly every hotel, so without the tenant
+            # filter a new hotel would find the first hotel's room 101 and skip
+            # creating its own -- leaving it with no rooms at all.
             stmt = select(Room).filter_by(
+                tenant_id=tenant_id,
                 room_number=data["room_number"],
                 is_deleted=False
             )
@@ -47,6 +54,7 @@ def seed_rooms():
 
             if not exists:
                 room = Room(
+                    tenant_id=tenant_id,
                     room_number=data["room_number"],
                     room_type_id=room_type.id,
                     floor_number=data["floor_number"],
@@ -63,7 +71,8 @@ def seed_rooms():
 
     except Exception as e:
         db_session.rollback()
-        print("!!! Error seeding rooms:", str(e))
+        print("!!! Error seeding rooms:", safe_error(e))
+        raise
 
     finally:
         db_session.remove()

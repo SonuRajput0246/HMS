@@ -1,4 +1,5 @@
 from sqlalchemy import select
+from src.database.seeders._seeding import resolve_tenant_id, safe_error
 from src.database.session import db_session
 from src.api.models.login_sliders_model import LoginSliders
 from datetime import datetime, timezone
@@ -60,13 +61,22 @@ sliders = [
     }
 ]
 
-def seed_login_sliders():
+def seed_login_sliders(tenant_id: int | None = None):
+    tenant_id = resolve_tenant_id(tenant_id)
     try:
         for slide in sliders:
-            stmt = select(LoginSliders).filter_by(title=slide["title"], is_deleted=False)
+            ## Scoped to the hotel: two hotels are allowed to have a slide
+            ## called "Reception", and without the tenant filter the second one
+            ## would be skipped as a duplicate of the first hotel's.
+            stmt = select(LoginSliders).filter_by(
+                tenant_id=tenant_id,
+                title=slide["title"],
+                is_deleted=False
+            )
             exists = db_session.execute(stmt).scalar_one_or_none()
             if not exists:
                 new_item = LoginSliders(
+                    tenant_id=tenant_id,
                     title=slide["title"],
                     image_path=slide["image_path"],
                     alt_text=slide["alt_text"],
@@ -81,7 +91,8 @@ def seed_login_sliders():
         print("--- Login sliders created successfully. ---")
     except Exception as e:
         db_session.rollback()
-        print(f"!!! Error seeding login sliders: {str(e)}")
+        print("!!! Error seeding login sliders:", safe_error(e))
+        raise
     finally:
         db_session.remove()
 

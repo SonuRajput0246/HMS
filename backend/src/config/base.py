@@ -23,6 +23,18 @@ class BaseConfig:
     JWT_ACCESS_TOKEN_EXPIRES_MIN = int(os.getenv("JWT_ACCESS_EXPIRES_MIN", 15))
     JWT_REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("JWT_REFRESH_EXPIRES_DAYS", 7))
 
+    ## Multi-tenancy
+    ##
+    ## Base domain tenant subdomains hang off in production, e.g. "hms.example.com"
+    ## so that acme.hms.example.com is tenant "acme". Left unset in development
+    ## on purpose: the API is then on a different origin than the app, so the
+    ## tenant arrives in the X-Tenant header rather than in Host.
+    TENANT_BASE_DOMAIN = os.getenv("TENANT_BASE_DOMAIN")
+
+    ## Header the frontend uses to name the tenant when the subdomain is not
+    ## visible to the API. See src/api/middlewares/tenant_resolver.py.
+    TENANT_HEADER_NAME = os.getenv("TENANT_HEADER_NAME", "X-Tenant")
+
     ## SMTP
     SMTP_HOST = os.getenv("SMTP_HOST")
     SMTP_PORT = int(os.getenv("SMTP_PORT", 587))

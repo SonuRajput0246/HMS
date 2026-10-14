@@ -43,7 +43,9 @@ from src.api.middlewares.auth_middleware import authenticate
 from src.api.models.module_model import Module
 from src.api.models.role_module_access_model import RoleModuleAccess
 from src.database.session import db_session
-from src.api.utils.errors import APIError
+## ForbiddenError now lives with the other error classes so that the module
+## refusal below and tenant suspension raise the identical type.
+from src.api.utils.errors import ForbiddenError
 
 
 ## Marker for routes that need a valid session but no module of their own:
@@ -51,12 +53,6 @@ from src.api.utils.errors import APIError
 ## rather than defaulted, so "needs no module" is always a decision someone
 ## made and can be grepped for.
 SELF_SERVICE = "__self_service__"
-
-
-class ForbiddenError(APIError):
-    def __init__(self, message="You do not have access to this resource",
-                 payload=None):
-        super().__init__(message, status_code=403, payload=payload)
 
 
 def granted_module_names(role_id):

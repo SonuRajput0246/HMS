@@ -1,10 +1,11 @@
 from datetime import datetime
 from src.database.base import Base
+from src.database.tenant_scoped import TenantScoped
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import String, Boolean, DateTime, ForeignKey, Index
 
 
-class EmailOTP(Base):
+class EmailOTP(Base, TenantScoped):
     __tablename__ = 'email_otps'
 
     ## Mapped[int] tells the IDE this is an integer

@@ -1,6 +1,7 @@
 from sqlalchemy import Index
 from typing import TYPE_CHECKING
 from src.database.base_model import BaseModel
+from src.database.tenant_scoped import TenantScoped
 from sqlalchemy import String, Boolean, ForeignKey, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -9,7 +10,7 @@ if TYPE_CHECKING:
     from src.api.models.reservation_model import Reservation
 
 
-class Room(BaseModel):
+class Room(BaseModel, TenantScoped):
     __tablename__ = 'rooms'
 
     id: Mapped[int] = mapped_column(primary_key=True)

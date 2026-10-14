@@ -1,5 +1,6 @@
 from typing import TYPE_CHECKING
 from src.database.base_model import BaseModel
+from src.database.tenant_scoped import TenantScoped
 from sqlalchemy import ForeignKey, UniqueConstraint, Index, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -8,7 +9,7 @@ if TYPE_CHECKING:
     from src.api.models.module_model import Module
 
 
-class RoleModuleAccess(BaseModel):
+class RoleModuleAccess(BaseModel, TenantScoped):
     __tablename__ = "role_module_access"
 
     id: Mapped[int] = mapped_column(primary_key=True)

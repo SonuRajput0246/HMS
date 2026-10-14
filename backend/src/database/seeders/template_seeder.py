@@ -22,10 +22,11 @@ its `code` or `channel` and refuse to delete it. Backend services resolve
 templates by code, so a seeded row losing its identity would silently break the
 flow it drives. The admin UI can still edit the name, subject, and body.
 
-Runs against an empty table. Do not re-run against a populated one: the
-existence check is by (code, channel) with `is_deleted=False`, so a row an admin
-has since edited would not be refreshed, while a row an admin has soft-deleted
-would get a fresh sibling inserted.
+Runs against an empty table *for one tenant*. The existence check is by
+(tenant_id, code, channel) with `is_deleted=False`, so it is safe to run per
+tenant, and a row an admin has since edited is left alone rather than
+overwritten. This is now a tenant default: `provision_tenant` calls it for
+every new hotel, and each hotel owns its own copy of the three rows.
 """
 from sqlalchemy import select
 
@@ -35,6 +36,7 @@ from src.api.utils.template_codes import (
     TemplateCode,
     default_sort_order,
 )
+from src.database.seeders._seeding import resolve_tenant_id, safe_error
 from src.database.session import db_session
 from datetime import datetime, timezone
 
@@ -117,15 +119,21 @@ templates_data = [
 ]
 
 
-def seed_templates():
-    """Insert any missing template row. Safe to call more than once."""
+def seed_templates(tenant_id: int | None = None):
+    """Insert any missing template row for this tenant. Safe to call again."""
+    tenant_id = resolve_tenant_id(tenant_id)
     try:
         now = datetime.now(timezone.utc)
         created = 0
         skipped = 0
 
         for td in templates_data:
+            ## tenant_id is part of the lookup: two hotels both need an
+            ## EMAIL_VERIFICATION_OTP, and an unscoped check would hand the
+            ## second hotel the first hotel's row -- meaning an admin editing
+            ## their own welcome email would be editing a competitor's.
             stmt = select(Template).filter_by(
+                tenant_id=tenant_id,
                 code=td["code"],
                 channel=td["channel"],
                 is_deleted=False,
@@ -137,6 +145,7 @@ def seed_templates():
                 continue
 
             new_template = Template(
+                tenant_id=tenant_id,
                 code=td["code"],
                 channel=td["channel"],
                 name=td["name"],
@@ -169,7 +178,10 @@ def seed_templates():
 
     except Exception as e:
         db_session.rollback()
-        print("!!! Error seeding templates:", str(e))
+        print("!!! Error seeding templates:", safe_error(e))
+        ## A hotel with no OTP templates cannot verify an email or reset a
+        ## password, so this must fail the provision rather than pass quietly.
+        raise
 
     finally:
         ## Return the connection to the pool

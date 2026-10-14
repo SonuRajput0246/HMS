@@ -1,17 +1,20 @@
 from sqlalchemy import select
 from datetime import datetime, timezone
+from src.database.seeders._seeding import resolve_tenant_id, safe_error
 from src.api.models.reservation_model import Reservation
 from src.api.models.guest_model import Guest
 from src.api.models.reservation_primary_guest_model import ReservationPrimaryGuest
 from src.database.session import db_session
 
 
-def seed_reservation_primary_guest():
+def seed_reservation_primary_guest(tenant_id: int | None = None):
+    tenant_id = resolve_tenant_id(tenant_id)
     try:
-        # 🔥 Get latest reservation
+        # Get latest reservation, this hotel's own. Unscoped, this would attach
+        # hotel A's newest booking to hotel B's guest.
         reservation_stmt = (
             select(Reservation)
-            .filter_by(is_deleted=False)
+            .filter_by(tenant_id=tenant_id, is_deleted=False)
             .order_by(Reservation.id.desc())
         )
         reservation = db_session().execute(reservation_stmt).scalars().first()
@@ -20,8 +23,10 @@ def seed_reservation_primary_guest():
             print("!!! Reservation not found")
             return
 
-        # Fetch guest
+        # Fetch guest. Scoped, because the same email exists in every hotel that
+        # seeded the demo data.
         guest_stmt = select(Guest).filter_by(
+            tenant_id=tenant_id,
             email="rahulsharma@example.com",
             is_deleted=False
         )
@@ -33,6 +38,7 @@ def seed_reservation_primary_guest():
 
         # Check if already mapped
         stmt = select(ReservationPrimaryGuest).filter_by(
+            tenant_id=tenant_id,
             reservation_id=reservation.id
         )
         exists = db_session().execute(stmt).scalar_one_or_none()
@@ -43,6 +49,7 @@ def seed_reservation_primary_guest():
 
         # Create mapping
         new_link = ReservationPrimaryGuest(
+            tenant_id=tenant_id,
             reservation_id=reservation.id,
             primary_guest_id=guest.id,
             created_at=datetime.now(timezone.utc)
@@ -54,7 +61,8 @@ def seed_reservation_primary_guest():
 
     except Exception as e:
         db_session.rollback()
-        print("!!! Error:", str(e))
+        print("!!! Error:", safe_error(e))
+        raise
 
     finally:
         db_session.remove()

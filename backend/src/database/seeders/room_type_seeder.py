@@ -1,6 +1,7 @@
 from sqlalchemy import select
-from src.api.models import RoomType
+from src.database.seeders._seeding import resolve_tenant_id, safe_error
 from src.database.session import db_session
+from src.api.models import RoomType
 from datetime import datetime, timezone
 
 room_types_data = [
@@ -10,15 +11,23 @@ room_types_data = [
     {"name":"Suite","description":"Luxury suite", "max_adults": 4, "max_children": 2, "max_infants": 2, "base_price": 7000, "extra_bed_allowed": True, "extra_bed_price": 1200}
 ]
 
-def seed_room_types():
+def seed_room_types(tenant_id: int | None = None):
+    tenant_id = resolve_tenant_id(tenant_id)
     try:
         for room in room_types_data:
-            ## Modern 2.0 syntax: Check if category exists
-            stmt = select(RoomType).filter_by(name=room["name"], is_deleted=False)
+            ## Modern 2.0 syntax: Check if category exists.
+            ## Scoped to the hotel: two hotels both sell a "Deluxe" room at their
+            ## own price, so the name is only unique inside one hotel.
+            stmt = select(RoomType).filter_by(
+                tenant_id=tenant_id,
+                name=room["name"],
+                is_deleted=False
+            )
             exists = db_session().execute(stmt).scalar_one_or_none()
 
             if not exists:
                 room_type = RoomType(
+                    tenant_id=tenant_id,
                     name=room["name"],
                     description=room["description"],
                     max_adults=room["max_adults"],
@@ -38,7 +47,8 @@ def seed_room_types():
 
     except Exception as e:
         db_session.rollback()
-        print("!!! Error seeding Room Type:", str(e))
+        print("!!! Error seeding Room Type:", safe_error(e))
+        raise
 
     finally:
         ## We use .remove() for scoped_sessions to return the connection to the pool

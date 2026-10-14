@@ -2,6 +2,7 @@ from sqlalchemy import Index
 from datetime import datetime
 from typing import TYPE_CHECKING
 from src.database.base_model import BaseModel
+from src.database.tenant_scoped import TenantScoped
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 from sqlalchemy import Integer, String, Boolean, DateTime, ForeignKey, CheckConstraint
 
@@ -10,7 +11,7 @@ if TYPE_CHECKING:
     from src.api.models.token_model import Token
 
 
-class User(BaseModel):
+class User(BaseModel, TenantScoped):
     __tablename__ = 'users'
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -69,7 +70,7 @@ class User(BaseModel):
         Index("ix_user_fts_search", "first_name", "last_name", "email", mysql_prefix="FULLTEXT"),
 
         # 3. Email Lookup / Duplicate Check / Prefix Search
-        Index("ix_user_active_email", "is_deleted", "email"),
+        Index("ix_user_active_email", "tenant_id", "is_deleted", "email"),
     )
 
     def __repr__(self):

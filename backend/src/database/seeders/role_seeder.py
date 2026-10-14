@@ -1,4 +1,5 @@
 from sqlalchemy import select
+from src.database.seeders._seeding import resolve_tenant_id, safe_error
 from src.database.session import db_session
 from src.api.models.role_model import Role
 from src.api.models.module_model import Module
@@ -110,10 +111,20 @@ ROLE_PERMISSIONS = {
 REPORTS_ROLES = ("MANAGER",)
 
 
-def seed_roles():
-    """Dynamic role seeder - assigns permissions based on existing modules"""
+def seed_roles(tenant_id: int | None = None):
+    """Dynamic role seeder - assigns permissions based on existing modules.
+
+    Seeded per hotel. The module tree it reads is global (it belongs to the
+    product, not to any hotel), but the roles and the grants it creates are the
+    hotel's own -- so every hotel can rename its Manager role, or grant it
+    different modules, without touching anyone else's.
+    """
+    tenant_id = resolve_tenant_id(tenant_id)
     try:
-        # 1. Get all active modules from the database
+        # 1. Get all active modules from the database.
+        ## Intentionally NOT tenant-filtered: `modules` has no tenant_id. It is
+        ## the product's shared menu tree, and every hotel is offered the same
+        ## one to pick permissions from.
         modules = db_session.execute(
             select(Module).where(Module.is_active == True, Module.is_deleted == False)
         ).scalars().all()
@@ -123,12 +134,21 @@ def seed_roles():
 
         # 2. Create/Update Roles
         for role_def in ROLE_DEFINITIONS:
+            ## Scoped to the hotel. role_code is unique per tenant, so without
+            ## tenant_id here the second hotel would find the first hotel's
+            ## ADMIN role, decide it already exists, and inherit it -- along
+            ## with every permission grant attached to it.
             role = db_session.execute(
-                select(Role).where(Role.role_code == role_def["role_code"], Role.is_deleted == False)
+                select(Role).where(
+                    Role.tenant_id == tenant_id,
+                    Role.role_code == role_def["role_code"],
+                    Role.is_deleted == False
+                )
             ).scalar_one_or_none()
 
             if not role:
                 role = Role(
+                    tenant_id=tenant_id,
                     role_name=role_def["role_name"],
                     role_code=role_def["role_code"],
                     description=role_def["description"],
@@ -147,20 +167,20 @@ def seed_roles():
                 print(f"  Updated role: {role.role_name}")
 
             # 3. Assign permissions based on modules that EXIST in this DB
-            _assign_role_permissions(role, module_map)
+            _assign_role_permissions(role, module_map, tenant_id)
 
         db_session.commit()
         print("--- Roles seeded successfully. ---")
 
     except Exception as e:
         db_session.rollback()
-        print(f"Error seeding roles: {e}")
+        print(f"Error seeding roles: {safe_error(e)}")
         raise
     finally:
         db_session.remove()
 
 
-def _assign_role_permissions(role: Role, module_map: dict):
+def _assign_role_permissions(role: Role, module_map: dict, tenant_id: int):
     """Assign module permissions to role based on what modules exist"""
 
     # Get permission config for this role
@@ -175,7 +195,13 @@ def _assign_role_permissions(role: Role, module_map: dict):
         perm_config["REPORTS"] = ["View", "Export"]
 
     # Clear existing permissions (for idempotent seeding)
-    db_session.query(RoleModuleAccess).filter_by(role_id=role.id).delete()
+    ## Filtered by tenant_id as well as role_id. `role_id` is globally unique so
+    ## the tenant filter changes nothing functionally -- but this is a bulk
+    ## DELETE, and naming the tenant is what makes it obvious in the query log
+    ## that it cannot reach another hotel's grants.
+    db_session.query(RoleModuleAccess).filter_by(
+        tenant_id=tenant_id, role_id=role.id
+    ).delete()
 
     for module_pattern, operations in perm_config.items():
         if module_pattern == "*":
@@ -191,6 +217,7 @@ def _assign_role_permissions(role: Role, module_map: dict):
         for module_name, module_id in target_modules:
             for operation in operations:
                 access = RoleModuleAccess(
+                    tenant_id=tenant_id,
                     role_id=role.id,
                     module_id=module_id,
                     operation_key=operation,

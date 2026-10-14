@@ -1,5 +1,6 @@
 from sqlalchemy import String, Boolean
 from src.database.base_model import BaseModel
+from src.database.tenant_scoped import TenantScoped
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from typing import TYPE_CHECKING
 
@@ -8,7 +9,7 @@ if TYPE_CHECKING:
     from src.api.models.room_model import Room
 
 
-class RoomType(BaseModel):
+class RoomType(BaseModel, TenantScoped):
     __tablename__ = 'room_types'
 
     id: Mapped[int] = mapped_column(primary_key=True)

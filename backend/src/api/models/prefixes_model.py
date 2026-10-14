@@ -1,10 +1,11 @@
 from datetime import datetime
 from src.database.base import Base
+from src.database.tenant_scoped import TenantScoped
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import String, Boolean, DateTime, UniqueConstraint
 
 
-class Prefixes(Base):
+class Prefixes(Base, TenantScoped):
     __tablename__ = "prefixes"
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -21,7 +22,9 @@ class Prefixes(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
     __table_args__ = (
-        UniqueConstraint("purpose", name="uq_prefixes_purpose"),
+        ## Per hotel: every hotel has a RESERVATION prefix, so a global unique
+        ## purpose would let whoever seeded first block everyone else.
+        UniqueConstraint("tenant_id", "purpose", name="uq_prefixes_tenant_purpose"),
     )
 
     def __repr__(self):

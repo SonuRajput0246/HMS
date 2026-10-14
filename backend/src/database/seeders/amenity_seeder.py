@@ -1,6 +1,7 @@
 from sqlalchemy import select
-from src.api.models import RoomAmenity
+from src.database.seeders._seeding import resolve_tenant_id, safe_error
 from src.database.session import db_session
+from src.api.models import RoomAmenity
 from datetime import datetime, timezone
 
 room_amenities_data = [
@@ -18,15 +19,23 @@ room_amenities_data = [
     {"name":"Blackout Curtains","description":"Blackout curtains to ensure uninterrupted sleep"}
 ]
 
-def seed_room_amenities():
+def seed_room_amenities(tenant_id: int | None = None):
+    tenant_id = resolve_tenant_id(tenant_id)
     try:
         for am in room_amenities_data:
-            ## Modern 2.0 syntax: Check if category exists
-            stmt = select(RoomAmenity).filter_by(name=am["name"], is_deleted=False)
+            ## Modern 2.0 syntax: Check if category exists.
+            ## Scoped to the hotel: every hotel wants "Air Conditioning", and an
+            ## unscoped check would let the first hotel claim the name for all.
+            stmt = select(RoomAmenity).filter_by(
+                tenant_id=tenant_id,
+                name=am["name"],
+                is_deleted=False
+            )
             exists = db_session().execute(stmt).scalar_one_or_none()
 
             if not exists:
                 amenity = RoomAmenity(
+                    tenant_id=tenant_id,
                     name=am["name"],
                     description=am["description"],
                     is_active=True,
@@ -41,7 +50,8 @@ def seed_room_amenities():
 
     except Exception as e:
         db_session.rollback()
-        print("!!! Error seeding room amenities:", str(e))
+        print("!!! Error seeding room amenities:", safe_error(e))
+        raise
 
     finally:
         ## We use .remove() for scoped_sessions to return the connection to the pool

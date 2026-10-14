@@ -1,10 +1,11 @@
 from datetime import datetime
 from src.database.base import Base
+from src.database.tenant_scoped import TenantScoped
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import ForeignKey, DateTime, String
 
 
-class AccountDeletions(Base):
+class AccountDeletions(Base, TenantScoped):
     __tablename__ = 'account_deletions'
 
     ## Mapped[int] tells the IDE this is an integer

@@ -1,6 +1,7 @@
 from datetime import timedelta
 from sqlalchemy import select
 from datetime import datetime, timezone
+from src.database.seeders._seeding import resolve_tenant_id, safe_error
 from src.api.models import Room
 from src.api.models.room_blocks_model import RoomBlocks
 from src.database.session import db_session
@@ -16,12 +17,14 @@ room_blocks_data = [
 ]
 
 
-def seed_room_blocks():
+def seed_room_blocks(tenant_id: int | None = None):
+    tenant_id = resolve_tenant_id(tenant_id)
     try:
         for block in room_blocks_data:
 
-            # Fetch room
+            # Fetch room. Scoped, so room 401 is this hotel's 401.
             room_stmt = select(Room).filter_by(
+                tenant_id=tenant_id,
                 room_number=block["room_number"],
                 is_deleted=False
             )
@@ -32,6 +35,7 @@ def seed_room_blocks():
 
             # Check overlapping block existence
             stmt = select(RoomBlocks).filter_by(
+                tenant_id=tenant_id,
                 room_id=room.id,
                 is_deleted=False
             )
@@ -39,6 +43,7 @@ def seed_room_blocks():
 
             if not exists:
                 room_block = RoomBlocks(
+                    tenant_id=tenant_id,
                     room_id=room.id,
                     start_date=block["start_date"],
                     end_date=block["end_date"],
@@ -53,7 +58,8 @@ def seed_room_blocks():
 
     except Exception as e:
         db_session.rollback()
-        print("!!! Error seeding room blocks:", str(e))
+        print("!!! Error seeding room blocks:", safe_error(e))
+        raise
 
     finally:
         db_session.remove()

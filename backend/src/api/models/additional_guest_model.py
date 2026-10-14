@@ -1,13 +1,14 @@
 from typing import TYPE_CHECKING
 from sqlalchemy import String, Integer
 from src.database.base_model import BaseModel
+from src.database.tenant_scoped import TenantScoped
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 
 if TYPE_CHECKING:
     from src.api.models.reservation_additional_guest_model import ReservationAdditionalGuest
 
-class AdditionalGuest(BaseModel):
+class AdditionalGuest(BaseModel, TenantScoped):
     __tablename__ = "additional_guests"
 
     id: Mapped[int] = mapped_column(primary_key=True)

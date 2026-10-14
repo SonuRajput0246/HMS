@@ -1,4 +1,5 @@
 from sqlalchemy import select
+from src.database.seeders._seeding import resolve_tenant_id, safe_error
 from src.database.session import db_session
 from src.api.models.inventory_model import Inventory
 from src.api.models.inventory_category_model import InventoryCategory
@@ -41,10 +42,16 @@ inventory_items = [
     {"name": "Fabric Softener", "unit_cost": "220.00", "category": "Laundry", "quantity": 30, "unit": "ltr"}
 ]
 
-def seed_inventories():
+def seed_inventories(tenant_id: int | None = None):
+    tenant_id = resolve_tenant_id(tenant_id)
     try:
-        ## 1. Fetch all active categories into a loopup directory { "Food": 1, "Beverage": 2 }
-        cat_stmt = select(InventoryCategory).filter_by(is_deleted=False)
+        ## 1. Fetch this hotel's active categories into a lookup { "Food": 1, ... }
+        ## Scoped, so the item lands in this hotel's own "Food" category rather
+        ## than whichever hotel happened to seed first.
+        cat_stmt = select(InventoryCategory).filter_by(
+            tenant_id=tenant_id,
+            is_deleted=False
+        )
         category_records = db_session.execute(cat_stmt).scalars().all()
 
         category_map = {c.name: c.id for c in category_records}
@@ -58,6 +65,7 @@ def seed_inventories():
 
             ## 2. Check if the item already exists using SQLAlchemy 2.0 select
             exists_stmt = select(Inventory).filter_by(
+                tenant_id=tenant_id,
                 name=item["name"],
                 category_id=category_id,
                 is_deleted=False
@@ -75,6 +83,7 @@ def seed_inventories():
             else:
                 ## BaseModel handles created_at and is_deleted automatically
                 new_item = Inventory(
+                    tenant_id=tenant_id,
                     name=item["name"],
                     category_id=category_id,
                     quantity=item["quantity"],
@@ -95,8 +104,7 @@ def seed_inventories():
         db_session.rollback()
         ## Raise rather than print-and-return: this swallowed a NameError once
         ## and the run reported success with no inventory written at all.
-        print("!!! Inventory seeder FAILED: "
-              + str(e).encode("ascii", "replace").decode("ascii")[:300])
+        print("!!! Inventory seeder FAILED: " + safe_error(e))
         raise
 
     finally:

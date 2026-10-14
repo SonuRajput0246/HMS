@@ -1,5 +1,6 @@
 from datetime import datetime
 from src.database.base_model import BaseModel
+from src.database.tenant_scoped import TenantScoped
 from sqlalchemy import Integer, ForeignKey, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from typing import TYPE_CHECKING
@@ -9,7 +10,7 @@ if TYPE_CHECKING:
     from src.api.models.room_amenity_model import RoomAmenity
 
 
-class RoomTypeAmenity(BaseModel):
+class RoomTypeAmenity(BaseModel, TenantScoped):
     __tablename__ = 'room_type_amenities'
 
     id: Mapped[int] = mapped_column(primary_key=True)

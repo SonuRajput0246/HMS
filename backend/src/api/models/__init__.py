@@ -13,8 +13,14 @@ it and therefore gets the full registry.
 """
 
 ### Importing all the Models
+##
+## Tenant first: it is the parent every tenant-scoped table points at, and
+## relationship() targets must already be in the registry when a child class
+## body executes.
+from .tenant_model import Tenant
 from .role_model import Role
 from .user_model import User
+from .platform_user_model import PlatformUser
 from .token_model import Token
 from .email_otp_model import EmailOTP
 from .module_model import Module

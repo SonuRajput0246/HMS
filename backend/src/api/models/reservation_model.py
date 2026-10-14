@@ -1,7 +1,8 @@
 from decimal import Decimal
 from datetime import datetime
-from sqlalchemy import String, Numeric, CheckConstraint, Boolean, text
+from sqlalchemy import String, Numeric, CheckConstraint, Boolean, text, UniqueConstraint
 from src.database.base_model import BaseModel
+from src.database.tenant_scoped import TenantScoped
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import Integer, ForeignKey, DateTime, Index
 from typing import TYPE_CHECKING
@@ -15,14 +16,18 @@ if TYPE_CHECKING:
     from src.api.models.reservation_additional_guest_model import ReservationAdditionalGuest
 
 
-class Reservation(BaseModel):
+class Reservation(BaseModel, TenantScoped):
     __tablename__ = 'reservations'
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    ## Unique per hotel, not per install -- see uq_reservations_tenant_number.
+    ## Numbers are minted from reservation_sequences, which are themselves
+    ## per-tenant, so two hotels legitimately generate the same
+    ## "RES-202610-00001" and a global UNIQUE would refuse the second hotel's
+    ## first booking of the month.
     reservation_number: Mapped[str] = mapped_column(
         String(20),
-        nullable=False,
-        unique=True
+        nullable=False
     )
     room_id: Mapped[int] = mapped_column(
         Integer,
@@ -99,6 +104,10 @@ class Reservation(BaseModel):
         ## these zero-night windows to one day so a same-day room cannot be
         ## sold twice.
         CheckConstraint("check_out_date >= check_in_date", name="ck_valid_date_range"),
+
+        ## Reservation numbers are unique within a hotel, and only within a
+        ## hotel -- see the note on the column above.
+        UniqueConstraint("tenant_id", "reservation_number", name="uq_reservations_tenant_number"),
 
         ## For "Get Available Rooms" (Reservation Service)
         Index(

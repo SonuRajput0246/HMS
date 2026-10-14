@@ -1,5 +1,6 @@
 from typing import TYPE_CHECKING
 from src.database.base_model import BaseModel
+from src.database.tenant_scoped import TenantScoped
 from sqlalchemy import String, Text, Integer, Boolean, ForeignKey, Index, JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -7,7 +8,7 @@ if TYPE_CHECKING:
     from src.api.models.user_model import User
 
 
-class Template(BaseModel):
+class Template(BaseModel, TenantScoped):
     __tablename__ = 'message_templates'
 
     id: Mapped[int] = mapped_column(primary_key=True)

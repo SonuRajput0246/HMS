@@ -1,5 +1,6 @@
 from typing import TYPE_CHECKING
 from src.database.base_model import BaseModel
+from src.database.tenant_scoped import TenantScoped
 from sqlalchemy import String, Float, Boolean, ForeignKey, Index, Numeric
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -7,7 +8,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 if TYPE_CHECKING:
     from src.api.models.inventory_category_model import InventoryCategory
 
-class Inventory(BaseModel):
+class Inventory(BaseModel, TenantScoped):
     __tablename__ = "inventory"
 
     id: Mapped[int] = mapped_column(primary_key=True)

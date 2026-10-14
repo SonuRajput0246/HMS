@@ -1,10 +1,11 @@
 from sqlalchemy import String, Boolean
 from src.database.base_model import BaseModel
+from src.database.tenant_scoped import TenantScoped
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.api.models.room_type_amenity_model import RoomTypeAmenity
 
 
-class RoomAmenity(BaseModel):
+class RoomAmenity(BaseModel, TenantScoped):
     __tablename__ = 'room_amenities'
 
     id: Mapped[int] = mapped_column(primary_key=True)

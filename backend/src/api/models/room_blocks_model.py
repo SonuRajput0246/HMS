@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import TYPE_CHECKING
 from src.database.base_model import BaseModel
+from src.database.tenant_scoped import TenantScoped
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import Integer, ForeignKey, DateTime, String, Index
 
@@ -8,7 +9,7 @@ if TYPE_CHECKING:
     from src.api.models.room_model import Room
 
 
-class RoomBlocks(BaseModel):
+class RoomBlocks(BaseModel, TenantScoped):
     __tablename__ = 'room_blocks'
 
     id: Mapped[int] = mapped_column(primary_key=True)

@@ -12,6 +12,10 @@ which matters now that each instance can have a separate one.
 
 These tables use `name` (not `country_name` / `state_name`) and have no
 `is_deleted` column -- they are reference data with an `is_active` flag.
+
+The guests themselves are tenant-scoped; the country/state/city rows they point
+at are global reference data shared by every hotel, so those lookups stay
+unscoped on purpose.
 """
 from datetime import date, datetime, timezone
 
@@ -21,6 +25,7 @@ from src.api.models.city_model import City
 from src.api.models.country_model import Country
 from src.api.models.state_model import State
 from src.api.models.guest_model import Guest
+from src.database.seeders._seeding import resolve_tenant_id, safe_error
 from src.database.session import db_session
 
 
@@ -119,12 +124,19 @@ def _resolve_location_ids(guest: dict) -> dict:
     }
 
 
-def seed_guest():
+def seed_guest(tenant_id: int | None = None):
+    tenant_id = resolve_tenant_id(tenant_id)
     try:
         for guest in guests_data:
+            ## Scoped to the hotel. The same person can legitimately be a guest
+            ## at two hotels, and each hotel keeps its own guest record with its
+            ## own stay history -- one shared row would merge two businesses'
+            ## books.
             existing = db_session.execute(
                 select(Guest).filter_by(
-                    email=guest["email"], is_deleted=False
+                    tenant_id=tenant_id,
+                    email=guest["email"],
+                    is_deleted=False
                 )
             ).scalar_one_or_none()
 
@@ -137,6 +149,7 @@ def seed_guest():
             payload.update(_resolve_location_ids(guest))
 
             db_session.add(Guest(
+                tenant_id=tenant_id,
                 **payload,
                 created_at=datetime.now(timezone.utc),
                 updated_at=datetime.now(timezone.utc),
@@ -150,8 +163,7 @@ def seed_guest():
         # Raise rather than print-and-return: the "additional guests" seeder
         # that runs next used to fail on a missing guest, pointing at the
         # wrong seeder entirely.
-        print(f"!!! Guest seeder FAILED: "
-              f"{str(e).encode('ascii', 'replace').decode('ascii')[:300]}")
+        print(f"!!! Guest seeder FAILED: {safe_error(e)}")
         raise
 
     finally:
