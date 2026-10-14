@@ -52,6 +52,14 @@ ROLE_DEFINITIONS = [
         "is_system": False,
         # Housekeeping module
     },
+    {
+        "role_name": "Guest",
+        "role_code": "GUEST",
+        "description": "Self-registered account with no staff access",
+        "is_system": True,
+        # No modules. This is the role public self-registration grants, so it
+        # must exist in every hotel before anyone can sign up.
+    },
 ]
 
 # ============================================
@@ -99,6 +107,10 @@ ROLE_PERMISSIONS = {
         "HOUSEKEEPING": ["View", "Edit"],
         "ROOM": ["View"],
     },
+    ## Self-registered accounts get nothing. Spelled out rather than omitted so
+    ## the absence of grants is a visible decision, not a missing entry someone
+    ## later "fixes" by adding DASHBOARD.
+    "GUEST": {},
 }
 
 

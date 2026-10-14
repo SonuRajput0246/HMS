@@ -36,6 +36,10 @@ class TemplateVariable(str, Enum):
     USER_NAME = "user_name"
     OTP = "otp"
     EXPIRY_MINUTES = "expiry_minutes"
+    ## The current hotel's brand. Supplied by `email_service` from the tenant's
+    ## `system_settings`, so seeded copy can sign off as the hotel rather than as
+    ## the product.
+    COMPANY_NAME = "company_name"
 
 
 ## The three OTP flows carry the same context, so every seeded template uses
@@ -44,6 +48,7 @@ OTP_VARIABLES = [
     TemplateVariable.USER_NAME.value,
     TemplateVariable.OTP.value,
     TemplateVariable.EXPIRY_MINUTES.value,
+    TemplateVariable.COMPANY_NAME.value,
 ]
 
 

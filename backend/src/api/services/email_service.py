@@ -10,6 +10,7 @@ from src.api.services.template_resolver import TemplateResolver
 from src.api.utils.email_helper import send_email
 from src.api.utils.security import hash_value
 from src.api.utils.template_codes import TemplateCode, TemplateVariable
+from src.api.utils.tenant_settings import get_tenant_setting
 
 
 logger = logging.getLogger(__name__)
@@ -160,15 +161,19 @@ class EmailService:
         """Values made available to `{{ variable }}` tokens.
 
         Keys are TemplateVariable values so the seeder, the CRUD validator,
-        and this call site cannot drift apart. `company_name` is included as a
-        context-only convenience for admins writing new templates; it is not
-        part of OTP_VARIABLES.
+        and this call site cannot drift apart. `company_name` is resolved from
+        the **current tenant's** `system_settings` rather than a global config
+        key -- the old `COMPANY_NAME` key was never set anywhere, so every hotel
+        rendered "HMS" regardless of who it was. It is part of `OTP_VARIABLES`
+        because the seeded copy uses it to sign off.
         """
         return {
             TemplateVariable.USER_NAME.value: f"{user.first_name} {user.last_name}",
             TemplateVariable.OTP.value: otp,
             TemplateVariable.EXPIRY_MINUTES.value: otp_expiry_minutes,
-            "company_name": current_app.config.get("COMPANY_NAME", "HMS"),
+            TemplateVariable.COMPANY_NAME.value: get_tenant_setting(
+                self.db, TemplateVariable.COMPANY_NAME.value
+            ),
         }
 
     def _dispatch(self, code, user, otp, otp_expiry_minutes) -> bool:
@@ -207,7 +212,11 @@ class EmailService:
                 ", ".join(rendered["missing_variables"]),
             )
 
-        subject = rendered.get("subject") or "HMS Notification"
+        ## Last-resort subject for an empty render. Branded like the body, not
+        ## with a hardcoded product name, so it does not contradict the mail it
+        ## sits above.
+        brand = context.get(TemplateVariable.COMPANY_NAME.value) or "HMS"
+        subject = rendered.get("subject") or f"{brand} Notification"
         html_body = rendered.get("html_body")
 
         if not html_body:

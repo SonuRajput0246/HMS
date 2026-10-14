@@ -58,8 +58,13 @@ FALLBACK_MESSAGE = (
     "<p>Hello {{ user_name }},</p>"
     "<p>A notification was generated for your account but the message "
     "template could not be loaded. Please contact support if this persists.</p>"
-    "<p>Regards,<br><b>HMS</b></p>"
+    "<p>Regards,<br><b>{{ company_name }}</b></p>"
 )
+
+## Printed only when a caller passes no brand at all. The real value comes from
+## the current tenant's `system_settings` and reaches the renderer through the
+## render context; this is a rendering-layer last resort, not the data default.
+FALLBACK_COMPANY_NAME = "HMS"
 
 ON_MISSING_EMPTY = "empty"
 ON_MISSING_KEEP = "keep"
@@ -171,20 +176,31 @@ def load_layout() -> str:
         return handle.read()
 
 
-def build_email_html(subject: str | None, content_fragment: str) -> str:
+def build_email_html(
+    subject: str | None,
+    content_fragment: str,
+    company_name: str | None = None,
+) -> str:
     """Wrap a rendered HTML fragment in the static email layout.
 
     `subject` and `content_fragment` are expected to be already escaped:
-    `subject` is escaped here, and the fragment is escaped at the point its own
-    placeholders were substituted. Both are then inserted with escaping off so
-    the values are not double-escaped.
+    `subject` and `company_name` are escaped here, and the fragment is escaped
+    at the point its own placeholders were substituted. All three are then
+    inserted with escaping off so the values are not double-escaped.
+
+    `company_name` is the current hotel's brand; when omitted the generic
+    fallback is used, so a caller that has no tenant context still renders.
     """
     safe_subject = html.escape(subject or "", quote=True)
+    safe_company = html.escape(company_name or FALLBACK_COMPANY_NAME, quote=True)
     result = render(
         load_layout(),
         {
             "subject": safe_subject,
             "content": content_fragment,
+            ## The hotel's own brand, so a multi-tenant install does not send
+            ## every hotel's mail under the product's name.
+            "company_name": safe_company,
             ## Footer copyright year. Plain integer, safe either way.
             "year": datetime.now(timezone.utc).year,
         },
@@ -240,7 +256,11 @@ def render_email(template_row, context: dict) -> dict:
 
     return {
         "subject": subject_result.output,
-        "html_body": build_email_html(subject_result.output, message_result.output),
+        "html_body": build_email_html(
+            subject_result.output,
+            message_result.output,
+            (context or {}).get("company_name"),
+        ),
         "content_html": message_result.output,
         "used_variables": _merge_unique(
             subject_result.used_variables, message_result.used_variables
@@ -283,7 +303,11 @@ def render_fallback_email(subject: str, context: dict) -> dict:
     message_result = render(FALLBACK_MESSAGE, context, escape_values=True)
     return {
         "subject": subject_result.output,
-        "html_body": build_email_html(subject_result.output, message_result.output),
+        "html_body": build_email_html(
+            subject_result.output,
+            message_result.output,
+            (context or {}).get("company_name"),
+        ),
         "content_html": message_result.output,
         "used_variables": _merge_unique(
             subject_result.used_variables, message_result.used_variables

@@ -35,6 +35,7 @@ from src.api.utils.template_renderer import (
     render_in_app,
     render_fallback_email,
     audit_declared_variables,
+    FALLBACK_COMPANY_NAME,
 )
 
 
@@ -217,7 +218,7 @@ class TemplateResolver:
         row = self.get_active(raw_code, enum_channel)
 
         if row is None:
-            return self._handle_missing(raw_code, enum_channel)
+            return self._handle_missing(raw_code, enum_channel, context=context)
 
         try:
             if enum_channel == "email":
@@ -266,6 +267,7 @@ class TemplateResolver:
             return self._handle_missing(
                 raw_code,
                 enum_channel,
+                context=context,
                 reason=f"Render failed: {exc}",
                 template_id=row.id,
             )
@@ -287,10 +289,17 @@ class TemplateResolver:
         self,
         code: str,
         channel: str,
+        context: dict | None = None,
         reason: str | None = None,
         template_id: int | None = None,
     ) -> dict:
-        """Build the fallback result and record why the real template was unusable."""
+        """Build the fallback result and record why the real template was unusable.
+
+        The caller's `context` is reused rather than discarded, so the fallback
+        still carries the hotel's brand and the user's name even when the stored
+        template was unusable. It exposes nothing the real send would not: the
+        fallback copy never references the OTP.
+        """
         if reason is None:
             suspended = self.is_suspended(code, channel)
             reason = (
@@ -303,12 +312,13 @@ class TemplateResolver:
 
         logger.error("TemplateResolver: %s Falling back to default copy.", reason)
 
-        context_stub: dict = {}
+        context = context or {}
+        brand = context.get("company_name") or FALLBACK_COMPANY_NAME
 
         if channel == "email":
             fallback = render_fallback_email(
-                f"{code.replace('_', ' ').title()} from HMS",
-                context_stub,
+                f"{code.replace('_', ' ').title()} from {brand}",
+                context,
             )
             result = {
                 "found": False,
@@ -328,7 +338,7 @@ class TemplateResolver:
             }
         else:
             fallback = render_fallback_email(
-                f"{code.replace('_', ' ').title()}", context_stub
+                f"{code.replace('_', ' ').title()}", context
             )
             result = {
                 "found": False,

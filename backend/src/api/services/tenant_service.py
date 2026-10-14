@@ -1,5 +1,6 @@
 from src.api.models.tenant_model import Tenant
 from src.api.utils.responses import service_response
+from src.api.utils.tenant_settings import get_tenant_branding
 
 
 class TenantService:
@@ -32,10 +33,14 @@ class TenantService:
     def get_public_info(self, tenant):
         """The part of a tenant that is safe to serve without a token.
 
-        Deliberately narrow. The login page needs the hotel's name so a user can
-        see they are at the right address; nothing else about a tenant is
-        anonymous business. No id, no provisioning state, no flags -- any of
-        those would let an unauthenticated caller enumerate the platform.
+        Deliberately narrow. The login page needs the hotel's name and branding
+        so a user can see they are at the right address; nothing else about a
+        tenant is anonymous business. No id, no provisioning state, no flags --
+        any of those would let an unauthenticated caller enumerate the platform.
+
+        The `branding` block is the hotel's own `system_settings` subset (see
+        `tenant_settings`), which is what makes a login page -- and the mail it
+        triggers -- belong to the hotel rather than to the product.
         """
         if tenant is None:
             return service_response(
@@ -45,12 +50,22 @@ class TenantService:
                 404,
             )
 
+        branding = get_tenant_branding(self.db, tenant.id)
+
         return service_response(
             True,
             "Tenant resolved.",
             {
                 "slug": tenant.slug,
                 "name": tenant.name,
+                "branding": {
+                    ## The hotel's chosen name, as opposed to the registry
+                    ## `name` above, which is the platform admin's label for it.
+                    "display_name": branding["company_name"],
+                    "app_logo_image": branding["app_logo_image"],
+                    "terms_condition_url": branding["terms_condition_url"],
+                    "privacy_policy_url": branding["privacy_policy_url"],
+                },
             },
             200,
         )

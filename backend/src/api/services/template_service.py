@@ -46,6 +46,7 @@ from src.api.utils.template_renderer import (
     render,
     ON_MISSING_KEEP,
 )
+from src.api.utils.tenant_settings import get_tenant_setting
 
 
 logger = logging.getLogger(__name__)
@@ -345,6 +346,12 @@ class TemplateService:
         for name in (data.get("variables") or []):
             context.setdefault(name, "")
 
+        ## The brand is not a sample value: the server knows the hotel's real
+        ## one, so override whatever placeholder the client sent. Without this
+        ## the preview footer would show a hardcoded 'HMS' while the real send
+        ## brands the mail as the hotel.
+        context["company_name"] = get_tenant_setting(self.db, "company_name")
+
         subject_raw = data.get("subject_template") or ""
         title_raw = data.get("title_template") or ""
         message_raw = data.get("message_template") or ""
@@ -379,8 +386,11 @@ class TemplateService:
 
         ## Email previews get the real layout so the author sees the real result.
         if channel == "email":
-            preview["html_body"] = build_email_html(subject_result.output,
-                                                    message_result.output)
+            preview["html_body"] = build_email_html(
+                subject_result.output,
+                message_result.output,
+                context.get("company_name"),
+            )
 
         return service_response(True, "Preview generated.", preview, 200)
 

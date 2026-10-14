@@ -1,8 +1,8 @@
 # Multi-Tenancy — Architecture & Design
 
 Status: **design agreed. Phases 1 (tenant registry & resolution), 2 (model scoping), 3 (enforcement),
-4 (auth integration) and 5 (provisioning & seeders, brought forward) are implemented and verified in a
-scratch database. Per-tenant config and frontend are not started — see §11.**
+4 (auth integration), 5 (provisioning & seeders, brought forward) and 6 (per-tenant config & content)
+are implemented and verified in a scratch database. The frontend (Phase 7) is not started — see §11.**
 Owner: this repo. Supersedes the earlier `INSTANCE_TYPE` (HMS/CMS) switch, which is gone.
 
 ---
@@ -360,8 +360,9 @@ provisioning is just the ordered call of them.
    so a tenant that is not durable first would leave seeded rows pointing at an id that never was.
 2. Seed the tenant's **roles + `role_module_access`**, from the global `modules` tree.
 3. Seed **`prefixes`** and **`reservation_sequences`** (a sequence belongs to a prefix).
-4. Seed default **`system_settings`** (`default_currency`) and **`message_templates`** (the 3 OTP
-   rows).
+4. Seed default **`system_settings`** — `default_currency`, `company_name` (resolved to the hotel's
+   own name), `app_logo_image`, `terms_condition_url`, `privacy_policy_url` — and
+   **`message_templates`** (the 3 OTP rows, whose copy signs off as `{{ company_name }}`).
 5. Seed default **`login_sliders`**.
 6. Create the tenant's first **`users`** row, in its own `SUPER_ADMIN` role.
 
@@ -461,7 +462,7 @@ can be driven side by side for testing.
   afterwards; the dev database is never touched.
 - **Seeding (done with Phase 5).** Against a throwaway `hms_seedtest` database built with
   `Base.metadata.create_all`: seed the platform, provision `acme` and `globex`, then assert that each
-  holds its own 6 roles, 3 prefixes, 3 sequences, 3 templates, 9 sliders, 1 setting and 1 admin; that
+  holds its own 7 roles, 3 prefixes, 3 sequences, 3 templates, 9 sliders, 5 settings and 1 admin; that
   re-provisioning changes no count; that demo data lands in exactly one tenant; that every
   `tenant_id` is non-null and points at a known tenant; and that both hotels can hold the **same**
   reservation number (`RES-<yyyymm>-00001`), which a global `UNIQUE` would have rejected. Also runs
@@ -471,6 +472,13 @@ can be driven side by side for testing.
   `tenant_booking_test.py` (§10): a token minted for A is rejected on B; a suspended tenant is 403;
   the hotel and platform identities never cross; and the second hotel can create a reservation and
   record a payment, attributed to its own user.
+- **Branding (done with Phase 6).** `tenant_branding_test.py` (`hms_brandingtest`, **26/26**): each
+  hotel's `company_name` defaults to its own display name, and the send path brands its mail with it
+  -- captured at the SMTP boundary, so the real subject and body are checked -- changing the *setting*
+  (not the tenant row) changes the mail; neither hotel's mail carries the other's brand or the generic
+  product name; the seeded login-slider welcome names the hotel; the public `tenant-info` endpoint
+  reports per-hotel branding; and self-registration grants the hotel's `GUEST` role rather than the
+  first-seeded `SUPER_ADMIN`.
 - **Static audit.** `tenant_leak_audit.py` (§5.3).
 - **Regression.** `npm run build` and `npm test` (91 specs) stay at their current baseline; the
   backend boots with `create_app()` as it does now (`APP OK - 65 api routes`).
@@ -484,19 +492,19 @@ can be driven side by side for testing.
   `topnav.component.ts:28` reading `localStorage.getItem('token')` when the real key is
   `STORAGE_KEYS.ACCESS_TOKEN` (`'app_accessToken'`). *The second one becomes a tenancy bug in
   Phase 7, so it will likely have to be fixed there anyway.*
-- **One hardcoded tenant-scoped id remains.** Three were correct in a single-tenant world and became
-  cross-tenant references the moment a second hotel existed. Two are now the authenticated actor, and
-  are proven *at the second hotel* by `tenant_booking_test.py`:
+- **The hardcoded tenant-scoped ids are gone.** Three were correct in a single-tenant world and became
+  cross-tenant references the moment a second hotel existed. All three are now resolved from context,
+  and each is proven at the *second* hotel:
   - `reservation_service.create_reservation` — was `created_by=data.get("created_by") or 1`; now
     `get_current_user_id()`. The Angular create payload never sent `created_by`, so the fallback (user
-    1) was what always ran. **Fixed.**
+    1) was what always ran. **Fixed** (`tenant_booking_test.py`).
   - `payment_service.insert_payment_details` — was `verified_by=1`; now `get_current_user_id()`.
-    **Fixed.**
-  - `auth_service.py:40` — `role_id=1` for a self-registered user, **still open**, already flagged
-    in-code as `## LATER CHANGE IT & SET CUSTOMER/GUEST ROLE_ID`. There is no `GUEST` role in the
-    seeder yet, so this needs a product decision (which role self-registration grants), not just a
-    lookup. **Note it also means today's public registration hands out the first-seeded role —
-    `SUPER_ADMIN` — which is a live authorization bug independent of tenancy.** *(Phase 6.)*
+    **Fixed** (`tenant_booking_test.py`).
+  - `auth_service.register_user` — was `role_id=1`, which in a freshly provisioned hotel is the
+    first-seeded role, `SUPER_ADMIN`: public registration handed out the highest privilege in the
+    hotel. A per-tenant `GUEST` role (no module access) is now seeded, and self-registration resolves
+    it by `role_code` within the current hotel. Missing `GUEST` **closes** registration rather than
+    falling back to any other role. **Fixed** (`tenant_branding_test.py`).
 - **Platform auth is deliberately minimal (Phase 4e).** No `platform_tokens` table, so a platform
   session is stateless and cannot be revoked before its expiry (default 60 minutes); no second factor
   on platform login; and no platform-user seeder — the first operator is created out-of-band (a row in
@@ -507,6 +515,12 @@ can be driven side by side for testing.
   to a hotel like any other token now, but it is still a second-factor hole. Not fixed here.
 - `material-module.ts` trimming (previously found unsafe to act on).
 - `user.service.ts`'s 8 legacy methods against endpoints that no longer exist.
+- **Branding *uploads* are not built (Phase 6 scope).** Phase 6 stores branding as per-tenant
+  `system_settings` **values** — `company_name`, `app_logo_image`, `terms_condition_url`,
+  `privacy_policy_url` — and serves them from the public `tenant-info` endpoint. There is no upload or
+  file-serving endpoint anywhere in the codebase today, so `app_logo_image` is a URL/path the hotel
+  supplies, not a file this app stores. Adding tenant-scoped uploads is new feature work, deliberately
+  left out.
 - Group-of-properties modelling — deferred until a chain actually appears.
 
 ---
@@ -520,7 +534,7 @@ can be driven side by side for testing.
 | 3 | Enforcement | **done** | `do_orm_execute` filter, `before_flush` stamp + FK guard, `Session.get` wrapper, leak audit script, leak tests | `tenant_leak_test.py` **141/141**; `tenant_leak_audit.py` clean; the four §5.3 hazards proven |
 | 4 | Auth integration | **done** | `tenant_id` JWT claim on all token types; `authenticate()` cross-check; host-only refresh cookie; platform auth (`platform_users`, separate secret + scope, `/api/v1/platform/*`); §10 booking/payment ids fixed | `tenant_auth_test.py` **13/13**; `platform_auth_test.py` **20/20**; `tenant_booking_test.py` **9/9**; suspended tenant 403 |
 | 5 | Provisioning | **done** (early — see §7) | Tenant-aware seeders; `provision_tenant()`; `seed_platform_data` / `seed_tenant_defaults` / `seed_tenant_demo_data` | Two tenants provisioned into a scratch DB, each isolated (see §9) |
-| 6 | Per-tenant config & content | | Per-tenant `system_settings`, templates, branding, email `company_name`, upload paths | Two tenants send differently-branded mail |
+| 6 | Per-tenant config & content | **done** | Per-tenant `system_settings` + branding, email `company_name`, seeded `GUEST` role, registration fix | `tenant_branding_test.py` **26/26** |
 | 7 | Frontend | | Tenant-aware `InstanceService`, `X-Tenant` header, per-tenant token key | Two tenants driven side by side in one browser |
 | 8 | Verification & docs | | Full pass, leakage + request tests, this doc updated | All of §9 green |
 
@@ -549,6 +563,9 @@ every scoped table — and only then was the filter added to make it pass.
    soft-delete-then-re-register behaviour, rather than `UNIQUE(tenant_id, email)`. **Confirmed and
    implemented in Phase 2.**
 2. Branding (logo, display name) lives in per-tenant `system_settings`, not as columns on `tenants`.
+   **Implemented in Phase 6**: `company_name` (defaults to the hotel's name), `app_logo_image`,
+   `terms_condition_url`, `privacy_policy_url`; consumed by the send path and the public
+   `tenant-info` endpoint. Only `app_logo_image`'s *upload* is out of scope (§10).
 3. A tenant's first user gets the tenant's `SUPER_ADMIN` role; the platform admin is a separate
    identity entirely.
 4. `enum_definitions` / `enum_options` and `inventory_units` stay global (per the decision), so a

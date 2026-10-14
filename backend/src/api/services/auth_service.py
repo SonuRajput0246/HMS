@@ -5,7 +5,7 @@ import jwt
 from flask import current_app, request
 from sqlalchemy import select
 from src.api.extensions import bcrypt
-from src.api.models import EmailOTP, Token, Module, RoleModuleAccess
+from src.api.models import EmailOTP, Token, Module, RoleModuleAccess, Role
 from src.api.models.user_model import User
 from src.api.schemas.auth_schema import LoginResponseSchema
 from src.api.utils.mfa import generate_secret, get_uri, verify_otp
@@ -29,16 +29,39 @@ class AuthService:
             if existing_user:
                 raise ResourceConflictError("Your account already exists with this email.")
 
-            ## 2. Hash Password
+            ## 2. Resolve the role public registration grants.
+            ##
+            ## This was `role_id=1`, which in a freshly provisioned hotel is the
+            ## first-seeded role -- SUPER_ADMIN. So anyone who could reach
+            ## /register could sign themselves up as the hotel's top
+            ## administrator. The Role read is tenant-scoped by the Phase 3
+            ## filter, so this resolves the *current hotel's* GUEST role; a
+            ## self-registered account therefore has no staff access anywhere.
+            guest_role = (
+                self.db.query(Role)
+                .filter(Role.role_code == "GUEST", Role.is_deleted == False)
+                .first()
+            )
+            if guest_role is None:
+                ## A provisioning fault, not a user error: every hotel is seeded
+                ## with GUEST before it is reachable. Refusing is the safe
+                ## failure -- granting some other role would be the bug we are
+                ## fixing.
+                raise RuntimeError(
+                    "This hotel has no GUEST role, so self-registration is "
+                    "closed. Ask an administrator to create your account."
+                )
+
+            ## 3. Hash Password
             hashed_password = bcrypt.generate_password_hash(data['password'], 12).decode("utf-8")
 
-            ## 3. Create User instance
+            ## 4. Create User instance
             new_user = User(
                 first_name=data['first_name'],
                 last_name=data['last_name'],
                 email=data['email'],
                 password=hashed_password,
-                role_id=1,  ## LATER CHANGE IT & SET CUSTOMER/GUEST ROLE_ID
+                role_id=guest_role.id,
                 is_email_verified=False,
                 is_active=True
             )
@@ -46,14 +69,14 @@ class AuthService:
             self.db.add(new_user)
             self.db.flush()
 
-            ## 4. Handle OTP Sending via EmailService
+            ## 5. Handle OTP Sending via EmailService
             email_service = EmailService(self.db)
             email_sent = email_service.send_email_verification_otp(new_user)
 
             if not email_sent:
                 raise RuntimeError("Failed to send verification email")
 
-            ## 5. Commit only if everything succeeded
+            ## 6. Commit only if everything succeeded
             self.db.commit()
 
             return service_response(
