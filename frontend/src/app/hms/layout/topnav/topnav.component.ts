@@ -25,7 +25,6 @@ export class TopnavComponent {
   isPageLoad = false;
 
   constructor() {
-      const token: any = localStorage.getItem('token');
       this.userName = this._common.getUserFullName();
   }
 

@@ -12,6 +12,8 @@ import { catchError, filter, switchMap, take } from 'rxjs/operators';
 import { Router } from '@angular/router';
 import { AppConfig } from '../core/config/config';
 import { STORAGE_KEYS } from './config/storage-keys';
+import { InstanceService } from './config/instance.service';
+import { TENANT_HEADER } from './config/tenant';
 
 
 @Injectable()
@@ -24,6 +26,7 @@ export class HttpIntercept implements HttpInterceptor {
         private router: Router,
         private http: HttpClient,
         private config: AppConfig,
+        private instance: InstanceService,
     ) {}
 
 
@@ -40,8 +43,10 @@ export class HttpIntercept implements HttpInterceptor {
         let authReq = req;
 
         if (accessToken && !isPublicApi) {
-            authReq = this.addToken(req, accessToken);
+            authReq = this.addToken(authReq, accessToken);
         }
+
+        authReq = this.addTenant(authReq);
 
         return next.handle(authReq).pipe(
             catchError((error: HttpErrorResponse) => {
@@ -66,6 +71,30 @@ export class HttpIntercept implements HttpInterceptor {
         return req.clone({
             setHeaders: {
                 Authorization: `Bearer ${token}`
+            }
+        });
+    }
+
+    /**
+     * Name the hotel on every request, including the ones that run before login.
+     *
+     * The API cannot see which hotel it is serving when the app and the API are
+     * on different origins -- the development setup, where the browser talks to
+     * `acme.localhost:4200` and the API answers on `localhost:5000` -- so the
+     * tenant travels in a header. Requests for the app's own static assets are
+     * left alone: they never reach the API and a custom header buys nothing.
+     *
+     * An explicit header wins, so a caller (or a test) can override it.
+     */
+    private addTenant(req: HttpRequest<any>): HttpRequest<any> {
+        const slug = this.instance.slug;
+        const isStaticAsset = /(^|\/)assets\//.test(req.url);
+        if (!slug || isStaticAsset || req.headers.has(TENANT_HEADER)) {
+            return req;
+        }
+        return req.clone({
+            setHeaders: {
+                [TENANT_HEADER]: slug
             }
         });
     }

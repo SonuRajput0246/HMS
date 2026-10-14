@@ -9,12 +9,24 @@ import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { SharedModule } from './shared/shared.module';
 import { HttpIntercept } from './core/http-interceptor';
 import { InitialService } from './services/initial.service';
+import { TenantService } from './services/tenant.service';
 import { MAT_DATE_LOCALE } from '@angular/material/core';
 import { provideMomentDateAdapter } from '@angular/material-moment-adapter';
 
 
 export function initApp(initialService: InitialService) {
   return () => initialService.loadAppConfig();
+}
+
+/**
+ * Resolve the host's hotel after the static config is in.
+ *
+ * APP_INITIALIZER factories run in the order they are registered, and this one
+ * needs the `BASE_URL` that `initApp` sets, so it must stay below it. Both
+ * block the first render.
+ */
+export function initTenant(tenantService: TenantService) {
+  return () => tenantService.load();
 }
 
 //// Date Format
@@ -50,6 +62,14 @@ export const MY_DATE_FORMATS = {
       provide: APP_INITIALIZER,
       useFactory: initApp,
       deps: [InitialService],
+      multi: true
+    },
+    {
+      /// Must stay after the initializer above: multi-providers run in
+      /// registration order, and tenant-info needs the BASE_URL it sets.
+      provide: APP_INITIALIZER,
+      useFactory: initTenant,
+      deps: [TenantService],
       multi: true
     },
     {

@@ -15,6 +15,10 @@
 
                         <div class="head">User Login</div>
 
+                        @if(tenantName) {
+                            <div class="tenant-name">{{ tenantName }}</div>
+                        }
+
                         <mat-form-field class="custom-input" appearance="outline" subscriptSizing="dynamic" style="margin-bottom: 10px;">
                             <input matInput type="email" formControlName="email" placeholder="Enter Email">
                             <mat-error *ngIf="loginForm.get('email')?.hasError('required')">

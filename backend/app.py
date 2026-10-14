@@ -1,3 +1,5 @@
+import re
+
 from flask import Flask
 from flask_cors import CORS
 from src.config import get_config
@@ -47,9 +49,26 @@ def create_app():
     app.config.from_object(get_config())
 
     ## Enable CORS
+    ##
+    ## The app is served from each hotel's own subdomain, so the dev server
+    ## answers on `acme.localhost:4200` as surely as on `localhost:4200`.
+    ## Production names its origins in CORS_ORIGINS; development falls back to
+    ## localhost and any hotel subdomain of it. A regex stands in for the
+    ## wildcard that `supports_credentials=True` forbids, which is also why the
+    ## allowed origin is echoed back rather than sent as `*`.
+    cors_origins = app.config.get("CORS_ORIGINS")
+    if cors_origins:
+        origins = [
+            origin.strip()
+            for origin in cors_origins.split(",")
+            if origin.strip()
+        ]
+    else:
+        origins = [re.compile(r"^http://([a-z0-9-]+\.)?localhost:4200$")]
+
     CORS(
         app,
-        resources={r"/*": {"origins": "http://localhost:4200"}},
+        resources={r"/*": {"origins": origins}},
         supports_credentials=True
     )
 

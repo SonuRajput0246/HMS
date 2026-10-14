@@ -63,6 +63,14 @@ class BaseConfig:
     COOKIE_SECURE = os.getenv("COOKIE_SECURE")
     COOKIE_SAMESITE = os.getenv("COOKIE_SAMESITE")
 
+    ## CORS
+    ##
+    ## Comma-separated list of browser origins allowed to call the API. Left
+    ## unset in development, where app.py admits the dev server on
+    ## `localhost:4200` and any hotel subdomain of it (`acme.localhost:4200`).
+    ## Production sets this to its own origins.
+    CORS_ORIGINS = os.getenv("CORS_ORIGINS")
+
     ## Timezone the business trades in. Every "today" boundary in a report is
     ## computed in THIS zone, not the server's: under Asia/Kolkata the report for
     ## 9 Oct begins at 18:30 UTC on 8 Oct. Get this wrong and the opening and

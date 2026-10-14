@@ -21,6 +21,13 @@ export class LoginComponent {
   private _confirmService = inject(ConfirmationService);
   private _common = inject(CommonService);
   private _instance = inject(InstanceService);
+
+  /**
+   * The hotel's name, resolved during boot -- before this component exists.
+   * Falls back to the product name on a host that names no hotel.
+   */
+  tenantName = this._instance.label;
+
   loginForm!: FormGroup;
   verifyMfaForm!: FormGroup;
   hidePassword = true;

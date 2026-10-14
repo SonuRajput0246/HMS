@@ -1,8 +1,10 @@
 # Multi-Tenancy — Architecture & Design
 
 Status: **design agreed. Phases 1 (tenant registry & resolution), 2 (model scoping), 3 (enforcement),
-4 (auth integration), 5 (provisioning & seeders, brought forward) and 6 (per-tenant config & content)
-are implemented and verified in a scratch database. The frontend (Phase 7) is not started — see §11.**
+4 (auth integration), 5 (provisioning & seeders, brought forward), 6 (per-tenant config & content) and
+7 (tenant-aware frontend) are implemented. The backend phases are verified in a scratch database; the
+frontend is verified by the Karma suite, and the two-hotel walkthrough in §8 is the remaining manual
+check — see §11.**
 Owner: this repo. Supersedes the earlier `INSTANCE_TYPE` (HMS/CMS) switch, which is gone.
 
 ---
@@ -434,7 +436,7 @@ ints instead.
 |---|---|
 | `InstanceService` | Becomes tenant-aware: `slug` from `window.location.hostname`'s first label; `label` (from a public tenant-info endpoint), `prefix` and `homeUrl` stay `/hms/...`. |
 | HTTP interceptor (`core/http-interceptor.ts`) | Adds `X-Tenant: <slug>` on every request, including pre-login calls. |
-| Token storage key | `app_accessToken` becomes `app_accessToken_<slug>`. The current key is already wrong (see §10) and would become a genuine cross-tenant bug once one browser can reach two tenants. |
+| Token storage key | `app_accessToken` becomes `app_accessToken_<slug>`. The key was also wrong in a way Phase 7 removed (§10); scoping it means two hotels in one browser cannot share a session. |
 | Boot | `config.json` keeps `api_base_url` only; tenant identity is **not** a build-time value. |
 | Login | Optionally show the tenant's name via a public `GET /api/v1/common/tenant-info`. |
 | Unknown subdomain | The frontend routes to the 404 page; the API returns 404. |
@@ -444,6 +446,24 @@ ints instead.
 `.localhost` is specified to resolve to loopback, so `acme.localhost:4200` works with no hosts-file
 edit in current browsers. The frontend then sends `X-Tenant: acme` to `localhost:5000`. Two tenants
 can be driven side by side for testing.
+
+One thing has to agree for that to work: the API must allow the subdomain origin (`CORS_ORIGINS`,
+unset in development, where `app.py` admits `localhost:4200` and any hotel subdomain of it). The dev
+server itself needs no change -- webpack-dev-server accepts `localhost` and its subdomains out of the
+box, so the Host header is never the thing that refuses the request.
+
+What landed:
+
+| Piece | Where |
+|---|---|
+| Host → slug rule | `core/config/tenant.ts` (`tenantSlugFromHostname`) |
+| Tenant on the wire | `core/http-interceptor.ts` (`X-Tenant`, on every API call) |
+| Per-tenant token keys | `core/config/storage-keys.ts` (`app_accessToken_<slug>`) |
+| Boot + branding | `services/tenant.service.ts`, wired as a second `APP_INITIALIZER` |
+| Host with no usable hotel | `core/tenant.guard.ts` → the existing `**` 404 route |
+
+A host that names no hotel (`localhost` without a subdomain, an IP) and a host naming a hotel that
+does not exist are both refused with the 404 page, matching the API in both cases.
 
 ---
 
@@ -480,18 +500,25 @@ can be driven side by side for testing.
   reports per-hotel branding; and self-registration grants the hotel's `GUEST` role rather than the
   first-seeded `SUPER_ADMIN`.
 - **Static audit.** `tenant_leak_audit.py` (§5.3).
-- **Regression.** `npm run build` and `npm test` (91 specs) stay at their current baseline; the
-  backend boots with `create_app()` as it does now (`APP OK - 65 api routes`).
+- **Frontend (done with Phase 7).** New Karma specs cover the pure pieces and the ones the app cannot
+  boot without: `tenantSlugFromHostname` (the host→slug table, including bare `localhost` and IPs),
+  `scopedStorageKeys`, the interceptor's `X-Tenant` (present on API calls, named before login, absent
+  on assets and on a host with no hotel, never overwriting an explicit header), `TenantService`'s four
+  outcomes (no hotel without a call, branding published, 404 unknown, unreachable API still usable),
+  and `TenantGuard` (allow / 404 / 404). `npm test` is **122/122**.
+- **Regression.** `npm test` (122 specs) is green; the backend boots with `create_app()` as it does now
+  (`APP OK - 65 api routes`). `npm run build` fails only on the pre-existing size budgets -- the initial
+  bundle and `edit-reservation.component.scss` are both over, and neither file was touched here.
 
 ---
 
 ## 10. Explicitly out of scope
 
 - **Pre-existing bugs, not folded in unless asked:** the missing `category` / `inventory_2` menu
-  icons (`sidenav.component.html` builds `/assets/menu_icons/<icon>`), and
-  `topnav.component.ts:28` reading `localStorage.getItem('token')` when the real key is
-  `STORAGE_KEYS.ACCESS_TOKEN` (`'app_accessToken'`). *The second one becomes a tenancy bug in
-  Phase 7, so it will likely have to be fixed there anyway.*
+  icons (`sidenav.component.html` builds `/assets/menu_icons/<icon>`). The other one flagged here --
+  `topnav.component.ts:28` reading `localStorage.getItem('token')` instead of
+  `STORAGE_KEYS.ACCESS_TOKEN` -- is **fixed** with Phase 7: the value was assigned and never read, so
+  the line was deleted rather than repointed, which is also why it was harmless until now.
 - **The hardcoded tenant-scoped ids are gone.** Three were correct in a single-tenant world and became
   cross-tenant references the moment a second hotel existed. All three are now resolved from context,
   and each is proven at the *second* hotel:
@@ -535,7 +562,7 @@ can be driven side by side for testing.
 | 4 | Auth integration | **done** | `tenant_id` JWT claim on all token types; `authenticate()` cross-check; host-only refresh cookie; platform auth (`platform_users`, separate secret + scope, `/api/v1/platform/*`); §10 booking/payment ids fixed | `tenant_auth_test.py` **13/13**; `platform_auth_test.py` **20/20**; `tenant_booking_test.py` **9/9**; suspended tenant 403 |
 | 5 | Provisioning | **done** (early — see §7) | Tenant-aware seeders; `provision_tenant()`; `seed_platform_data` / `seed_tenant_defaults` / `seed_tenant_demo_data` | Two tenants provisioned into a scratch DB, each isolated (see §9) |
 | 6 | Per-tenant config & content | **done** | Per-tenant `system_settings` + branding, email `company_name`, seeded `GUEST` role, registration fix | `tenant_branding_test.py` **26/26** |
-| 7 | Frontend | | Tenant-aware `InstanceService`, `X-Tenant` header, per-tenant token key | Two tenants driven side by side in one browser |
+| 7 | Frontend | **done** | Tenant-aware `InstanceService`, `X-Tenant` header, per-tenant token key, boot-time branding, unknown-host 404, dev CORS + `allowedHosts` | Karma **122/122**; the §8 two-hotel walkthrough is the remaining manual check |
 | 8 | Verification & docs | | Full pass, leakage + request tests, this doc updated | All of §9 green |
 
 Phase 3 is the one that decides whether this is safe. The leak test was written **first and made to
@@ -548,12 +575,11 @@ every scoped table — and only then was the filter added to make it pass.
 > migrated database. (The seeders were never affected: Phase 5's seeders set `tenant_id` explicitly,
 > which is what let them be verified against a real database early.)
 
-> **Phase 4 → Phase 7 window: the API now requires a tenant on every request.** From Phase 4 a request
-> that names no hotel is refused (404) and an authenticated request is refused without a `tenant_id`
-> claim (401). The Angular app does not send `X-Tenant` yet — that is Phase 7 — so until then it must
-> be driven with the header set, or from a `<tenant>.localhost` host. Backend verifications are
-> unaffected (they set the header explicitly), which is why this is a documented window rather than a
-> blocker. The alternative is to bring the `X-Tenant` interceptor forward from Phase 7.
+> **The Phase 4 → Phase 7 window is closed.** From Phase 4 the API refuses a request that names no
+> hotel (404) and an authenticated request without a `tenant_id` claim (401). Phase 7 made the Angular
+> app name its hotel: the interceptor sends `X-Tenant` on every API call, so the app no longer needs
+> the header set by hand, or a `<tenant>.localhost` host, to work. Backend verifications, which always
+> set the header explicitly, were unaffected throughout.
 
 ---
 
