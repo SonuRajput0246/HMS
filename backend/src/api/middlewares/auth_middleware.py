@@ -5,6 +5,7 @@ from flask import request, current_app, g
 from src.api.models.user_model import User
 from src.api.models.token_model import Token
 from src.database.session import db_session
+from src.database.tenant_context import current_tenant_id
 from src.api.utils.errors import UnauthorizedError
 
 
@@ -36,6 +37,19 @@ def authenticate():
         user_id = payload.get("user_id")
         if not user_id:
             raise UnauthorizedError("Invalid token payload")
+
+        ## 2b. The token is bound to the hotel it was minted for.
+        ##
+        ## Without this the user lookup below is the only thing tying a token to
+        ## a tenant, and a token presented on the wrong host simply fails to
+        ## find its user -- a 401 that looks like a bad token. Checking the
+        ## claim first makes the refusal explicit, and does it before any
+        ## tenant-scoped read. A *missing* claim is rejected too, deliberately:
+        ## a token minted before this change, or forged without one, must not
+        ## fall back to whatever tenant the request resolved to.
+        tenant_id = current_tenant_id()
+        if tenant_id is None or payload.get("tenant_id") != tenant_id:
+            raise UnauthorizedError("Token is not valid for this hotel")
 
         ## 3 Fetch User (SQLAlchemy 2.0 Syntax)
         stmt = select(User).filter_by(is_deleted=False, id=user_id)

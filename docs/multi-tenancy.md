@@ -1,8 +1,8 @@
 # Multi-Tenancy — Architecture & Design
 
-Status: **design agreed. Phases 1 (tenant registry & resolution), 2 (model scoping), 3 (enforcement)
-and 5 (provisioning & seeders, brought forward) are implemented and verified in a scratch database.
-Auth, per-tenant config and frontend are not started — see §11.**
+Status: **design agreed. Phases 1 (tenant registry & resolution), 2 (model scoping), 3 (enforcement),
+4 (auth integration) and 5 (provisioning & seeders, brought forward) are implemented and verified in a
+scratch database. Per-tenant config and frontend are not started — see §11.**
 Owner: this repo. Supersedes the earlier `INSTANCE_TYPE` (HMS/CMS) switch, which is gone.
 
 ---
@@ -286,30 +286,66 @@ tenant-scoped and its lookup needs the tenant first.
 2. **`X-Tenant` header** (development and cross-origin). The frontend derives it from the subdomain.
 3. If both are present they must agree.
 
-Then load `Tenant` by slug and stash it on `g`. Unknown slug → 404; `is_suspended` → 403.
+Then load `Tenant` by slug and stash it on `g`. Unknown slug → 404; `is_suspended` → 403; a request
+that names **no** tenant at all → 404 as well. The last one is not pedantry: without it a header-less
+request would run with no tenant filter, and the login route's `users` lookup could match a row from
+any hotel.
 
 **Skipped for** `/api/v1/platform/*` (platform routes are above tenants), health checks, and static
 assets. The skip list is explicit and greppable.
 
 ### 6.2 JWT
 
-- Access and refresh tokens gain a **`tenant_id`** claim; the MFA `mfa_pending` temp token too.
-- `authenticate()` requires `claim.tenant_id == g.tenant.id` and rejects mismatches with 401. A token
-  minted for hotel A is therefore structurally useless against hotel B.
-- **Refresh cookie:** currently `hms_refreshToken`, and `COOKIE_SECURE` / `COOKIE_SAMESITE` are
-  configured but the `Domain` attribute is the risk. Cookies must be **host-only** (no `Domain`),
-  so `acme.hms.example.com` cannot send its cookie to `beta.hms.example.com`. The JWT claim check is
-  the second line of defence.
-- `AuthService.generate_user_session` and the MFA temp token set the claim; `user_login`,
-  `verify_email`, `activate_account`, `reset_user_password`, `send_otp_on_email` and
-  `get_fresh_tokens` all become tenant-aware implicitly once the tenant is resolved, because their
-  `User` lookups are auto-filtered.
+**Implemented (Phase 4a–4d).**
+
+- Access and refresh tokens carry a **`tenant_id`** claim; the MFA `mfa_pending` temp token too. The
+  value is the user's own `tenant_id`, so the token is pinned to the hotel the account belongs to.
+- `authenticate()` requires `claim.tenant_id == current_tenant_id()` and rejects a **missing** claim
+  as well as a mismatched one, with 401, *before* it loads the user. A token minted for hotel A is
+  therefore structurally useless against hotel B, and a token with no claim cannot fall back to
+  whichever tenant the request happened to resolve to.
+- The refresh path (`get_fresh_tokens`) and the MFA path (`verify_mfa_login`) check the same claim.
+  The refresh one matters because a browser sends its cookie to whatever host it is talking to; in
+  development two hotels share `localhost`, so the claim is the only thing separating them.
+- **Refresh cookie:** `hms_refreshToken` is set with no `Domain` attribute, so it is **host-only**
+  already — `acme.hms.example.com` will not send it to `beta.hms.example.com`. The claim check is the
+  second line of defence. (`COOKIE_SECURE` / `COOKIE_SAMESITE` are read from the environment.)
+- `user_login`, `verify_email`, `activate_account`, `reset_user_password`, `send_otp_on_email` and
+  `get_fresh_tokens` are tenant-aware implicitly once the tenant is resolved, because their `User`
+  lookups are auto-filtered by the enforcement layer.
+
+Verified by `src/database/scripts/tenant_auth_test.py` (`hms_authtest` scratch database, 13/13):
+login mints a bound token; the token is accepted at its own hotel and refused at another; a
+claim-less or foreign-claim token is refused; the cookie is refused cross-hotel; a header-less login
+is 404; another hotel's credentials are refused; and the temp MFA token is bound too.
 
 ### 6.3 Platform authentication
 
-A **separate secret** (`PLATFORM_JWT_SECRET_KEY`) and a distinct audience/scope claim, so a tenant
-token can never be accepted on a platform route or vice versa. Separate routes under
-`/api/v1/platform/`: login, list/create tenants, suspend/reactivate, reset a tenant's admin password.
+**Implemented (Phase 4e).** The operator who sits above every hotel is a row in `platform_users`, not
+in `users`. They authenticate with a **separate secret** (`PLATFORM_JWT_SECRET_KEY`; unset by default,
+so platform routes refuse every call rather than degrade into "any token is fine") and a distinct
+`scope: "platform"` claim. A hotel token therefore fails signature verification on a platform route and
+a platform token fails it on a hotel route — the scope check is the second line of defence.
+
+`src/api/middlewares/platform_auth.py` is the gate, the counterpart of `authenticate()`:
+`platform_required` decodes with the platform secret, requires the scope, loads the (non-tenant-scoped)
+`PlatformUser`, and stashes it on `g`. Routes under `/api/v1/platform/`, which the tenant resolver is
+exempt for:
+
+- `POST /login` — public; mints a platform token.
+- `GET /tenants` — list every hotel.
+- `POST /tenants` — provision one (calls `provision_tenant`; §7).
+- `POST /tenants/<id>/suspend` and `.../reactivate` — the toggle the resolver enforces as 403.
+- `POST /tenants/<id>/reset-admin-password` — resets the hotel's `SUPER_ADMIN` password **and revokes
+  its live tokens**, so the reset is not cosmetic.
+
+Verified by `src/database/scripts/platform_auth_test.py` (`hms_platformtest`, **20/20**): both
+cross-audience directions are refused; provisioning through the route yields a working hotel admin; a
+suspended hotel's requests are 403 and reactivation restores them; and a password reset stops the old
+password and the tokens it had bought.
+
+Platform tokens are **stateless** — there is no `platform_tokens` table, so a session cannot be revoked
+before it expires (default 60 minutes). Platform MFA is not wired either. Both are deliberate; see §10.
 
 ---
 
@@ -431,10 +467,13 @@ can be driven side by side for testing.
   reservation number (`RES-<yyyymm>-00001`), which a global `UNIQUE` would have rejected. Also runs
   `run_base_seeders()` twice to prove the documented dev command is idempotent. The scratch database
   is dropped afterwards; the dev database is never touched.
-- **Request-level tests.** A token minted for A is rejected on B (§6.2); a suspended tenant is 403.
+- **Request-level tests.** `tenant_auth_test.py` (§6.2), `platform_auth_test.py` (§6.3) and
+  `tenant_booking_test.py` (§10): a token minted for A is rejected on B; a suspended tenant is 403;
+  the hotel and platform identities never cross; and the second hotel can create a reservation and
+  record a payment, attributed to its own user.
 - **Static audit.** `tenant_leak_audit.py` (§5.3).
 - **Regression.** `npm run build` and `npm test` (91 specs) stay at their current baseline; the
-  backend boots with `create_app()` as it does now (`APP OK - 59 api routes`).
+  backend boots with `create_app()` as it does now (`APP OK - 65 api routes`).
 
 ---
 
@@ -445,19 +484,27 @@ can be driven side by side for testing.
   `topnav.component.ts:28` reading `localStorage.getItem('token')` when the real key is
   `STORAGE_KEYS.ACCESS_TOKEN` (`'app_accessToken'`). *The second one becomes a tenancy bug in
   Phase 7, so it will likely have to be fixed there anyway.*
-- **Hardcoded tenant-scoped ids the write guard now refuses for any tenant but the first.** These
-  were correct in a single-tenant world and become cross-tenant references once a second hotel
-  exists. Phase 3 makes them fail **closed** (400 / refused), which is the safe direction, but they
-  block the second tenant from those flows and must be fixed before it is used for real:
-  - `reservation_service.py:549` — `created_by=data.get("created_by") or 1`. The acting user is
-    available from `get_current_user_id()` and should be used, the way `cancel_reservation` already
-    sets `cancelled_by` from `g.current_user`. *(Wire in Phase 4, with the actor/JWT work.)*
-  - `payment_service.py:123` — `verified_by=1`. Same fix; same phase.
-  - `auth_service.py:40` — `role_id=1` for a self-registered user, already flagged in-code as
-    `## LATER CHANGE IT & SET CUSTOMER/GUEST ROLE_ID`. There is no `GUEST` role in the seeder yet, so
-    this needs a product decision (which role self-registration grants), not just a lookup. **Note
-    it also means today's public registration hands out the first-seeded role — `SUPER_ADMIN` — which
-    is a live authorization bug independent of tenancy.** *(Phase 4/6.)*
+- **One hardcoded tenant-scoped id remains.** Three were correct in a single-tenant world and became
+  cross-tenant references the moment a second hotel existed. Two are now the authenticated actor, and
+  are proven *at the second hotel* by `tenant_booking_test.py`:
+  - `reservation_service.create_reservation` — was `created_by=data.get("created_by") or 1`; now
+    `get_current_user_id()`. The Angular create payload never sent `created_by`, so the fallback (user
+    1) was what always ran. **Fixed.**
+  - `payment_service.insert_payment_details` — was `verified_by=1`; now `get_current_user_id()`.
+    **Fixed.**
+  - `auth_service.py:40` — `role_id=1` for a self-registered user, **still open**, already flagged
+    in-code as `## LATER CHANGE IT & SET CUSTOMER/GUEST ROLE_ID`. There is no `GUEST` role in the
+    seeder yet, so this needs a product decision (which role self-registration grants), not just a
+    lookup. **Note it also means today's public registration hands out the first-seeded role —
+    `SUPER_ADMIN` — which is a live authorization bug independent of tenancy.** *(Phase 6.)*
+- **Platform auth is deliberately minimal (Phase 4e).** No `platform_tokens` table, so a platform
+  session is stateless and cannot be revoked before its expiry (default 60 minutes); no second factor
+  on platform login; and no platform-user seeder — the first operator is created out-of-band (a row in
+  `platform_users`). Each of these is a product decision rather than a tenancy requirement.
+- **Pre-existing, not tenancy-specific:** `authenticate()` skips the revocation check for any token
+  carrying a `scope` claim (`auth_middleware.py:78`), which is what lets the `mfa_pending` temp token be
+  accepted as a bearer token for its five-minute life — i.e. it bypasses the second factor. It is bound
+  to a hotel like any other token now, but it is still a second-factor hole. Not fixed here.
 - `material-module.ts` trimming (previously found unsafe to act on).
 - `user.service.ts`'s 8 legacy methods against endpoints that no longer exist.
 - Group-of-properties modelling — deferred until a chain actually appears.
@@ -471,7 +518,7 @@ can be driven side by side for testing.
 | 1 | Tenant registry & resolution | **done** | `tenants`, `platform_users` models; `tenant_context`; `before_request` resolution; public tenant-info endpoint | App boots unchanged; `acme` resolves to a tenant; platform routes are skipped |
 | 2 | Model scoping | **done** | `TenantScoped` mixin on every §3.3 model; composite constraints | Models import clean; migrations regenerated by hand |
 | 3 | Enforcement | **done** | `do_orm_execute` filter, `before_flush` stamp + FK guard, `Session.get` wrapper, leak audit script, leak tests | `tenant_leak_test.py` **141/141**; `tenant_leak_audit.py` clean; the four §5.3 hazards proven |
-| 4 | Auth integration | | `tenant_id` JWT claim on all token types; `authenticate()` cross-check; host-only refresh cookie; platform auth | Token A rejected on B; suspended tenant 403 |
+| 4 | Auth integration | **done** | `tenant_id` JWT claim on all token types; `authenticate()` cross-check; host-only refresh cookie; platform auth (`platform_users`, separate secret + scope, `/api/v1/platform/*`); §10 booking/payment ids fixed | `tenant_auth_test.py` **13/13**; `platform_auth_test.py` **20/20**; `tenant_booking_test.py` **9/9**; suspended tenant 403 |
 | 5 | Provisioning | **done** (early — see §7) | Tenant-aware seeders; `provision_tenant()`; `seed_platform_data` / `seed_tenant_defaults` / `seed_tenant_demo_data` | Two tenants provisioned into a scratch DB, each isolated (see §9) |
 | 6 | Per-tenant config & content | | Per-tenant `system_settings`, templates, branding, email `company_name`, upload paths | Two tenants send differently-branded mail |
 | 7 | Frontend | | Tenant-aware `InstanceService`, `X-Tenant` header, per-tenant token key | Two tenants driven side by side in one browser |
@@ -486,6 +533,13 @@ every scoped table — and only then was the filter added to make it pass.
 > `before_flush` stamp now fills `tenant_id` from the request context, so the app can be run against a
 > migrated database. (The seeders were never affected: Phase 5's seeders set `tenant_id` explicitly,
 > which is what let them be verified against a real database early.)
+
+> **Phase 4 → Phase 7 window: the API now requires a tenant on every request.** From Phase 4 a request
+> that names no hotel is refused (404) and an authenticated request is refused without a `tenant_id`
+> claim (401). The Angular app does not send `X-Tenant` yet — that is Phase 7 — so until then it must
+> be driven with the header set, or from a `<tenant>.localhost` host. Backend verifications are
+> unaffected (they set the header explicitly), which is why this is a documented window rather than a
+> blocker. The alternative is to bring the `X-Tenant` interceptor forward from Phase 7.
 
 ---
 

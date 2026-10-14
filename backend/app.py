@@ -22,6 +22,7 @@ from src.api.routes.inventory_route import inventory_bp
 from src.api.routes.room_route import room_bp
 from src.api.routes.guest_route import guest_bp
 from src.api.routes.reservation_route import reservation_bp
+from src.api.routes.platform_route import platform_bp
 
 ## Event listeners. Imported purely for side effect: each module registers
 ## SQLAlchemy before_insert / before_update hooks as it is imported. That is not
@@ -75,6 +76,11 @@ def create_app():
     app.register_blueprint(room_bp, url_prefix="/api/v1/room")
     app.register_blueprint(guest_bp, url_prefix="/api/v1/guest")
     app.register_blueprint(reservation_bp, url_prefix="/api/v1/reservation")
+
+    ## Platform administration, above every hotel. Exempt from tenant resolution
+    ## (see TENANT_EXEMPT_PREFIXES) and gated by its own secret; see
+    ## src/api/middlewares/platform_auth.py.
+    app.register_blueprint(platform_bp, url_prefix="/api/v1/platform")
 
     @app.teardown_appcontext
     def shutdown_session(exception=None):

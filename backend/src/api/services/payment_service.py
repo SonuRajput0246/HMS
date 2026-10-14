@@ -7,6 +7,7 @@ from src.api.models.enum_definitions_model import EnumDefinition
 from src.api.services.exchange_service import ExchangeService
 from src.api.utils.currency_utils import calculate_base_amount
 from src.api.utils.responses import service_response
+from src.api.utils.jwt_helper import get_current_user_id
 
 
 logger = logging.getLogger(__name__)
@@ -120,7 +121,11 @@ class PaymentService:
             transaction_ref=data.get('transaction_ref'),
             remarks=data.get('remark'),
             paid_at=paid_at,
-            verified_by=1,
+            ## The operator who recorded the payment, from the authenticated
+            ## request. This used to be a hardcoded `1`, which was correct only
+            ## while user 1 was the only user; under one database per hotel it is
+            ## another hotel's user id, and the write guard refuses it.
+            verified_by=get_current_user_id(),
             exchange_rate=94.50,
             base_amount=base_amount
         )

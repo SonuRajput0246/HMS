@@ -23,6 +23,20 @@ class BaseConfig:
     JWT_ACCESS_TOKEN_EXPIRES_MIN = int(os.getenv("JWT_ACCESS_EXPIRES_MIN", 15))
     JWT_REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("JWT_REFRESH_EXPIRES_DAYS", 7))
 
+    ## Platform (super-admin) JWT.
+    ##
+    ## Deliberately a different secret from the tenant JWT above, so a token
+    ## minted for a hotel can never be accepted on a platform route and a
+    ## platform token can never be accepted on a hotel route -- even if one
+    ## secret leaks, the other stays useless. See docs/multi-tenancy.md §6.3.
+    ##
+    ## Unset by default on purpose: platform routes then refuse every call with a
+    ## loud error instead of degrading into "any token is fine". Set it in .env
+    ## (and in the deployment) to enable platform administration.
+    PLATFORM_JWT_SECRET_KEY = os.getenv("PLATFORM_JWT_SECRET_KEY")
+    PLATFORM_JWT_ALGORITHM = os.getenv("PLATFORM_JWT_ALGO", "HS256")
+    PLATFORM_JWT_EXPIRES_MIN = int(os.getenv("PLATFORM_JWT_EXPIRES_MIN", 60))
+
     ## Multi-tenancy
     ##
     ## Base domain tenant subdomains hang off in production, e.g. "hms.example.com"

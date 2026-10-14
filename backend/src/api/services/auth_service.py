@@ -13,6 +13,7 @@ from src.api.utils.security import hash_value
 from src.api.utils.responses import service_response
 from src.api.utils.errors import ResourceConflictError, APIError
 from src.api.services.email_service import EmailService
+from src.database.tenant_context import current_tenant_id
 
 class AuthService:
 
@@ -109,6 +110,11 @@ class AuthService:
         access_token = jwt.encode(
             {
                 "user_id": user.id,
+                ## The hotel this token is good for. authenticate() refuses a
+                ## token whose claim does not match the tenant the request
+                ## resolved to, so a token minted at acme is structurally
+                ## useless at globex even if its bearer presents it there.
+                "tenant_id": user.tenant_id,
                 "iat": datetime.now(timezone.utc),
                 "exp": access_exp,
                 # jti makes each issuance distinct.
@@ -128,7 +134,8 @@ class AuthService:
 
         refresh_exp = datetime.now(timezone.utc) + timedelta(days=current_app.config["JWT_REFRESH_TOKEN_EXPIRE_DAYS"])
         refresh_token = jwt.encode(
-            {"user_id": user.id, "iat": datetime.now(timezone.utc),
+            {"user_id": user.id, "tenant_id": user.tenant_id,
+             "iat": datetime.now(timezone.utc),
              "exp": refresh_exp, "jti": uuid.uuid4().hex},
             current_app.config["JWT_SECRET_KEY"], algorithm=current_app.config["JWT_ALGORITHM"]
         )
@@ -328,6 +335,7 @@ class AuthService:
         if user.mfa_enabled:
             temp_token_payload = {
                 "user_id": user.id,
+                "tenant_id": user.tenant_id,
                 "scope": "mfa_pending",
                 "exp": datetime.now(timezone.utc) + timedelta(minutes=5)  # Short expiry
             }
@@ -355,6 +363,13 @@ class AuthService:
 
             if decoded_payload.get("scope") != "mfa_pending":
                 return {"status": False, "message": "Invalid token scope.", "code": 401}
+
+            ## Same binding as the access and refresh tokens. The temp token is
+            ## short-lived but it is still a bearer credential, so it is refused
+            ## on a host it was not minted for.
+            tenant_id = current_tenant_id()
+            if tenant_id is None or decoded_payload.get("tenant_id") != tenant_id:
+                return {"status": False, "message": "This MFA session belongs to another hotel.", "code": 401}
 
             user_id = decoded_payload.get("user_id")
             user = self.db.query(User).filter_by(is_deleted=False, id=user_id).first()
@@ -437,6 +452,14 @@ class AuthService:
         user_id = payload.get("user_id")
         if not user_id:
             return {"error": "Invalid refresh token.", "code": 401}
+
+        ## The refresh cookie rides on whatever host the browser is talking to.
+        ## In development two hotels share localhost, so the same cookie is sent
+        ## for both; the claim is what stops acme's cookie from refreshing a
+        ## session at globex. Checked before the user is loaded.
+        tenant_id = current_tenant_id()
+        if tenant_id is None or payload.get("tenant_id") != tenant_id:
+            return {"error": "Refresh token is not valid for this hotel.", "code": 401}
 
         ## Validate user.
         ## NOTE: deliberately no `is_active` filter, so a token issued before a

@@ -7,6 +7,7 @@ from sqlalchemy import exists, and_, not_, func, literal_column
 from src.api.models import Room, RoomBlocks, Reservation, ReservationPrimaryGuest, ReservationAdditionalGuest, Guest
 from src.api.utils.enum_helper import EnumHelper, EnumUnavailableError
 from src.api.utils.responses import service_response
+from src.api.utils.jwt_helper import get_current_user_id
 from sqlalchemy.orm import joinedload, selectinload
 from decimal import Decimal
 from datetime import datetime, timedelta
@@ -546,7 +547,11 @@ class ReservationService:
             total_amount=total_amount,
             total_nights=nights,
             reservation_status=opening_status,
-            created_by=data.get("created_by") or 1,
+            ## The authenticated caller. This used to be `data.get("created_by")
+            ## or 1`, a hardcoded fallback to user 1 that only made sense while
+            ## there was one user; under one database per hotel that is another
+            ## hotel's user id, and the write guard refuses the row.
+            created_by=get_current_user_id(),
             total_adults=total_adults,
             total_children=total_children,
             total_infants=total_infants

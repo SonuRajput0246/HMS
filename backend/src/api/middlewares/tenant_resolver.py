@@ -82,9 +82,9 @@ def _header_slug() -> str | None:
 def resolve_tenant():
     """Resolve the tenant for the current request onto flask.g.
 
-    Never raises for a request that simply names no tenant -- plenty of requests
-    legitimately have none. It raises only when a tenant *was* named and is
-    unusable.
+    Raises when the request names no tenant, or names one that is unusable
+    (unknown, inactive or suspended). The caller runs this only for routes that
+    belong to a hotel -- see init_tenant_resolver and TENANT_EXEMPT_PREFIXES.
     """
     clear_tenant_context()
     g.tenant = None
@@ -102,7 +102,13 @@ def resolve_tenant():
 
     slug = header_slug or host_slug
     if not slug:
-        return None
+        ## Every route this hook covers belongs to a hotel, so a request that
+        ## names none is refused rather than served unscoped. Letting it through
+        ## as "no tenant" would run the request with no tenant filter at all --
+        ## an unscoped `users` lookup on the login route, for instance, could
+        ## match a row from any hotel. Platform routes, which sit above tenants,
+        ## are excluded by TENANT_EXEMPT_PREFIXES before this is reached.
+        raise ResourceNotFoundError("No hotel is associated with this request.")
 
     tenant = TenantService(db_session).find_by_slug(slug)
     if tenant is None:
