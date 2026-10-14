@@ -28,3 +28,14 @@ session_factory = sessionmaker(
 ## 3. Create a Scoped Session
 ## This is thread-safe and perfect for Flask production environments
 db_session = scoped_session(session_factory)
+
+
+## 4. Turn on tenant enforcement
+##
+## Imported for side effect: the module attaches `do_orm_execute` and
+## `before_flush` listeners to the Session class, which is what scopes every
+## read to the current tenant and stamps every write. It lives here, rather than
+## in app.py, so that anything which builds a session -- the app, the seeders,
+## the scripts, a test -- is covered by the same listeners and a new entry point
+## cannot forget to install them.
+import src.database.tenant_enforcement  # noqa: E402,F401

@@ -1,7 +1,8 @@
 # Multi-Tenancy — Architecture & Design
 
-Status: **design agreed. Phase 1 (tenant registry & resolution) and Phase 2 (model scoping) are
-implemented. No enforcement, auth, provisioning or frontend work yet — see §11.**
+Status: **design agreed. Phases 1 (tenant registry & resolution), 2 (model scoping), 3 (enforcement)
+and 5 (provisioning & seeders, brought forward) are implemented and verified in a scratch database.
+Auth, per-tenant config and frontend are not started — see §11.**
 Owner: this repo. Supersedes the earlier `INSTANCE_TYPE` (HMS/CMS) switch, which is gone.
 
 ---
@@ -196,7 +197,11 @@ set_tenant_context(tenant_id)  # request path
 
 ### 5.2 Read and write filtering
 
-One `do_orm_execute` listener on `Session`:
+Implemented in `src/database/tenant_enforcement.py`. The listeners are attached to the `Session`
+class by importing the module, and `src/database/session.py` imports it — so *obtaining a session at
+all* is what turns enforcement on, for the app, the seeders, the scripts and any test alike.
+
+One `do_orm_execute` listener scopes reads and ORM bulk writes:
 
 ```python
 @event.listens_for(Session, "do_orm_execute")
@@ -206,37 +211,67 @@ def _scope_to_tenant(state):
     tenant_id = current_tenant_id()
     if tenant_id is None:
         return
+    if not isinstance(state.statement, (Select, Update, Delete)):
+        return                      # an INSERT has no WHERE; a TextClause has no .options()
     state.statement = state.statement.options(
         with_loader_criteria(TenantScoped, lambda cls: cls.tenant_id == tenant_id,
                              include_aliases=True)
     )
 ```
 
-One `before_flush` listener does two jobs: **stamp** `tenant_id` on new tenant-scoped rows from the
-current context (raising if the context is `None` — an unscoped insert is a programming error, not
-something to default), and **guard** every new/dirty row's tenant-scoped relationships against
-cross-tenant assignment (§3.4, derived from the mapper).
+`Session.get` is wrapped separately, because it answers from the identity map before it emits SQL —
+see §5.3.
+
+One `before_flush` listener does three jobs on the rows about to be written:
+
+- **stamp** `tenant_id` on new tenant-scoped rows from the current context, raising
+  `TenantContextMissingError` when the context is `None` — an unscoped insert is a programming error,
+  not something to default;
+- **guard** object-graph relationships assigned in Python — a tenant-scoped relationship whose
+  target's `tenant_id` differs is refused with `CrossTenantReferenceError`;
+- **guard** scalar foreign keys, batched to one lookup per target class per flush — a foreign key
+  whose target row is not in the current tenant is refused.
+
+The set of guarded edges is **derived from the mapper, not hand-written**: an edge is guarded exactly
+when its target class inherits `TenantScoped`. That is what allows the five tenant → global edges
+(§3.4) without naming them, and what covers a model added later with no edit here.
+`bypass_tenant_filter()` suppresses the read filter but does **not** authorise an unscoped write; a
+cross-tenant write still names its tenant with `tenant_context(tenant_id)`, because a write with no
+tenant is always a bug.
 
 This is **deny-by-default and central**: a new model that inherits `TenantScoped` is filtered
 automatically, and a service that forgets a filter is still safe.
 
-### 5.3 Gaps to close with a spike (Phase 3, before trusting it)
+The refusals are `RuntimeError` subclasses, deliberately *not* `SQLAlchemyError`, so a service that
+wraps `commit()` in `except SQLAlchemyError` cannot swallow them. `CrossTenantReferenceError` maps to
+a 400 in `src/api/utils/error_handlers.py`; `TenantContextMissingError` is a server fault and falls
+through to the generic 500.
 
-These are *not* asserted as working; they are the things the spike must prove or work around:
+### 5.3 Spike results — proven, not assumed
 
-1. **`Session.get()`** — a direct primary-key load may bypass loader criteria. If it does, it needs
-   a wrapper or an enforced ban.
-2. **Bulk `Query.update()` / `delete()`** — `auth_service.logout_user`, the token-revocation in
-   `generate_user_session`, and `role_seeder._assign_role_permissions` all use them today. Whether
-   `with_loader_criteria` reaches ORM-enabled bulk statements must be verified, not assumed.
-3. **`text()` and raw connections** — currently only one fragment on the request path and it is
-   safely inside a `select()`. A static audit script keeps it that way.
-4. **Relationship loading** (`lazy="joined"` on `reservation_sequences.prefix` and others) must not
-   pull an unfiltered parent row.
+All four were probed against a throwaway database before the layer was trusted, and are now asserted
+by the leak test. SQLAlchemy 2.0.44.
 
-A `src/database/scripts/tenant_leak_audit.py`, mirroring the existing
-`audit_authorization.py` idiom, greps for `text(`, `Session.get`, `session.connection(`, bulk
-update/delete, and every `skip_tenant_filter` use — so each one is a reviewed decision.
+1. **`Session.get()`** — the database lookup *is* filtered, but a hit in the identity map returns
+   before any SQL runs, so loader criteria never see it. A row loaded under `bypass_tenant_filter()`
+   therefore stayed visible after the tenant switched. **Closed** by wrapping `Session.get()`: an
+   identity-map hit that belongs to another tenant returns `None`, which is what the read filter would
+   have done had a query run. This is the one real gap the spike found.
+2. **Bulk `Query.update()` / `Query.delete()`** — both fire `do_orm_execute` and honour
+   `with_loader_criteria`; the emitted SQL is scoped, and `synchronize_session` (default `auto`) does
+   not defeat it. So `auth_service.logout_user`, the token revocation in `generate_user_session`,
+   `guest_service.handle_additional_guests`, `admin_service`'s role-permission rewrite and
+   `role_seeder._assign_role_permissions` are all scoped with no change to them.
+3. **`text()` and raw connections** — a raw `TextClause` is skipped by the `isinstance` check, and
+   `tenant_leak_audit.py` fails on any raw SQL executed outside the seeder allowlist. It reads clean.
+4. **Relationship loading** — `include_aliases=True` filters eager-loaded (`lazy="joined"`) parents
+   too; proven against the real eager-loaded `reservations → created_by_user` and
+   `reservation_sequences → prefix` rows.
+
+A `src/database/scripts/tenant_leak_audit.py`, mirroring the existing `audit_authorization.py` idiom,
+greps for `text(`, `Session.get`, `session.connection(`, Core/bulk update/delete, and every
+`skip_tenant_filter` / `bypass_tenant_filter` use — so each one is a reviewed decision. It is
+read-only and needs no database.
 
 ---
 
@@ -377,9 +412,17 @@ can be driven side by side for testing.
 
 ## 9. Verification
 
-- **Leak tests (new).** There is no backend test suite today. Phase 3 introduces one whose first
-  test *fails* before the filter exists: provision tenants A and B, insert one row per tenant-scoped
-  model in A, assert B reads zero. Run per model, so a newly added model is covered automatically.
+- **Leak tests (new, Phase 3).** `src/database/scripts/tenant_leak_test.py`. There is no backend test
+  suite and no `pytest` in the venv, so it is a self-contained, exit-code script in the same idiom as
+  `audit_authorization.py`. It builds a throwaway `hms_leaktest` database with `create_all`, seeds the
+  platform, provisions `acme` and `globex`, and gives tenant A a row in **every** scoped table. It was
+  written first and run against the Phase-2 tree, where it failed (76 passed / 62 failed: B saw A's
+  rows everywhere) — then the enforcement layer was added and it passes **141/141**. It checks:
+  coverage of the boundary; that every scoped model emits a `tenant_id` predicate (captured from the
+  SQL, so a model added later is covered automatically); that B reads none of A's rows, per table; the
+  four §5.3 hazards; and that writes are stamped, an unscoped insert is refused, and a cross-tenant
+  foreign key is refused while the same key inside the tenant is allowed. The database is dropped
+  afterwards; the dev database is never touched.
 - **Seeding (done with Phase 5).** Against a throwaway `hms_seedtest` database built with
   `Base.metadata.create_all`: seed the platform, provision `acme` and `globex`, then assert that each
   holds its own 6 roles, 3 prefixes, 3 sequences, 3 templates, 9 sliders, 1 setting and 1 admin; that
@@ -402,6 +445,19 @@ can be driven side by side for testing.
   `topnav.component.ts:28` reading `localStorage.getItem('token')` when the real key is
   `STORAGE_KEYS.ACCESS_TOKEN` (`'app_accessToken'`). *The second one becomes a tenancy bug in
   Phase 7, so it will likely have to be fixed there anyway.*
+- **Hardcoded tenant-scoped ids the write guard now refuses for any tenant but the first.** These
+  were correct in a single-tenant world and become cross-tenant references once a second hotel
+  exists. Phase 3 makes them fail **closed** (400 / refused), which is the safe direction, but they
+  block the second tenant from those flows and must be fixed before it is used for real:
+  - `reservation_service.py:549` — `created_by=data.get("created_by") or 1`. The acting user is
+    available from `get_current_user_id()` and should be used, the way `cancel_reservation` already
+    sets `cancelled_by` from `g.current_user`. *(Wire in Phase 4, with the actor/JWT work.)*
+  - `payment_service.py:123` — `verified_by=1`. Same fix; same phase.
+  - `auth_service.py:40` — `role_id=1` for a self-registered user, already flagged in-code as
+    `## LATER CHANGE IT & SET CUSTOMER/GUEST ROLE_ID`. There is no `GUEST` role in the seeder yet, so
+    this needs a product decision (which role self-registration grants), not just a lookup. **Note
+    it also means today's public registration hands out the first-seeded role — `SUPER_ADMIN` — which
+    is a live authorization bug independent of tenancy.** *(Phase 4/6.)*
 - `material-module.ts` trimming (previously found unsafe to act on).
 - `user.service.ts`'s 8 legacy methods against endpoints that no longer exist.
 - Group-of-properties modelling — deferred until a chain actually appears.
@@ -414,22 +470,22 @@ can be driven side by side for testing.
 |---|---|---|---|---|
 | 1 | Tenant registry & resolution | **done** | `tenants`, `platform_users` models; `tenant_context`; `before_request` resolution; public tenant-info endpoint | App boots unchanged; `acme` resolves to a tenant; platform routes are skipped |
 | 2 | Model scoping | **done** | `TenantScoped` mixin on every §3.3 model; composite constraints | Models import clean; migrations regenerated by hand |
-| 3 | Enforcement | next | `do_orm_execute` filter, `before_flush` stamp + FK guard, leak audit script, leak tests | Cross-tenant read returns nothing; spike closes §5.3 |
+| 3 | Enforcement | **done** | `do_orm_execute` filter, `before_flush` stamp + FK guard, `Session.get` wrapper, leak audit script, leak tests | `tenant_leak_test.py` **141/141**; `tenant_leak_audit.py` clean; the four §5.3 hazards proven |
 | 4 | Auth integration | | `tenant_id` JWT claim on all token types; `authenticate()` cross-check; host-only refresh cookie; platform auth | Token A rejected on B; suspended tenant 403 |
 | 5 | Provisioning | **done** (early — see §7) | Tenant-aware seeders; `provision_tenant()`; `seed_platform_data` / `seed_tenant_defaults` / `seed_tenant_demo_data` | Two tenants provisioned into a scratch DB, each isolated (see §9) |
 | 6 | Per-tenant config & content | | Per-tenant `system_settings`, templates, branding, email `company_name`, upload paths | Two tenants send differently-branded mail |
 | 7 | Frontend | | Tenant-aware `InstanceService`, `X-Tenant` header, per-tenant token key | Two tenants driven side by side in one browser |
 | 8 | Verification & docs | | Full pass, leakage + request tests, this doc updated | All of §9 green |
 
-Phase 3 is the one that decides whether this is safe. The leak test is written **first and made to
-fail**, then the filter is added to make it pass.
+Phase 3 is the one that decides whether this is safe. The leak test was written **first and made to
+fail** — against the Phase-2 tree it reported **76 passed / 62 failed**, with B seeing A's rows in
+every scoped table — and only then was the filter added to make it pass.
 
-> **Known broken window between Phase 2 and Phase 3.** `tenant_id` is `NOT NULL` with no default and
-> nothing stamps it yet, so *writes* to tenant-scoped tables through the API fail with a NOT NULL
-> violation until the `before_flush` stamp lands. Reads are unaffected. The **seeders are no longer
-> affected**, because Phase 5's seeders set `tenant_id` explicitly instead of waiting to be stamped —
-> which is also what let them be verified against a real database at this point. Do not run the app
-> for real work against a migrated DB until Phase 3 is in.
+> **The Phase-2 → Phase-3 broken window is closed.** While `tenant_id` was `NOT NULL` with nothing
+> stamping it, *writes* to tenant-scoped tables through the API failed with a NOT NULL violation. The
+> `before_flush` stamp now fills `tenant_id` from the request context, so the app can be run against a
+> migrated database. (The seeders were never affected: Phase 5's seeders set `tenant_id` explicitly,
+> which is what let them be verified against a real database early.)
 
 ---
 

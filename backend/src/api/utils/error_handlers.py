@@ -2,6 +2,7 @@ from flask import jsonify
 from marshmallow import ValidationError as MarshmallowError
 from werkzeug.exceptions import HTTPException
 from src.api.utils.errors import APIError
+from src.database.tenant_enforcement import CrossTenantReferenceError
 import logging
 
 def register_error_handlers(app):
@@ -15,6 +16,19 @@ def register_error_handlers(app):
         return jsonify({
             "status": False,
             "message": first_error_message
+        }), 400
+
+    @app.errorhandler(CrossTenantReferenceError)
+    def handle_cross_tenant_reference(error):
+        """400. A row was written that pointed at another tenant's row.
+
+        Raised by the write guard in src/database/tenant_enforcement.py. It is a
+        client-visible refusal rather than a 500 because the id it names came in
+        with the request and does not belong to the tenant being written to.
+        """
+        return jsonify({
+            "status": False,
+            "message": str(error)
         }), 400
 
     @app.errorhandler(APIError)
