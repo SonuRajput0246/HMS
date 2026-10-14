@@ -459,7 +459,7 @@ What landed:
 | Host → slug rule | `core/config/tenant.ts` (`tenantSlugFromHostname`) |
 | Tenant on the wire | `core/http-interceptor.ts` (`X-Tenant`, on every API call) |
 | Per-tenant token keys | `core/config/storage-keys.ts` (`app_accessToken_<slug>`) |
-| Boot + branding | `services/tenant.service.ts`, wired as a second `APP_INITIALIZER` |
+| Boot + branding | `services/tenant.service.ts`, chained after `config.json` in the `APP_INITIALIZER` |
 | Host with no usable hotel | `core/tenant.guard.ts` → the existing `**` 404 route |
 
 A host that names no hotel (`localhost` without a subdomain, an IP) and a host naming a hotel that
