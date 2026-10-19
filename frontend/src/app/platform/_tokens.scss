@@ -1,0 +1,407 @@
+// Shared design tokens for the platform (super admin) console.
+//
+// The console is its own surface, so it carries its own look rather than
+// inheriting the tenant app's prebuilt indigo/pink Material theme: a navy shell
+// with teal accents, matching the newer auth screens. Only variables and a few
+// small mixins live here; every component pulls them in with
+// `@use '../tokens' as *;`.
+//
+// The `#{}` interpolation in the mixins' custom-property values is load-bearing.
+// Sass treats a custom-property value as literal CSS, so a bare `$var` would be
+// emitted verbatim as the text "$var" and silently do nothing.
+
+// ----- palette -----
+$navy: #003366;
+$navy-deep: #04213f;
+$navy-light: #0a4387;
+$navy-soft: #eef3fa;
+// Two steps *deeper* than the track above. The status filter needs them because
+// an unselected segment has to move away from the track to read as hovered --
+// the selected pill beside it is already the lightest surface in the control,
+// so a lighter hover step would have nowhere to go.
+$navy-soft-hover: #d3e0f3;
+$navy-soft-press: #bed0ea;
+
+$teal: #16b4a4;
+$teal-deep: #0e8f83;
+$teal-soft: #e2f6f3;
+
+$page-bg: #f2f6fc;
+$card-bg: #ffffff;
+
+$text: #1c2b3a;
+$text-muted: #64748b;
+$border: #e2e8f0;
+$border-strong: #cdd8e6;
+$placeholder: #b7c4d6;
+
+$success: #15803d;
+$success-soft: #e7f6ec;
+$amber: #b45309;
+$amber-soft: #fdf1e3;
+$neutral: #64748b;
+$neutral-soft: #eef1f6;
+
+// ----- shape, depth, motion -----
+$radius-sm: 8px;
+$radius: 12px;
+$radius-lg: 16px;
+$radius-xl: 20px;
+$topbar-h: 64px;
+$ease: cubic-bezier(0.4, 0, 0.2, 1);
+
+// How hard a control blurs while it is being pressed. Deliberately small: the
+// press should read as a faint softening of the control, never as the label
+// dissolving. Anything at a full pixel or more blurs a 14px glyph into a
+// smudge for the length of the click, which on a filled button looks like the
+// whole face going pale.
+$press-blur: 0.5px;
+
+// The streak that crosses a control on hover. The console default is white,
+// which is right on the dark topbar but wrong on a navy button: against navy
+// that streak read as the button turning white rather than as a highlight.
+// Filled buttons pass this blue instead, so the sheen is a lighter shade of
+// the button's own colour and the face never stops looking blue.
+$press-shine: rgba(111, 168, 220, 0.5);
+
+$shadow-sm: 0 1px 2px rgba(16, 32, 56, 0.06), 0 1px 3px rgba(16, 32, 56, 0.04);
+$shadow-md: 0 6px 16px -4px rgba(16, 32, 56, 0.12), 0 2px 6px -2px rgba(16, 32, 56, 0.06);
+$shadow-lg: 0 18px 36px -14px rgba(4, 33, 63, 0.28);
+$shadow-navy: 0 12px 26px -14px rgba(0, 51, 102, 0.85);
+
+// ----- gradients -----
+$grad-navy: linear-gradient(100deg, #{$navy-deep} 0%, #{$navy} 55%, #{$navy-light} 100%);
+$grad-navy-soft: linear-gradient(140deg, #{$navy} 0%, #{$navy-light} 100%);
+$grad-teal: linear-gradient(140deg, #{$teal} 0%, #{$teal-deep} 100%);
+
+// ----- entrance motion -----
+// Keyframes live here rather than in each component because a @keyframes block
+// is global once emitted: whichever screen routes in plays the same motion, and
+// stagger is passed per element.
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@mixin rise-in($delay: 0s) {
+  animation: rise-in 0.45s $ease both;
+  animation-delay: $delay;
+}
+
+// ----- surfaces -----
+@mixin panel {
+  border: 1px solid $border;
+  border-radius: $radius-lg;
+  background: $card-bg;
+  box-shadow: $shadow-sm;
+}
+
+// A hairline of colour along the top edge of a surface. Reads as a highlight
+// from the light above without needing an extra element.
+@mixin top-edge($color) {
+  position: relative;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 3px;
+    border-radius: $radius-lg $radius-lg 0 0;
+    background: $color;
+  }
+}
+
+// ----- page furniture, shared by every console screen -----
+@mixin page-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+@mixin eyebrow {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: $teal-deep;
+}
+
+@mixin title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: $navy;
+}
+
+@mixin subtitle {
+  margin: 6px 0 0;
+  font-size: 13.5px;
+  color: $text-muted;
+}
+
+// ----- Material widgets, retinted -----
+//
+// Every block is qualified with the real MDC host class and written as
+// `<class>.<mdc class>`. Once Angular appends its scope attribute that is
+// three class-level selectors, which outranks the prebuilt theme's two-class
+// rules like `.mat-mdc-unelevated-button.mat-primary` no matter which
+// stylesheet the browser sees first.
+//
+// Colours arrive as CSS custom properties because that is the only handle the
+// theme leaves open: the declarations it makes on `html` are overridable from
+// any ancestor element, and the properties inherit down to the MDC internals.
+
+// `$state-layer` is the colour Material paints over the face while the button
+// is hovered or held down (~4% and ~12%). It defaults to the label colour,
+// which is Material's own convention, but on a filled navy button that white
+// veil is what makes the face go pale under the cursor -- pass a lighter shade
+// of `$bg` instead and the press deepens the colour rather than bleaching it.
+// The two tokens below are NOT interchangeable, and treating them alike is what
+// floods a button solid on press:
+//
+//   * `state-layer-color` is painted *opaque* and dialled down by the separate
+//     `*-state-layer-opacity` tokens (4% hover, 12% press), so it takes a
+//     solid colour.
+//   * `ripple-color` is applied to `.mat-ripple-element` at full opacity --
+//     Angular Material sets only `transform`, and there is no `opacity` rule
+//     for a button's ripple the way there is for checkbox, radio and tab. So
+//     the alpha has to be baked in here. Material's own values are
+//     `rgba(63, 81, 181, .1)`, never a solid.
+//
+// Handing the ripple a solid colour therefore paints the expanding circle at
+// 100%, and since the ripple grows to cover the whole control, the face reads
+// as a different colour outright for as long as the press is held.
+@mixin mdc-filled-button($bg, $fg, $state-layer: $fg) {
+  &.mat-mdc-unelevated-button {
+    --mdc-filled-button-container-color: #{$bg};
+    --mdc-filled-button-label-text-color: #{$fg};
+    --mdc-filled-button-container-shape: #{$radius-sm};
+    // A disabled action must not look like a faded brand button -- the indigo
+    // theme paints it blue, which reads as "primary, just faded". Neutral grey
+    // with muted text makes the unavailable state unmistakable.
+    --mdc-filled-button-disabled-container-color: #e3e8ef;
+    --mdc-filled-button-disabled-label-text-color: #9aa7b8;
+    --mat-filled-button-state-layer-color: #{$state-layer};
+    --mat-filled-button-ripple-color: #{rgba($state-layer, 0.1)};
+  }
+}
+
+@mixin mdc-outlined-button($fg, $outline) {
+  &.mat-mdc-outlined-button {
+    --mdc-outlined-button-label-text-color: #{$fg};
+    --mdc-outlined-button-outline-color: #{$outline};
+    --mdc-outlined-button-container-shape: #{$radius-sm};
+    --mat-outlined-button-state-layer-color: #{$fg};
+    // Alpha in the token -- see the note above. Solid navy here turned the
+    // Refresh button completely blue under the finger.
+    --mat-outlined-button-ripple-color: #{rgba($fg, 0.1)};
+  }
+}
+
+@mixin mdc-outlined-field {
+  &.mat-mdc-form-field {
+    --mdc-outlined-text-field-container-shape: #{$radius-sm};
+    --mdc-outlined-text-field-outline-color: #{$border-strong};
+    --mdc-outlined-text-field-hover-outline-color: #{$navy-light};
+    --mdc-outlined-text-field-focus-outline-color: #{$navy};
+    --mdc-outlined-text-field-focus-outline-width: 2px;
+    --mdc-outlined-text-field-label-text-color: #{$text-muted};
+    --mdc-outlined-text-field-hover-label-text-color: #{$navy};
+    --mdc-outlined-text-field-focus-label-text-color: #{$navy};
+    --mdc-outlined-text-field-input-text-color: #{$text};
+    --mdc-outlined-text-field-input-text-placeholder-color: #{$placeholder};
+    --mdc-outlined-text-field-caret-color: #{$navy};
+  }
+}
+
+// ----- button interaction, shared by every console control -----
+//
+// One rule for the whole console: **a hover never repaints the surface.**
+// Material already paints a state layer on hover and press, so changing the
+// background as well produced a muddy double-darkening on the filled buttons
+// and made "hover" and "active" nearly indistinguishable.
+//
+// Instead each variant expresses its states as lift + shadow + a single
+// deliberate colour step, which keeps hover, press, focus and disabled
+// readable on every button without five sets of near-identical colours.
+
+@keyframes btn-sweep {
+  0% {
+    transform: skewX(-20deg) translateX(0);
+    opacity: 0;
+  }
+
+  20% {
+    opacity: 1;
+  }
+
+  100% {
+    transform: skewX(-20deg) translateX(300%);
+    opacity: 0;
+  }
+}
+
+// A light streak crossing the control. Transform-only so it runs on the
+// compositor instead of relayouting every frame, and it rides above the label
+// because a sheen is meant to be seen passing over the text.
+@mixin sweep($shine: rgba(255, 255, 255, 0.5), $pseudo: '::after') {
+  position: relative;
+  overflow: hidden;
+
+  &#{$pseudo} {
+    content: '';
+    position: absolute;
+    top: -30%;
+    bottom: -30%;
+    left: -80%;
+    width: 45%;
+    pointer-events: none;
+    background: linear-gradient(100deg, transparent 0%, $shine 50%, transparent 100%);
+    transform: skewX(-20deg);
+    opacity: 0;
+  }
+
+  // Nested rather than chained as `&:hover...#{&}::after`: Sass only allows `&`
+  // at the start of a compound selector.
+  &:hover:not([disabled]):not(.mat-mdc-button-disabled) {
+    &#{$pseudo} {
+      animation: btn-sweep 0.8s $ease;
+    }
+  }
+}
+
+// The press half of the contract, on its own. Controls that Material renders
+// with a shape of their own -- toggle segments, paginator arrows, menu items --
+// cannot take `console-button` (it would override their radius and colour), but
+// they must still feel identical when pressed, so they pull this in directly.
+//
+// Every consumer must list `filter` in its own transition: the 0.05s here is
+// only the *in*, and the recovery easing comes from wherever `filter` is
+// declared on the base state.
+//
+// `$blur` is a parameter so a caller can tune it, but the default is already
+// the "little blur" the whole console shares -- only reach for the argument
+// when a control genuinely needs to differ.
+@mixin press-sink($blur: $press-blur) {
+  transform: translateY(1px);
+  box-shadow: inset 0 2px 6px rgba(4, 33, 63, 0.3);
+  filter: blur($blur);
+  // Snaps in; the base rule's slower duration eases it back out on release.
+  transition-duration: 0.05s;
+}
+
+@mixin console-button($shine: rgba(255, 255, 255, 0.5), $blur: $press-blur) {
+  position: relative;
+  border-radius: $radius-sm;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  overflow: hidden;
+  // Durations only -- the curve is declared once below. Repeating
+  // `$ease` after each property cost ~130 bytes of CSS in every component that
+  // includes this mixin, and a single `transition-timing-function` ends up
+  // applying to exactly the same list.
+  transition: transform 0.16s, box-shadow 0.16s, border-color 0.16s,
+    background-color 0.16s, color 0.16s,
+    // Blur settles back more slowly than it arrives: a symmetric tween makes
+    // the press read as a flicker instead of an impact.
+    filter 0.22s;
+  transition-timing-function: $ease;
+
+  @include sweep($shine);
+
+  &:hover:not([disabled]):not(.mat-mdc-button-disabled) {
+    transform: translateY(-1px);
+  }
+
+  // Pushed in, not shrunk. The button travels one pixel into the surface, the
+  // surface closes over it, and the whole control blurs under the finger.
+  &:active:not([disabled]):not(.mat-mdc-button-disabled) {
+    @include press-sink($blur);
+  }
+
+  // Keyboard-only. :focus-visible keeps the ring off mouse clicks, which is
+  // what stops a navy button from flashing a teal halo on every press.
+  &:focus-visible {
+    outline: 2px solid $teal;
+    outline-offset: 2px;
+  }
+
+  &:disabled,
+  &.mat-mdc-button-disabled {
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+}
+
+// The filled variant's only job is the hover lift's coloured shadow. It must
+// NOT restate an active box-shadow: that would win the cascade against
+// `console-button`'s inner shadow and cancel the sink.
+@mixin filled-button-feedback {
+  &:hover:not([disabled]) {
+    box-shadow: $shadow-navy;
+  }
+}
+
+// The outline variant has no fill to deepen, so it gains a faint navy tint on
+// hover -- one deliberate colour step, exactly as the contract above allows.
+//
+// Press deliberately does NOT repaint the face a second time. Material is
+// already taking the state layer from 4% to 12%, and stacking a stronger tint
+// under that is the "muddy double-darkening" the contract warns about: the two
+// additions landed on a clearly blue face rather than a pressed one. The press
+// reads instead through `press-sink` and the state-layer step. The outline is
+// restated here for touch, where `:hover` may never have applied.
+@mixin outlined-button-feedback {
+  &:hover:not([disabled]) {
+    --mdc-outlined-button-outline-color: #{$navy};
+    background: $navy-soft;
+  }
+
+  &:active:not([disabled]) {
+    --mdc-outlined-button-outline-color: #{$navy};
+  }
+}
+
+// Icon-sized buttons. Self-contained: these are used where the surrounding
+// rules set their own radius and colour, so they carry their own transition
+// (including `filter`, which `press-sink` relies on) rather than inheriting
+// `console-button`'s. The focus ring sits on the button's own circle rather
+// than outside it.
+//
+// `$blur` is a parameter for the same reason as in `press-sink`, but the shared
+// default is the right amount even here -- a sub-pixel blur still lands.
+@mixin icon-button-feedback($tint: $navy-soft, $blur: $press-blur) {
+  border-radius: 50%;
+  transition: transform 0.16s, box-shadow 0.16s, background-color 0.16s,
+    filter 0.22s;
+  transition-timing-function: $ease;
+
+  &:hover:not([disabled]) {
+    transform: translateY(-1px);
+    background: $tint;
+  }
+
+  &:active:not([disabled]) {
+    @include press-sink($blur);
+  }
+
+  &:focus-visible {
+    outline: 2px solid $teal;
+    outline-offset: -2px;
+  }
+}

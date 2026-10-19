@@ -25,6 +25,8 @@ from datetime import datetime, timezone
 from sqlalchemy import select
 
 from src.api.models import Tenant
+from src.api.utils.tenant_settings import DEFAULT_SETTINGS
+from src.config import get_config
 from src.database.seeders.login_slider_seeder import seed_login_sliders
 from src.database.seeders.prefixes_seeder import seed_prefixes
 from src.database.seeders.reservation_sequence_seeder import seed_reservation_sequences
@@ -36,13 +38,27 @@ from src.database.session import db_session
 from src.database.tenant_context import tenant_context
 
 
-def get_or_create_tenant(slug: str, name: str) -> Tenant:
+def get_or_create_tenant(
+    slug: str,
+    name: str,
+    timezone_name: str | None = None,
+    currency: str | None = None,
+) -> Tenant:
     """The tenant with this slug, creating it if it is new.
 
     Lookup is by `slug` because slug is the tenant's identity: it is the
     subdomain and the JWT claim, so it is the thing callers already hold. `name`
     is only a label, and is refreshed when it differs -- nothing depends on it
     holding still, and a stale display name is worse than a write.
+
+    `timezone_name` and `currency` are the registry facts the platform console
+    sets at creation time. Both fall back to the install-wide defaults
+    (`BUSINESS_TIMEZONE` and the seeded `default_currency`) so a development
+    bootstrap that never mentions them still produces a usable hotel.
+
+    Like `name`, they are refreshed on an existing row. That is what makes
+    re-running provisioning repair a half-finished one rather than only ever
+    adding to it.
 
     The row is committed before any seeding starts. Seeders each own their
     session and commit independently, so a tenant that is not durable first
@@ -52,9 +68,21 @@ def get_or_create_tenant(slug: str, name: str) -> Tenant:
         select(Tenant).filter_by(slug=slug, is_deleted=False)
     ).scalar_one_or_none()
 
+    timezone_name = timezone_name or get_config().BUSINESS_TIMEZONE
+    currency = currency or DEFAULT_SETTINGS["default_currency"]
+
     if tenant is not None:
+        changed = False
         if tenant.name != name:
             tenant.name = name
+            changed = True
+        if tenant.timezone != timezone_name:
+            tenant.timezone = timezone_name
+            changed = True
+        if tenant.currency != currency:
+            tenant.currency = currency
+            changed = True
+        if changed:
             tenant.updated_at = datetime.now(timezone.utc)
             db_session.commit()
         return tenant
@@ -62,8 +90,9 @@ def get_or_create_tenant(slug: str, name: str) -> Tenant:
     tenant = Tenant(
         slug=slug,
         name=name,
+        timezone=timezone_name,
+        currency=currency,
         is_active=True,
-        is_suspended=False,
         created_at=datetime.now(timezone.utc),
         updated_at=datetime.now(timezone.utc),
     )
@@ -72,7 +101,7 @@ def get_or_create_tenant(slug: str, name: str) -> Tenant:
     return tenant
 
 
-def seed_tenant_defaults(tenant_id: int) -> None:
+def seed_tenant_defaults(tenant_id: int, currency: str | None = None) -> None:
     """Seed the rows every working hotel needs, and only those.
 
     Order is dependency order, not alphabetical: `prefixes` before
@@ -80,11 +109,15 @@ def seed_tenant_defaults(tenant_id: int) -> None:
     sequence seeder resolves prefixes by id. `roles` is last only because it is
     the heaviest -- it reads the global `modules` tree, which `seed_platform_data`
     must have seeded already or every role comes out with no permissions.
+
+    `currency` is threaded into `system_settings` so the hotel's own
+    `default_currency` starts as the code the registry says it trades in,
+    rather than the install-wide default the hotel was about to be wrong about.
     """
     with tenant_context(tenant_id):
         seed_prefixes(tenant_id)
         seed_reservation_sequences(tenant_id)
-        seed_system_settings(tenant_id)
+        seed_system_settings(tenant_id, currency=currency)
         seed_templates(tenant_id)
         seed_login_sliders(tenant_id)
         seed_roles(tenant_id)
@@ -98,6 +131,8 @@ def provision_tenant(
     admin_first_name: str = "Hotel",
     admin_last_name: str = "Admin",
     role_code: str = "SUPER_ADMIN",
+    timezone_name: str | None = None,
+    currency: str | None = None,
 ) -> Tenant:
     """A working, empty, isolated hotel with one admin who can sign in.
 
@@ -106,7 +141,7 @@ def provision_tenant(
     and reporting success there would be a lie the support queue then has to
     untangle.
     """
-    tenant = get_or_create_tenant(slug, name)
+    tenant = get_or_create_tenant(slug, name, timezone_name=timezone_name, currency=currency)
 
     ## Capture the id now, as a plain int. Every seeder below closes its session
     ## via db_session.remove() when it finishes, which detaches this instance --
@@ -114,9 +149,10 @@ def provision_tenant(
     ## instead of returning a number. The id does not go stale; the ORM object
     ## does.
     tenant_id = tenant.id
+    effective_currency = tenant.currency
 
     with tenant_context(tenant_id):
-        seed_tenant_defaults(tenant_id)
+        seed_tenant_defaults(tenant_id, currency=effective_currency)
         seed_super_admin(
             tenant_id,
             email=admin_email,

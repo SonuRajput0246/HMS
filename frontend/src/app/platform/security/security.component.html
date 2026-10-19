@@ -1,0 +1,138 @@
+<div class="security-page">
+  <header class="page-head">
+    <div class="page-title">
+      <span class="eyebrow">Platform</span>
+      <h1>Security</h1>
+      <p>Your own password and two-factor settings.</p>
+    </div>
+  </header>
+
+  <div class="identity-card" *ngIf="profile">
+    <span class="avatar">{{ (profile.first_name || '?').charAt(0).toUpperCase() }}</span>
+    <div class="identity-meta">
+      <span class="name">{{ profile.first_name }} {{ profile.last_name }}</span>
+      <span class="email">{{ profile.email }}</span>
+    </div>
+    <span class="mfa-state" [class.on]="mfaEnabled()" [class.off]="!mfaEnabled()">
+      <mat-icon>{{ mfaEnabled() ? 'verified_user' : 'gpp_maybe' }}</mat-icon>
+      {{ mfaEnabled() ? 'Two-factor enabled' : 'Two-factor setup incomplete' }}
+    </span>
+  </div>
+
+  <div class="cards">
+    <!-- Password -->
+    <section class="card">
+      <div class="card-head">
+        <span class="card-icon"><mat-icon>lock_reset</mat-icon></span>
+        <div>
+          <h2>Change password</h2>
+          <p>You stay signed in on this device after changing it.</p>
+        </div>
+      </div>
+
+      <form [formGroup]="passwordForm" (ngSubmit)="changePassword()" class="card-form">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Current password</mat-label>
+          <input matInput type="password" formControlName="current_password" autocomplete="current-password">
+          <mat-error *ngIf="passwordForm.get('current_password')?.hasError('required')">
+            Current password is required
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>New password</mat-label>
+          <input matInput type="password" formControlName="new_password" autocomplete="new-password">
+          <mat-hint>6–20 characters</mat-hint>
+          <mat-error *ngIf="passwordForm.get('new_password')?.hasError('required')">
+            New password is required
+          </mat-error>
+          <mat-error *ngIf="passwordForm.get('new_password')?.hasError('minlength') || passwordForm.get('new_password')?.hasError('maxlength')">
+            Password must be 6–20 characters
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Confirm new password</mat-label>
+          <input matInput type="password" formControlName="confirm_password" autocomplete="new-password">
+          <mat-error *ngIf="passwordForm.hasError('mismatch') && passwordForm.get('confirm_password')?.touched">
+            Passwords do not match
+          </mat-error>
+          <mat-error *ngIf="passwordForm.hasError('unchanged') && passwordForm.get('new_password')?.touched">
+            New password must differ from the current one
+          </mat-error>
+        </mat-form-field>
+
+        <button mat-flat-button color="primary" class="btn-primary" type="submit" [disabled]="isSavingPassword">
+          {{ isSavingPassword ? 'Updating...' : 'Update password' }}
+        </button>
+      </form>
+    </section>
+
+    <!-- Two-factor -->
+    <section class="card">
+      <div class="card-head">
+        <span class="card-icon teal"><mat-icon>phonelink_lock</mat-icon></span>
+        <div>
+          <h2>Two-factor authentication</h2>
+          <p>Require a 6-digit code from your authenticator app at sign-in.</p>
+        </div>
+      </div>
+
+      <!-- Reconfigure: a fresh secret first, active only once a code proves it. -->
+      <div class="mfa-setup" *ngIf="mfaSetup() as setup; else mfaStateBlock">
+        <p class="setup-step">1. Scan this code in your authenticator app.</p>
+        <div class="qr-holder">
+          <qrcode [qrdata]="setup.qr_uri" [width]="188" [errorCorrectionLevel]="'M'"></qrcode>
+        </div>
+        <p class="secret-line">
+          Or enter this key manually:
+          <code>{{ setup.secret }}</code>
+          <button mat-icon-button class="copy-btn" type="button" matTooltip="Copy key" (click)="copySecret()">
+            <mat-icon>content_copy</mat-icon>
+          </button>
+        </p>
+
+        <p class="setup-step">2. Enter the code it shows to switch to the new app.</p>
+        <form [formGroup]="mfaForm" (ngSubmit)="confirmMfa()" class="confirm-form">
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="code-field">
+            <mat-label>Verification code</mat-label>
+            <input matInput type="text" inputmode="numeric" maxlength="6" formControlName="totp"
+                   autocomplete="one-time-code" placeholder="000000">
+            <mat-error *ngIf="mfaForm.get('totp')?.hasError('required')">Code is required</mat-error>
+            <mat-error *ngIf="mfaForm.get('totp')?.hasError('pattern')">Enter the 6-digit code</mat-error>
+          </mat-form-field>
+
+          <button mat-flat-button color="primary" class="btn-primary" type="submit" [disabled]="isSavingMfa">
+            {{ isSavingMfa ? 'Confirming...' : 'Confirm new app' }}
+          </button>
+          <button mat-stroked-button class="btn-outline" type="button" (click)="cancelMfaSetup()" [disabled]="isSavingMfa">
+            Cancel
+          </button>
+        </form>
+      </div>
+
+      <ng-template #mfaStateBlock>
+        <div class="mfa-state">
+          <span class="state-pill" [class.on]="mfaEnabled()" [class.off]="!mfaEnabled()">
+            <mat-icon>{{ mfaEnabled() ? 'verified_user' : 'gpp_maybe' }}</mat-icon>
+            {{ mfaEnabled() ? 'Required and enabled' : 'Setup incomplete' }}
+          </span>
+          <p class="state-copy">
+            {{ mfaEnabled()
+              ? 'A verification code is required each time you sign in, and it cannot be turned off.'
+              : 'Finish setting up your authenticator app. Your next sign-in will ask you to complete this.' }}
+          </p>
+
+          <!-- No off switch: a compulsory second factor is not something a
+               single operator can decline to carry. -->
+          <button mat-flat-button color="primary" class="btn-primary"
+                  type="button" (click)="beginMfaSetup()" [disabled]="isSavingMfa">
+            {{ isSavingMfa
+                ? 'Starting...'
+                : (mfaEnabled() ? 'Reconfigure authenticator app' : 'Set up authenticator app') }}
+          </button>
+        </div>
+      </ng-template>
+    </section>
+  </div>
+</div>

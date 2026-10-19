@@ -7,10 +7,12 @@ import { InstanceHomeRedirectComponent } from './core/instance-home-redirect.com
 import { routes as appRoutes } from './app-routing.module';
 import { PageNotFoundComponent } from './shared/page-not-found/page-not-found.component';
 import { UnauthorizedAccessComponent } from './shared/unauthorized-access/unauthorized-access.component';
+import { platformHostMatch, tenantHostMatch } from './core/platform-host.guard';
 
 /**
  * Covers the root redirect and the structural invariants of the real route
- * table.
+ * table, including the host split that keeps the platform console and the hotel
+ * app from reaching each other.
  *
  * These tests use a stub feature route rather than the real hms table. The real
  * table pulls in a lazy module full of Material components and services that
@@ -152,15 +154,61 @@ describe('root routing', () => {
   });
 
   it('the real root route renders the redirect component', () => {
-    expect(appRoutes.find(r => r.path === '')?.component)
+    // The redirect now lives inside the hotel shell, one level below the host
+    // guard, so the route carrying it is `''` *with a tenant host* rather than
+    // the top-level `''`. See the shell note in app-routing.module.ts.
+    const tenantShell = appRoutes.find(
+      r => r.path === '' && r.canMatch?.includes(tenantHostMatch)
+    );
+    expect(tenantShell?.children?.find(r => r.path === '')?.component)
       .toBe(InstanceHomeRedirectComponent);
   });
 
-  it('the real table mounts auth and hms lazily, and nothing else', () => {
-    expect(appRoutes.find(r => r.path === 'auth')?.loadChildren).toBeDefined();
-    expect(appRoutes.find(r => r.path === 'hms')?.loadChildren).toBeDefined();
-    expect(appRoutes.map(r => r.path).sort())
-      .toEqual(['', '**', 'auth', 'hms', 'unauthorized-access']);
+  it('the hotel tree mounts auth and hms lazily, and nothing else', () => {
+    const tenantShell = appRoutes.find(
+      r => r.path === '' && r.canMatch?.includes(tenantHostMatch)
+    );
+    const paths = (tenantShell?.children ?? []).map(r => r.path).sort();
+    expect(paths).toEqual(['', 'auth', 'hms']);
+    expect(tenantShell?.children?.find(r => r.path === 'auth')?.loadChildren)
+      .toBeDefined();
+    expect(tenantShell?.children?.find(r => r.path === 'hms')?.loadChildren)
+      .toBeDefined();
+  });
+
+  it('the console is lazy-loaded behind the platform host guard', () => {
+    // canMatch rather than canActivate, so the console's chunks are never
+    // fetched on a hotel host -- which is the whole reason for the split.
+    const platformShell = appRoutes.find(
+      r => r.path === '' && r.canMatch?.includes(platformHostMatch)
+    );
+    const mount = platformShell?.children?.find(r => r.path === 'platform');
+    expect(mount?.loadChildren).toBeDefined();
+    expect(mount?.component).toBeUndefined();
+  });
+
+  it('exactly two host shells exist, and they are guarded, not redirected', () => {
+    const shells = appRoutes.filter(r => r.path === '');
+    expect(shells.length).toBe(2);
+    expect(shells.every(r => r.canMatch?.length)).toBe(true);
+    // A canMatch is not evaluated on a route carrying a redirectTo, so a
+    // guarded shell must never be one.
+    expect(shells.every(r => !r.redirectTo)).toBe(true);
+  });
+
+  it('the console host redirects the sign-in URLs an operator would try', () => {
+    const platformShell = appRoutes.find(
+      r => r.path === '' && r.canMatch?.includes(platformHostMatch)
+    );
+    const redirects = (platformShell?.children ?? [])
+      .filter(r => r.redirectTo)
+      .map(r => `${r.path} -> ${r.redirectTo}`);
+
+    // `auth` and `auth/login` are both here because an operator's bookmark, and
+    // muscle memory from the hotel app, both point at the sign-in path.
+    expect(redirects).toContain(' -> platform/dashboard');
+    expect(redirects).toContain('auth/login -> platform/login');
+    expect(redirects).toContain('auth -> platform/login');
   });
 
   it('the 403 route is declared before the catch-all', () => {

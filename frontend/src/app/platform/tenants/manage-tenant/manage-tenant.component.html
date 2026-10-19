@@ -1,0 +1,210 @@
+<div class="manage-page">
+  <header class="page-head">
+    <div class="page-title">
+      <span class="eyebrow">{{ isEdit ? 'Platform · Hotel' : 'Platform · New' }}</span>
+      <h1>{{ isEdit ? 'Edit hotel' : 'New hotel' }}</h1>
+      <p>
+        {{ isEdit
+            ? 'Update this hotel\'s details. Changing the subdomain moves its URL.'
+            : 'Register a hotel and its first administrator.' }}
+      </p>
+    </div>
+
+    <button mat-stroked-button class="btn-outline" (click)="goBack()" [disabled]="isSaving">
+      <mat-icon>arrow_back</mat-icon>
+      Back
+    </button>
+  </header>
+
+  <div class="loader-wrap" *ngIf="isLoading">
+    <app-page-loader></app-page-loader>
+  </div>
+
+  <mat-card class="form-card" *ngIf="!isLoading">
+    <form [formGroup]="form" (ngSubmit)="save()">
+      <div class="section-head">
+        <span class="step">01</span>
+        <div>
+          <h2>Hotel</h2>
+          <p class="section-hint">Identity and regional defaults for this hotel.</p>
+        </div>
+      </div>
+
+      <div class="grid">
+        <mat-form-field appearance="outline">
+          <mat-label>Name</mat-label>
+          <input matInput formControlName="name" placeholder="Demo Hotel">
+          <mat-error *ngIf="form.get('name')?.hasError('required')">Name is required</mat-error>
+          <mat-error *ngIf="form.get('name')?.hasError('maxlength')">Name is too long</mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Subdomain</mat-label>
+          <input matInput formControlName="slug" placeholder="demo">
+          <span class="suffix" matSuffix>.{{ hostSuffix }}</span>
+          <mat-hint>Lowercase letters, numbers and hyphens.</mat-hint>
+          <mat-error *ngIf="form.get('slug')?.hasError('required')">Subdomain is required</mat-error>
+          <mat-error
+            *ngIf="form.get('slug')?.hasError('pattern') || form.get('slug')?.hasError('minlength')">
+            Use lowercase letters, numbers and hyphens (2-63 characters).
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Timezone</mat-label>
+          <mat-select formControlName="timezone" panelClass="console-select-panel">
+            <mat-option>
+              <ngx-mat-select-search
+                [formControl]="timezoneFilter"
+                placeholderLabel="Search timezone"
+                noEntriesFoundLabel="No matching timezone"
+                ariaLabel="Search timezone">
+              </ngx-mat-select-search>
+            </mat-option>
+            <mat-option *ngFor="let tz of filteredTimezones" [value]="tz.name">
+              {{ tz.name }}
+            </mat-option>
+          </mat-select>
+          <mat-hint *ngIf="isLookupsLoading">Loading timezones...</mat-hint>
+          <mat-hint *ngIf="!isLookupsLoading">IANA zone, e.g. Asia/Kolkata.</mat-hint>
+          <mat-error *ngIf="form.get('timezone')?.hasError('required')">Timezone is required</mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Currency</mat-label>
+          <mat-select formControlName="currency" panelClass="console-select-panel">
+            <mat-option>
+              <ngx-mat-select-search
+                [formControl]="currencyFilter"
+                placeholderLabel="Search currency"
+                noEntriesFoundLabel="No matching currency"
+                ariaLabel="Search currency">
+              </ngx-mat-select-search>
+            </mat-option>
+            <mat-option *ngFor="let c of filteredCurrencies" [value]="c.code">
+              {{ currencyLabel(c) }}
+            </mat-option>
+          </mat-select>
+          <mat-hint *ngIf="isLookupsLoading">Loading currencies...</mat-hint>
+          <mat-hint *ngIf="!isLookupsLoading">3-letter ISO 4217 code.</mat-hint>
+          <mat-error *ngIf="form.get('currency')?.hasError('required')">Currency is required</mat-error>
+          <mat-error *ngIf="form.get('currency')?.hasError('pattern')">
+            Use a 3-letter code, e.g. INR.
+          </mat-error>
+        </mat-form-field>
+      </div>
+
+      <div class="url-preview">
+        <span class="url-icon"><mat-icon>language</mat-icon></span>
+        <span class="url-text">
+          <span class="url-label">Hotel URL</span>
+          <span class="url-value">{{ tenantHost }}</span>
+        </span>
+        <span class="url-note">Derived from the subdomain</span>
+      </div>
+
+      <ng-container *ngIf="!isEdit">
+        <div class="section-head">
+          <span class="step">02</span>
+          <div>
+            <h2>First administrator</h2>
+            <p class="section-hint">These credentials are handed to the hotel owner out of band.</p>
+          </div>
+        </div>
+
+        <div class="grid">
+          <mat-form-field appearance="outline">
+            <mat-label>First name</mat-label>
+            <input matInput formControlName="admin_first_name">
+            <mat-error *ngIf="form.get('admin_first_name')?.hasError('required')">
+              First name is required
+            </mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Last name</mat-label>
+            <input matInput formControlName="admin_last_name">
+            <mat-error *ngIf="form.get('admin_last_name')?.hasError('required')">
+              Last name is required
+            </mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Email</mat-label>
+            <input matInput type="email" formControlName="admin_email">
+            <mat-error *ngIf="form.get('admin_email')?.hasError('required')">Email is required</mat-error>
+            <mat-error *ngIf="form.get('admin_email')?.hasError('email')">Enter a valid email</mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Password</mat-label>
+            <input matInput type="password" formControlName="admin_password">
+            <mat-hint>Between 6 and 20 characters.</mat-hint>
+            <mat-error *ngIf="form.get('admin_password')?.hasError('required')">
+              Password is required
+            </mat-error>
+            <mat-error *ngIf="form.get('admin_password')?.hasError('minlength')">
+              At least 6 characters
+            </mat-error>
+            <mat-error *ngIf="form.get('admin_password')?.hasError('maxlength')">
+              At most 20 characters
+            </mat-error>
+          </mat-form-field>
+        </div>
+      </ng-container>
+
+      <div class="actions">
+        <button mat-stroked-button class="btn-outline" type="button" (click)="goBack()" [disabled]="isSaving">
+          Cancel
+        </button>
+        <button mat-flat-button color="primary" class="btn-primary" type="submit"
+                [disabled]="isSaving">
+          {{ isSaving ? 'Saving...' : (isEdit ? 'Save changes' : 'Create hotel') }}
+        </button>
+      </div>
+    </form>
+  </mat-card>
+
+  <!-- Per-hotel history: the trail this hotel has already written. Only an
+       existing hotel has one, so this never renders on create. -->
+  <mat-card class="history-card" *ngIf="isEdit && !isLoading">
+    <div class="history-head">
+      <div class="history-title">
+        <mat-icon>history</mat-icon>
+        <div>
+          <h2>Recent activity</h2>
+          <p>
+            {{ historyTotal
+                ? historyTotal + ' recorded change' + (historyTotal === 1 ? '' : 's')
+                : 'Nothing recorded yet' }}
+          </p>
+        </div>
+      </div>
+
+      <button mat-stroked-button class="btn-outline" *ngIf="historyTotal > tenantHistory.length"
+              type="button" (click)="viewFullHistory()">
+        View all
+      </button>
+    </div>
+
+    <div class="history-body">
+      <mat-spinner *ngIf="isHistoryLoading" diameter="24"></mat-spinner>
+
+      <div class="history-empty" *ngIf="!isHistoryLoading && tenantHistory.length === 0">
+        <mat-icon>edit_note</mat-icon>
+        <p>No changes recorded for this hotel yet.</p>
+      </div>
+
+      <ul class="history-list" *ngIf="!isHistoryLoading && tenantHistory.length > 0">
+        <li *ngFor="let log of tenantHistory">
+          <span class="history-action">{{ log.action }}</span>
+          <span class="history-summary" *ngIf="historySummary(log)">{{ historySummary(log) }}</span>
+          <span class="history-meta">
+            {{ log.actor_email || 'system' }}
+            <ng-container *ngIf="log.created_at"> · {{ log.created_at | date: 'mediumDate' }}</ng-container>
+          </span>
+        </li>
+      </ul>
+    </div>
+  </mat-card>
+</div>

@@ -1,3 +1,5 @@
+from zoneinfo import available_timezones
+
 from src.api.models import LoginSliders, Country, State, City, Currency, EnumDefinition, EnumOption
 from src.api.utils.responses import service_response
 
@@ -124,6 +126,33 @@ class CommonService:
         return {
             "status": True,
             "data": currencies_list
+        }, 200
+
+
+    def get_all_timezones_list(self, data: dict):
+        """Every IANA zone a hotel can be configured with, optionally filtered.
+
+        Served from `zoneinfo` rather than a table so the list is exactly the one
+        `TenantManagementService` validates against -- a zone offered here can
+        never be rejected at save time, and a tzdata upgrade (adding or retiring
+        a zone) moves both sides together. No rows, no migration.
+
+        Reached two ways: the hotel-side `/api/v1/common` routes for a tenant's
+        own settings screen, and the platform console's `/lookups/timezones` for
+        the create-tenant form. Both want the same list.
+        """
+        search_value = data.get("search_value")
+        zones = sorted(available_timezones())
+
+        if search_value:
+            val = search_value.strip().lower()
+            zones = [zone for zone in zones if val in zone.lower()]
+
+        timezones_list = [{"name": zone} for zone in zones]
+
+        return {
+            "status": True,
+            "data": timezones_list
         }, 200
 
     def get_enum_options(self, data: dict):

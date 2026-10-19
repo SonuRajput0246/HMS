@@ -85,7 +85,7 @@ def build_scratch_database():
     import src.api.events.guest_events  # noqa: F401
     import src.api.events.payment_events  # noqa: F401
     import src.api.events.tenant_events  # noqa: F401
-    import src.api.events.platform_user_events  # noqa: F401
+    import src.api.events.super_admin_events  # noqa: F401
 
     from src.database.base import Base
     Base.metadata.create_all(scratch)

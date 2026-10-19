@@ -24,7 +24,11 @@ from src.api.routes.inventory_route import inventory_bp
 from src.api.routes.room_route import room_bp
 from src.api.routes.guest_route import guest_bp
 from src.api.routes.reservation_route import reservation_bp
-from src.api.routes.platform_route import platform_bp
+
+## Platform administration, above every hotel. Registered under the platform
+## namespace because its guard, its identity table and its lack of a tenant
+## context are all different from the routes above.
+from src.api.routes.super_admin_route import super_admin_bp
 
 ## Event listeners. Imported purely for side effect: each module registers
 ## SQLAlchemy before_insert / before_update hooks as it is imported. That is not
@@ -40,7 +44,7 @@ import src.api.events.reservation_events
 import src.api.events.guest_events
 import src.api.events.payment_events
 import src.api.events.tenant_events
-import src.api.events.platform_user_events
+import src.api.events.super_admin_events
 
 def create_app():
     app = Flask(__name__)
@@ -98,8 +102,8 @@ def create_app():
 
     ## Platform administration, above every hotel. Exempt from tenant resolution
     ## (see TENANT_EXEMPT_PREFIXES) and gated by its own secret; see
-    ## src/api/middlewares/platform_auth.py.
-    app.register_blueprint(platform_bp, url_prefix="/api/v1/platform")
+    ## src/api/middlewares/super_admin_auth.py.
+    app.register_blueprint(super_admin_bp, url_prefix="/api/v1/platform")
 
     @app.teardown_appcontext
     def shutdown_session(exception=None):

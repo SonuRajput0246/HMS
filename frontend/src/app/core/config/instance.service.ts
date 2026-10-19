@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { isPlatformHost } from '../platform-host';
 import { tenantSlugFromHostname } from './tenant';
 
 /**
@@ -17,6 +18,16 @@ import { tenantSlugFromHostname } from './tenant';
 export class InstanceService {
 
   /**
+   * Whether this host serves the platform console rather than a hotel.
+   *
+   * Resolved once, at construction, like `slug`. It is what stops the hotel
+   * half of the app from running on a console host: the boot sequence skips
+   * `tenant-info` entirely, so the console never issues a request that would 404
+   * and never ends up in the "unknown hotel" state that `TenantGuard` reads.
+   */
+  readonly isPlatform = isPlatformHost();
+
+  /**
    * The hotel this deployment serves, taken from the subdomain.
    *
    * Resolved once, at construction: the host cannot change without a reload, so
@@ -24,8 +35,14 @@ export class InstanceService {
    * `localhost`, an IP -- which the app treats as a 404, matching the API,
    * rather than guessing which hotel was meant. An apex domain is not null; it
    * yields a label that names no hotel and 404s the same way. See `tenant.ts`.
+   *
+   * Forced to `null` on the platform host, where the subdomain is the console's
+   * own reserved label rather than a hotel's. Left as-is it would make the boot
+   * resolve a tenant called `admin`, which does not exist and must not.
    */
-  readonly slug = tenantSlugFromHostname(window.location.hostname);
+  readonly slug = this.isPlatform
+    ? null
+    : tenantSlugFromHostname(window.location.hostname);
 
   /** Whether the host names a hotel at all. */
   readonly hasTenant = this.slug !== null;

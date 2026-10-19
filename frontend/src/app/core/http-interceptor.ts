@@ -12,8 +12,21 @@ import { catchError, filter, switchMap, take } from 'rxjs/operators';
 import { Router } from '@angular/router';
 import { AppConfig } from '../core/config/config';
 import { STORAGE_KEYS } from './config/storage-keys';
+import { PLATFORM_ACCESS_TOKEN_KEY, PLATFORM_PROFILE_KEY } from './config/platform-storage';
 import { InstanceService } from './config/instance.service';
 import { TENANT_HEADER } from './config/tenant';
+
+/**
+ * The API namespace that carries the platform session.
+ *
+ * A platform caller belongs to no hotel, so every call under it is
+ * authenticated with the platform token and travels with no tenant header.
+ * Matching on the path rather than on the current host is deliberate: it holds
+ * on the console host *and* anywhere else a stray platform call is made, so a
+ * mis-routed request is refused by the server rather than being sent with a
+ * hotel token attached.
+ */
+const PLATFORM_API = '/api/v1/platform';
 
 
 @Injectable()
@@ -32,21 +45,28 @@ export class HttpIntercept implements HttpInterceptor {
 
     intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
 
-        const accessToken = sessionStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
+        const isPlatformApi = req.url.includes(`${PLATFORM_API}/`);
+
+        //// The console and the hotel app share this browser, so the two
+        //// sessions are told apart by URL: a call to the platform API carries
+        //// the platform token, everything else carries the hotel token.
+        const accessToken = isPlatformApi
+            ? sessionStorage.getItem(PLATFORM_ACCESS_TOKEN_KEY)
+            : sessionStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
 
         //// Do NOT attach token for login or public APIs
         const isPublicApi =
             req.url.includes('/auth/login') ||
             req.url.includes('/auth/get-fresh-token') ||
             req.url.includes('/assets/');
-        
-        let authReq = req;
+
+        //// A platform caller has no hotel, so it must not send a slug --
+        //// doing so would make the backend read it as a hotel request.
+        let authReq = isPlatformApi ? req : this.addTenant(req);
 
         if (accessToken && !isPublicApi) {
             authReq = this.addToken(authReq, accessToken);
         }
-
-        authReq = this.addTenant(authReq);
 
         return next.handle(authReq).pipe(
             catchError((error: HttpErrorResponse) => {
@@ -59,9 +79,14 @@ export class HttpIntercept implements HttpInterceptor {
                     authReq.url.includes('/user-account/update-password') ||
                     authReq.url.includes('/auth/activate-account');
                 if (error.status === 401 && !isPublicApi && !isAuthOrValidationApi) {
+                    //// The hotel refresh mints a hotel token, which the
+                    //// platform API rejects; a platform 401 is terminal.
+                    if (isPlatformApi) {
+                        return this.handlePlatform401();
+                    }
                     return this.handle401Error(authReq, next);
                 }
-                
+
                 return throwError(() => error);
             })
         );
@@ -144,5 +169,22 @@ export class HttpIntercept implements HttpInterceptor {
         localStorage.clear();
         this.router.navigate(['/auth/login']);
         return throwError(() => new Error('Session expired'));
+    }
+
+    /**
+     * A platform token cannot be refreshed: `/auth/get-fresh-token` is the hotel
+     * endpoint and signs a hotel token, which the platform API refuses at the
+     * signature check. So a 401 here clears the platform session and returns to
+     * the console's sign-in.
+     *
+     * Only the platform keys are removed. `sessionStorage.clear()` would sign the
+     * operator out of every hotel in other tabs too, which is not what "your
+     * console session expired" means.
+     */
+    private handlePlatform401(): Observable<never> {
+        sessionStorage.removeItem(PLATFORM_ACCESS_TOKEN_KEY);
+        localStorage.removeItem(PLATFORM_PROFILE_KEY);
+        this.router.navigate(['/platform/login'], { replaceUrl: true });
+        return throwError(() => new Error('Platform session expired'));
     }
 }

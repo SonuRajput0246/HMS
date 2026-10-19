@@ -1,0 +1,413 @@
+@use '../tokens' as *;
+
+// The console is a full-height shell with its own scroll region rather than a
+// page that scrolls the document. `html, body { overflow: hidden }` is set
+// globally, so anything taller than the viewport would otherwise be clipped
+// with no way to reach it.
+.platform-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: $page-bg;
+}
+
+.topbar {
+  position: relative;
+  flex: 0 0 auto;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: $topbar-h;
+  padding: 0 22px;
+  box-sizing: border-box;
+  color: #ffffff;
+  // Drifts slowly across the bar so the header is never quite static.
+  background:
+    radial-gradient(120% 220% at 88% -70%, rgba($teal, 0.5) 0%, rgba($teal, 0) 56%),
+    linear-gradient(100deg, $navy-deep 0%, $navy 52%, $navy-light 100%);
+  background-size: 180% 100%, 180% 100%;
+  box-shadow: 0 8px 24px -12px rgba(4, 33, 63, 0.85);
+  animation: topbar-drift 24s ease-in-out infinite;
+
+  // A hairline of teal where the bar meets the page.
+  &::after {
+    content: '';
+    position: absolute;
+    inset: auto 0 -1px 0;
+    height: 2px;
+    background: linear-gradient(90deg, rgba($teal, 0.85) 0%, rgba($teal, 0) 45%);
+  }
+}
+
+@keyframes topbar-drift {
+  0%,
+  100% {
+    background-position: 0% 0, 0% 0;
+  }
+
+  50% {
+    background-position: 100% 0, 100% 0;
+  }
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 10px;
+  margin-left: -10px;
+  border-radius: $radius;
+  color: inherit;
+  text-decoration: none;
+  transition: background-color 0.2s $ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.08);
+  }
+}
+.brand-badge {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  background: linear-gradient(140deg, $teal 0%, $teal-deep 100%);
+  box-shadow: 0 8px 16px -8px rgba(22, 180, 164, 0.9);
+
+  mat-icon {
+    width: 22px;
+    height: 22px;
+    font-size: 22px;
+    color: #ffffff;
+  }
+}
+
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.brand-name {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.brand-eyebrow {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.links {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  .nav-link {
+    position: relative;
+    height: 40px;
+    padding: 0 16px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    color: rgba(255, 255, 255, 0.78);
+
+    // The label is painted from the token, not from `color`, so both are set.
+    --mdc-text-button-label-text-color: #{rgba(#ffffff, 0.78)};
+    // Both of Material's white veils are switched off. These pills sit on the
+    // navy bar, where a white state layer (12% on press) plus a white ripple
+    // plus the white sheen stacked into a pale flash that read as the whole
+    // button turning white under the cursor. The blur is the press feedback.
+    --mat-text-button-state-layer-color: transparent;
+    --mat-text-button-ripple-color: transparent;
+
+    transition: background-color 0.2s $ease, color 0.2s $ease,
+      transform 0.16s $ease, filter 0.22s $ease;
+
+    mat-icon {
+      width: 19px;
+      height: 19px;
+      margin-right: 6px;
+      font-size: 19px;
+      color: inherit;
+    }
+
+    &:hover {
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    // No sheen here. A highlight has to be lighter than the surface it crosses,
+    // and on this navy bar the only lighter option is white -- the exact flash
+    // that made the pill look like it vanished. The press is the shared sink
+    // and little blur, and that is all it needs.
+    &:active {
+      @include press-sink;
+    }
+
+    // White rather than teal: the ring sits on navy, where a teal outline has
+    // far less contrast against the bar than it does on a white page.
+    &:focus-visible {
+      outline: 2px solid rgba(255, 255, 255, 0.85);
+      outline-offset: 2px;
+    }
+
+    // The active pill is marked by the teal underline alone. It used to carry a
+    // 16% white fill and a white hairline ring as well, which on the navy bar
+    // made the section you had just clicked the lightest thing on screen.
+    &.active-link {
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.1);
+
+      --mdc-text-button-label-text-color: #ffffff;
+
+      &::after {
+        content: '';
+        position: absolute;
+        inset: auto 16px -1px 16px;
+        height: 2px;
+        border-radius: 2px 2px 0 0;
+        background: $teal;
+      }
+    }
+  }
+}
+
+.spacer {
+  flex: 1 1 auto;
+}
+
+// A plain button, not a `mat-icon-button`: the avatar lockup needs its own
+// layout, and this keeps the colour handling in one place.
+.account {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 10px 4px 5px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  font: inherit;
+  cursor: pointer;
+  transition: background-color 0.2s $ease, border-color 0.2s $ease,
+    transform 0.16s $ease, filter 0.22s $ease;
+
+  // Same reasoning as the nav pills: no sheen, because on the navy bar a sheen
+  // can only be white. Press is the shared sink and little blur.
+  &:hover {
+    background: rgba(255, 255, 255, 0.16);
+    border-color: rgba(255, 255, 255, 0.32);
+  }
+
+  &:active {
+    @include press-sink;
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba(255, 255, 255, 0.85);
+    outline-offset: 2px;
+  }
+}
+
+.avatar {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(140deg, $teal 0%, $teal-deep 100%);
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.account-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.2;
+  text-align: left;
+}
+
+.account-name {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.account-role {
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.account-caret {
+  width: 20px;
+  height: 20px;
+  font-size: 20px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.content {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 28px 32px 44px;
+  box-sizing: border-box;
+  background:
+    radial-gradient(70% 50% at 100% 0%, rgba($navy-light, 0.06) 0%, rgba($navy-light, 0) 60%),
+    $page-bg;
+
+  // The routed screen is the only real child here, so animating direct children
+  // gives every page the same entrance without each one restating it. The
+  // outlet element itself is skipped.
+  > *:not(router-outlet) {
+    @include rise-in;
+  }
+}
+
+// The panel below is rendered in the CDK overlay, not under `:host`, so these
+// rules are deliberately unprefixed. Angular's scope attribute still matches
+// them because the nodes come from this template.
+.menu-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: $navy-soft;
+  border-bottom: 1px solid $border;
+}
+
+.menu-avatar {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(140deg, $navy 0%, $navy-light 100%);
+  color: #ffffff;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.menu-id {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.menu-name {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: $navy;
+}
+
+.menu-email {
+  overflow: hidden;
+  font-size: 12px;
+  color: $text-muted;
+  text-overflow: ellipsis;
+}
+
+// The security link is the ordinary, non-destructive action in the menu, so it
+// keeps the console's navy rather than the sign-out amber.
+//
+// Deliberately NOT `menu-item`: that class is used across the tenant app and
+// carries a global `.menu-item .mat-mdc-menu-item-text { text-align: center }`
+// rule (see styles.scss). Reusing it here centred this label while its icon
+// stayed left, which read as a large gap. `menu-security` keeps the platform
+// menu clear of that global.
+.menu-security {
+  --mat-menu-item-label-text-color: #{$navy};
+  --mat-menu-item-icon-color: #{$navy};
+  --mat-menu-item-hover-state-layer-color: #{$navy-soft};
+  --mat-menu-item-focus-state-layer-color: #{$navy-soft};
+
+  font-weight: 600;
+  transition: background-color 0.16s $ease;
+
+  &:hover:not([disabled]) {
+    background: $navy-soft;
+  }
+}
+
+// Sign-out is the one destructive action in the menu, so it is the one tinted
+// amber rather than navy -- the icon alone is too quiet to carry that warning.
+.menu-signout {
+  --mat-menu-item-label-text-color: #{$amber};
+  --mat-menu-item-icon-color: #{$amber};
+  --mat-menu-item-hover-state-layer-color: #{$amber-soft};
+  --mat-menu-item-focus-state-layer-color: #{$amber-soft};
+
+  font-weight: 600;
+  transition: background-color 0.16s $ease, transform 0.16s $ease,
+    filter 0.22s $ease;
+
+  &:hover:not([disabled]) {
+    background: $amber-soft;
+  }
+
+  // The menu item is a button too, so pressing it blurs and sinks like the
+  // rest -- a menu row that merely changed colour would have felt detached.
+  &:active:not([disabled]) {
+    @include press-sink;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $teal;
+    outline-offset: -2px;
+  }
+
+  &[disabled] {
+    --mat-menu-item-label-text-color: #{$placeholder};
+    --mat-menu-item-icon-color: #{$placeholder};
+  }
+}
+
+// The panel lives in the CDK overlay, outside this component's view, so it is
+// reached with ::ng-deep. Material renders the panel `overflow: auto`; the
+// sign-out row sinks 1px on press (`press-sink`), and against the panel's flush
+// bottom edge that 1px of overflow made it flash a scrollbar on click. This is
+// a short, fixed account menu with nothing to scroll, so clip the overflow.
+//
+// `.mat-mdc-menu-panel` is in the selector deliberately: Material's own
+// `.mat-mdc-menu-panel { overflow: auto }` is injected *after* this component's
+// styles (it arrives when MatMenu first renders), so a bare
+// `.platform-account-menu` would tie on specificity and lose on source order.
+// Two classes outrank it outright, whatever the order.
+::ng-deep .mat-mdc-menu-panel.platform-account-menu {
+  overflow: hidden;
+}
+
+@media (max-width: 900px) {
+  .brand-eyebrow {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .topbar {
+    gap: 10px;
+    padding: 0 14px;
+  }
+
+  .content {
+    padding: 20px 16px 36px;
+  }
+
+  .account-meta {
+    display: none;
+  }
+
+  .links .nav-link {
+    padding: 0 12px;
+  }
+}

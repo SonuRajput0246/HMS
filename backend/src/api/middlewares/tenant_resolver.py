@@ -42,6 +42,37 @@ from src.database.tenant_context import clear_tenant_context, set_tenant_context
 TENANT_EXEMPT_PREFIXES = ("/api/v1/platform", "/static")
 
 
+## Host labels the platform keeps for itself. A hotel is addressed by a
+## subdomain, so a slug that collides with one of these would either shadow the
+## platform console or shadow the API that serves it. Enforced at creation time
+## by the platform console rather than at resolve time, so the refusal happens
+## where an operator can act on it.
+RESERVED_SLUGS: frozenset[str] = frozenset({
+    "localhost",
+    "www",
+    "api",
+    "app",
+    "admin",
+    "platform",
+    "superadmin",
+    "super-admin",
+    "sa",
+    "panel",
+    "console",
+})
+
+
+def is_reserved_slug(slug: str | None) -> bool:
+    """Is this slug claimed by the platform rather than a hotel?
+
+    Case- and whitespace-insensitive, because the comparison happens against
+    whatever an operator typed into a form, not against a normalised value.
+    """
+    if not slug:
+        return False
+    return slug.strip().lower() in RESERVED_SLUGS
+
+
 def _host_slug() -> str | None:
     """The leading label of the Host header, when the host is a tenant host.
 
@@ -83,8 +114,12 @@ def resolve_tenant():
     """Resolve the tenant for the current request onto flask.g.
 
     Raises when the request names no tenant, or names one that is unusable
-    (unknown, inactive or suspended). The caller runs this only for routes that
-    belong to a hotel -- see init_tenant_resolver and TENANT_EXEMPT_PREFIXES.
+    (unknown, or deactivated). The caller runs this only for routes that belong
+    to a hotel -- see init_tenant_resolver and TENANT_EXEMPT_PREFIXES.
+
+    An archived tenant never reaches here: `TenantService.find_by_slug` filters
+    `is_deleted`, so it reads as unknown rather than as a third kind of
+    unusable hotel.
     """
     clear_tenant_context()
     g.tenant = None
@@ -116,9 +151,6 @@ def resolve_tenant():
 
     if not tenant.is_active:
         raise ForbiddenError("This account is not active.")
-
-    if tenant.is_suspended:
-        raise ForbiddenError(tenant.suspended_reason or "This account is suspended.")
 
     g.tenant = tenant
     g.tenant_id = tenant.id

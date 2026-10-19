@@ -20,7 +20,16 @@ it and therefore gets the full registry.
 from .tenant_model import Tenant
 from .role_model import Role
 from .user_model import User
-from .platform_user_model import PlatformUser
+
+## Platform identity. Global, like `tenants` itself: neither carries a
+## `tenant_id`, and neither is reachable from a hotel token. `super_admin_tokens`
+## is a parent-by-FK of `super_admin_users`, so it is imported after it.
+from .super_admin_user_model import SuperAdminUser
+from .super_admin_token_model import SuperAdminToken
+
+## The platform activity trail. Also global -- see the docstring on the model.
+from .audit_log_model import AuditLog
+
 from .token_model import Token
 from .email_otp_model import EmailOTP
 from .module_model import Module

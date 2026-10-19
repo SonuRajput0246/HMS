@@ -5,7 +5,7 @@ from src.database.seeders._seeding import resolve_tenant_id, safe_error
 from src.database.session import db_session
 
 
-def seed_system_settings(tenant_id: int | None = None):
+def seed_system_settings(tenant_id: int | None = None, currency: str | None = None):
     """Seed the settings every hotel starts with.
 
     The data lives in `tenant_settings.DEFAULT_SETTINGS`, not here, because the
@@ -13,9 +13,16 @@ def seed_system_settings(tenant_id: int | None = None):
     instead of two that can drift.
 
     `company_name` is the exception: it is resolved to the hotel's own display
-    name, so a freshly provisioned hotel sends mail that names it without
-    anyone editing a setting first. An existing `company_name` is never
-    overwritten, so an admin's later edit survives a re-run.
+    name, so a freshly provisioned hotel sends mail that names it without anyone
+    editing a setting first. An existing `company_name` is never overwritten, so
+    an admin's later edit survives a re-run.
+
+    `currency` overrides `default_currency` for a hotel the platform console
+    created with an explicit code. Like `company_name` it is only applied when
+    the row does not exist yet -- provisioning a hotel that already has settings
+    must not reset a currency its staff have since changed. The registry stays
+    the operator's control; see `TenantManagementService._sync_currency_setting`
+    for the path that does change it.
     """
     tenant_id = resolve_tenant_id(tenant_id)
     try:
@@ -26,6 +33,8 @@ def seed_system_settings(tenant_id: int | None = None):
         rows = dict(DEFAULT_SETTINGS)
         if tenant is not None:
             rows["company_name"] = tenant.name
+        if currency:
+            rows["default_currency"] = currency.upper()
 
         for key, value in rows.items():
             ## Modern 2.0 syntax: Check if category exists.

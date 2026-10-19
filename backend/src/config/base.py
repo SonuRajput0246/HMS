@@ -28,7 +28,7 @@ class BaseConfig:
     ## Deliberately a different secret from the tenant JWT above, so a token
     ## minted for a hotel can never be accepted on a platform route and a
     ## platform token can never be accepted on a hotel route -- even if one
-    ## secret leaks, the other stays useless. See docs/multi-tenancy.md §6.3.
+    ## secret leaks, the other stays useless. See docs/multi-tenancy.md section 6.3.
     ##
     ## Unset by default on purpose: platform routes then refuse every call with a
     ## loud error instead of degrading into "any token is fine". Set it in .env
@@ -36,6 +36,45 @@ class BaseConfig:
     PLATFORM_JWT_SECRET_KEY = os.getenv("PLATFORM_JWT_SECRET_KEY")
     PLATFORM_JWT_ALGORITHM = os.getenv("PLATFORM_JWT_ALGO", "HS256")
     PLATFORM_JWT_EXPIRES_MIN = int(os.getenv("PLATFORM_JWT_EXPIRES_MIN", 60))
+
+    ## Platform console session lifetime.
+    ##
+    ## The platform admin has no refresh cookie of its own, so this expiry is the
+    ## whole session lifetime. It defaults longer than the 30-minute hotel access
+    ## token because an operator switching hotels would otherwise be logged out
+    ## mid-work, but short enough that a stolen token goes stale. The platform
+    ## token is also revocable through `super_admin_tokens`, so this is a
+    ## backstop rather than the only defence.
+    SUPER_ADMIN_TOKEN_EXPIRES_MIN = int(os.getenv("SUPER_ADMIN_TOKEN_EXPIRES_MIN", 60))
+
+    ## Brute-force guard on the platform sign-in. After this many consecutive
+    ## wrong passwords the account is locked for `SUPER_ADMIN_LOCKOUT_MINUTES`;
+    ## a correct password clears the counter. The platform login is the most
+    ## valuable one on the system -- it has no tenant scope -- so it is the one
+    ## that most needs a ceiling on guesses.
+    SUPER_ADMIN_MAX_LOGIN_ATTEMPTS = int(os.getenv("SUPER_ADMIN_MAX_LOGIN_ATTEMPTS", 5))
+    SUPER_ADMIN_LOCKOUT_MINUTES = int(os.getenv("SUPER_ADMIN_LOCKOUT_MINUTES", 15))
+
+    ## Bootstrap credentials for the FIRST platform admin, seeded by
+    ## src/database/seeders/platform_admin_seeder.py. Overridable per
+    ## environment; the defaults exist so a fresh database can be signed into at
+    ## all, and MUST be changed before anything is exposed.
+    PLATFORM_ADMIN_EMAIL = os.getenv("PLATFORM_ADMIN_EMAIL", "platform@admin.local")
+    PLATFORM_ADMIN_PASSWORD = os.getenv("PLATFORM_ADMIN_PASSWORD", "Platform@123")
+    PLATFORM_ADMIN_FIRST_NAME = os.getenv("PLATFORM_ADMIN_FIRST_NAME", "Platform")
+    PLATFORM_ADMIN_LAST_NAME = os.getenv("PLATFORM_ADMIN_LAST_NAME", "Admin")
+
+    ## The public origin this deployment is reached at. Handed to the platform
+    ## console by `GET /api/v1/platform/config` so one build serves every
+    ## environment and the panel can never print a development host in
+    ## production.
+    ##
+    ##   development  PUBLIC_BASE_URL=http://localhost:4200
+    ##   production   PUBLIC_BASE_URL=https://console.example.com
+    ##
+    ## Read ONCE, at process start: editing `.env` does not change a running
+    ## server. Restart the backend, then reload the console.
+    PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "http://localhost:4200")
 
     ## Multi-tenancy
     ##

@@ -634,3 +634,288 @@ div.swal2-container.swal-container-css {
     outline-offset: 2px;
   }
 }
+
+//==========================================================================//
+//  Platform (super admin) console                                          //
+//==========================================================================//
+//  Everything below is the console's own chrome. It lives in this global
+//  stylesheet for two reasons, both of them about the CDK overlay:
+//
+//    * MatPaginator opts out of style encapsulation entirely, so a component
+//      stylesheet cannot reach it at all.
+//    * Every panel below -- the page-size option list, the select dropdowns --
+//      is rendered under <body> in the overlay, outside the view of the
+//  component that opened it. A `::ng-deep` rule could reach it, but every
+//  component that copied the block would silently restyle every other page's
+//  dropdown, and the copies would drift apart.
+//
+//  One copy, globally, is the fix. The panel classes are opt-in:
+//  `panelClass="console-select-panel"` on any <mat-select>, and
+//  PAGE_SIZE_SELECT_CONFIG in shared/paginator-config.ts bound through
+//  [selectConfig] on any <mat-paginator>.
+//
+//  Colours are literals to match this file, which has no token partial of its
+//  own. They are the same values as platform/_tokens.scss ($navy #003366,
+//  $teal #16b4a4, and so on).
+//==========================================================================////------------ List page paginator (compact, one line) ----------//
+// Shared by the platform console's list pages (hotels, administrators, activity), which
+// all wrap their <mat-paginator> in a .table-footer. It lives here rather than
+// in one component's stylesheet because MatPaginator opts out of style
+// encapsulation, and because the option list is rendered in the CDK overlay,
+// outside every component's view.
+//
+// Material's own look is kept — only sizes, gaps and vertical alignment are
+// touched, so the bar reads as one centred line. Stock: an 84px x 40px trigger
+// opening 48px rows in 16px type, the group set on a text baseline, and a bar
+// that may wrap onto two lines.
+
+// The page-size trigger. Its height comes from the two container tokens
+// (infix min-height + its vertical padding). They are set here rather than via
+// the paginator's own --mat-paginator-form-field-* pair because that pair is
+// only substituted into --mat-form-field-container-* on the <mat-paginator>
+// host, so changing it further down never reaches this field.
+.table-footer .mat-mdc-paginator-page-size-select {
+  --mat-form-field-container-height: 26px;
+  --mat-form-field-container-vertical-padding: 0;
+
+  width: 50px;
+
+  // Stock 16px side padding would be a third of a 50px chip.
+  .mat-mdc-text-field-wrapper {
+    padding: 0 5px 0 7px;
+  }
+
+  // Stock arrow wrapper is 24px tall around a 10px caret.
+  .mat-mdc-select-arrow-wrapper {
+    height: 18px;
+  }
+
+  // Material centres this field's content on the text baseline
+  // (.mat-mdc-form-field-flex { align-items: baseline }), which drops the value
+  // a pixel or two inside the chip. Centre it in the box the container-height
+  // token gives the field instead.
+  .mat-mdc-form-field-flex {
+    align-items: center;
+  }
+
+  .mat-mdc-form-field-infix {
+    display: flex;
+    align-items: center;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+
+  // The trigger is an inline-flex box sitting on a line box inside <mat-select>,
+  // so its centre is set by that line box rather than by the field: about a
+  // pixel low. Flex on both boxes puts it dead centre.
+  mat-select.mat-mdc-select {
+    display: flex;
+    align-items: center;
+  }
+
+  .mat-mdc-select-trigger {
+    display: flex;
+  }
+}
+
+.table-footer .mat-mdc-paginator {
+  // Stock `wrap` lets the bar break onto two lines in a narrow window; the
+  // items are sized to fit, so keep them on one.
+  .mat-mdc-paginator-container {
+    flex-wrap: nowrap;
+  }
+
+  // Stock: 8px after the page-size group, 4px either side of its label, 4px
+  // either side of the select, then 24px/32px around the range label — about
+  // 70px of air around three items.
+  .mat-mdc-paginator-page-size {
+    align-items: center; // stock `baseline` reads as a half-dropped row
+    flex-wrap: nowrap;
+    margin-right: 8px;
+
+    .mat-mdc-paginator-page-size-label {
+      margin: 0 6px 0 0;
+    }
+
+    .mat-mdc-paginator-page-size-select {
+      margin: 0;
+    }
+  }
+
+  .mat-mdc-paginator-range-label {
+    margin: 0 8px 0 8px;
+  }
+
+  // The four arrows are 48px icon buttons sitting flush against each other, so
+  // their glyphs stay ~48px apart however tight the margins above get. Matched
+  // on the attribute, not a class: MatIconButton's host classes are
+  // `mat-mdc-icon-button mat-mdc-button-base`, so `button.mat-icon-button`
+  // never matches.
+  .mat-mdc-paginator-range-actions button[mat-icon-button] {
+    --mdc-icon-button-state-layer-size: 36px;
+    display: inline-flex; // stock `block`, which left the SVG on a baseline
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0 !important; // Material's own 12px would refill the button
+
+    // Both dimensions: MatIconButton's own rule pins the SVG to 24x24, so a
+    // width on its own would stretch the glyph instead of shrinking it.
+    .mat-mdc-paginator-icon {
+      width: 20px;
+      height: 20px;
+    }
+  }
+}
+
+// Option list. Reached through .cdk-overlay-container because the panel is
+// built outside the component that opened it; the class itself comes from
+// PAGE_SIZE_SELECT_CONFIG in shared/paginator-config.ts, bound to each
+// <mat-paginator> through [selectConfig].
+.cdk-overlay-container div.compact-page-size-panel.mat-mdc-select-panel {
+  min-width: 56px;
+  max-height: 160px;
+  padding: 4px 0; // stock 8px 0
+
+  // Row height as a token, so MDC's hard `height` shrinks with it.
+  --mdc-list-list-item-one-line-container-height: 28px;
+  // MatOption sizes its label from these (the .mdc-list-item__primary-text
+  // inside it just inherits), so they are what actually moves 16px -> 12.5px.
+  --mat-option-label-text-size: 12.5px;
+  --mat-option-label-text-line-height: 16px;
+
+  .mat-mdc-option {
+    height: 28px;
+    min-height: 28px;
+    padding: 0 10px;
+  }
+}
+
+
+//------------ Select option list (navy/teal) ----------//
+// The app's one dropdown option list. Opt into it with
+// `panelClass="console-select-panel"` on any <mat-select>.
+//
+// It lives here rather than in a component stylesheet for two reasons.
+// MatSelect renders its panel in the CDK overlay under <body>, outside the
+// component that opened it. A component rule *can* reach it -- written
+// `::ng-deep .cdk-overlay-container ...`, which compiles unscoped -- but that
+// is precisely the problem: every component that copies the block silently
+// restyles every other page's dropdown, and the copies drift apart. It also
+// already had six near-identical variants scattered across cms/*, each pinned
+// to one panelClass. One copy, globally, is the fix.
+//
+// Colours are literals to match this file, which has no token partial of its
+// own. They are the same values as platform/_tokens.scss ($navy #003366,
+// $teal #16b4a4, and so on).
+.cdk-overlay-container div.console-select-panel.mat-mdc-select-panel {
+  --mat-select-panel-background-color: #ffffff;
+
+  background-color: #ffffff;
+  border: 1px solid #cdd8e6;
+  border-radius: 12px;
+  padding: 6px;
+  box-shadow: 0 18px 36px -14px rgba(4, 33, 63, 0.28);
+  overflow-y: auto;
+
+  // MatSelect sizes the panel to the trigger via an inline width, so this is
+  // only a floor. It exists so a narrow field cannot ellipsise a long option
+  // label ("America/Argentina/Buenos_Aires") in the list.
+  min-width: 240px;
+}
+
+.console-select-panel .mat-mdc-option {
+  min-height: 36px;
+  padding: 0 12px;
+  margin: 1px 0;
+  border-radius: 9px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #1c2b3a;
+
+  // real mouse hover -- the only "selected-looking" highlight
+  &:hover:not(.mat-mdc-option-disabled) {
+    background: #eef3fa;
+    color: #003366;
+  }
+
+  // keyboard "active" option: stay invisible so it never looks pre-hovered
+  &.mat-mdc-option-active:not(:hover) {
+    background: transparent;
+    color: #1c2b3a;
+  }
+
+  // selected option: teal accent plus a left rule, no check box
+  &.mat-mdc-option-selected:not(.mat-mdc-option-disabled) {
+    background: #e2f6f3;
+    color: #16b4a4;
+    box-shadow: inset 3px 0 0 #16b4a4;
+
+    .mdc-list-item__primary-text {
+      font-weight: 700;
+    }
+  }
+
+  .mat-pseudo-checkbox {
+    display: none;
+  }
+}
+
+// ngx-mat-select-search parks a form field inside the FIRST mat-option, so it
+// inherits the option row's height, padding and hover above and reads as a
+// selectable entry. :has() is what separates the two -- nothing else on the
+// element distinguishes the search row from a real option.
+.console-select-panel mat-option:has(ngx-mat-select-search) {
+  min-height: 0;
+  padding: 0 0 6px;
+  margin: 0 0 4px;
+  background: transparent;
+  border-bottom: 1px solid #e2e8f0;
+  border-radius: 0 0 9px 9px;
+
+  &:hover {
+    background: transparent;
+  }
+
+  // The search box itself, trimmed to the row height of the options around it.
+  .mat-mdc-form-field {
+    --mat-form-field-container-height: 34px;
+    --mat-form-field-container-vertical-padding: 6px;
+    font-size: 12.5px;
+  }
+
+  .mat-mdc-text-field-wrapper {
+    background: #f8fafd;
+    border-radius: 9px !important;
+  }
+
+  .mdc-notched-outline__leading {
+    border-radius: 9px 0 0 9px !important;
+  }
+
+  .mdc-notched-outline__trailing {
+    border-radius: 0 9px 9px 0 !important;
+  }
+
+  .mdc-notched-outline > * {
+    border-color: #d5e0ee !important;
+  }
+
+  .mat-mdc-input-element,
+  .mat-mdc-floating-label {
+    font-size: 12.5px !important;
+  }
+
+  .mat-mdc-form-field-icon-prefix,
+  .mat-mdc-form-field-icon-suffix {
+    color: #003366;
+    padding: 0 8px !important;
+  }
+}
+
+
+
+
+
+

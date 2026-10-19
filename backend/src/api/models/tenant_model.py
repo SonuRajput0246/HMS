@@ -1,10 +1,11 @@
 from typing import TYPE_CHECKING
+
 from src.database.base_model import BaseModel
 from sqlalchemy import String, Boolean, CheckConstraint, Index
 from sqlalchemy.orm import Mapped, mapped_column
 
 if TYPE_CHECKING:
-    from src.api.models.platform_user_model import PlatformUser
+    pass
 
 
 class Tenant(BaseModel):
@@ -20,11 +21,27 @@ class Tenant(BaseModel):
     longer a valid DNS label stops resolving, and the failure looks like an
     outage rather than a bad input.
 
-    `is_active` and `is_suspended` are deliberately separate. `is_active` means
-    provisioned and usable; `is_suspended` means administratively blocked, with
-    the reason kept for the support call that follows. A tenant can be both
-    active and suspended, and suspension is reversible without touching
-    provisioning state.
+    `timezone` and `currency` are what the hotel actually trades in, and they
+    live here rather than in configuration for the same reason CMS's do: a single
+    process-wide setting cannot describe hotels in different zones or trading in
+    different currencies. Both are registry facts the platform console sets at
+    creation time. `timezone` is validated against the IANA database by the
+    service that writes it, because a typo shifts every daily report figure;
+    `currency` is an ISO 4217 code and is mirrored into the tenant's
+    `system_settings.default_currency`, which is what the hotel-side code reads.
+
+    `is_active` and `is_deleted` are the two lifecycle flags, and they mean
+    different things. `is_active` is provisioning state: a deactivated hotel
+    keeps every row it owns and simply stops accepting logins, and flipping it
+    back re-opens the hotel. `is_deleted` is archiving -- the hotel leaves every
+    list and its subdomain stops resolving, but nothing is destroyed and it can
+    be restored.
+
+    There is deliberately no third state. An earlier revision carried
+    `is_suspended` / `suspended_reason` for an administrative block distinct from
+    deactivation; it was removed as redundant, because a hotel that is blocked
+    with a reason is exactly what `is_active = false` already expresses, and two
+    flags for one decision is two that can disagree.
     """
 
     __tablename__ = 'tenants'
@@ -33,8 +50,15 @@ class Tenant(BaseModel):
     slug: Mapped[str] = mapped_column(String(63), nullable=False, unique=True, index=True)
     name: Mapped[str] = mapped_column(String(150), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
-    is_suspended: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    suspended_reason: Mapped[str | None] = mapped_column(String(255), nullable=True, default=None)
+
+    ## IANA zone the business trades in, e.g. "Asia/Kolkata". Reports bucket
+    ## hourly aggregates by this, so an unset value shifts every closing-hour
+    ## figure into the wrong day.
+    timezone: Mapped[str] = mapped_column(String(50), nullable=False, default="Asia/Kolkata")
+
+    ## ISO 4217 code, e.g. "INR". Drives currency formatting in the hotel UI and
+    ## the reports' totals.
+    currency: Mapped[str] = mapped_column(String(3), nullable=False, default="INR")
 
 
     __table_args__ = (

@@ -1,0 +1,68 @@
+<div class="platform-shell">
+  <header class="topbar">
+    <a class="brand" routerLink="/platform/dashboard">
+      <span class="brand-badge">
+        <mat-icon>shield_person</mat-icon>
+      </span>
+      <span class="brand-text">
+        <span class="brand-name">Platform Console</span>
+        <span class="brand-eyebrow">Super admin</span>
+      </span>
+    </a>
+
+    <nav class="links" aria-label="Platform sections">
+      <a mat-button class="nav-link" routerLink="/platform/dashboard" routerLinkActive="active-link">
+        <mat-icon>space_dashboard</mat-icon>
+        <span>Dashboard</span>
+      </a>
+      <a mat-button class="nav-link" routerLink="/platform/tenants" routerLinkActive="active-link">
+        <mat-icon>dns</mat-icon>
+        <span>Tenants</span>
+      </a>
+      <a mat-button class="nav-link" routerLink="/platform/admins" routerLinkActive="active-link">
+        <mat-icon>admin_panel_settings</mat-icon>
+        <span>Administrators</span>
+      </a>
+      <a mat-button class="nav-link" routerLink="/platform/activity" routerLinkActive="active-link">
+        <mat-icon>history</mat-icon>
+        <span>Activity</span>
+      </a>
+    </nav>
+
+    <span class="spacer"></span>
+
+    <button class="account" type="button" [matMenuTriggerFor]="accountMenu" aria-label="Account menu">
+      <span class="avatar">{{ initials }}</span>
+      <span class="account-meta">
+        <span class="account-name">{{ userName }}</span>
+        <span class="account-role">Platform admin</span>
+      </span>
+      <mat-icon class="account-caret">expand_more</mat-icon>
+    </button>
+
+    <!-- The panel lives in the CDK overlay. MatMenu exposes its panel-class
+         input under the name `class`, not `panelClass` (its resolved inputs are
+         `class => panelClass`), so `class=` is what reaches .mat-mdc-menu-panel. -->
+    <mat-menu #accountMenu="matMenu" xPosition="before" class="platform-account-menu">
+      <div class="menu-header">
+        <span class="menu-avatar">{{ initials }}</span>
+        <span class="menu-id">
+          <span class="menu-name">{{ userName }}</span>
+          <span class="menu-email">{{ userEmail }}</span>
+        </span>
+      </div>
+      <button mat-menu-item class="menu-security" routerLink="/platform/security">
+        <mat-icon>shield</mat-icon>
+        <span>Security</span>
+      </button>
+      <button mat-menu-item class="menu-signout" (click)="logout()" [disabled]="isLoggingOut">
+        <mat-icon>logout</mat-icon>
+        <span>Sign out</span>
+      </button>
+    </mat-menu>
+  </header>
+
+  <main class="content">
+    <router-outlet></router-outlet>
+  </main>
+</div>

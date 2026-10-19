@@ -1,0 +1,146 @@
+<div class="manage-page">
+  <header class="page-head">
+    <div class="page-title">
+      <span class="eyebrow">{{ isEdit ? 'Platform · Administrator' : 'Platform · New' }}</span>
+      <h1>{{ isEdit ? 'Edit administrator' : 'New administrator' }}</h1>
+      <p>
+        {{ isEdit
+            ? 'Update this operator\'s details. Their email is how they sign in.'
+            : 'Create an operator who can sign in to this console.' }}
+      </p>
+    </div>
+
+    <button mat-stroked-button class="btn-outline" (click)="goBack()" [disabled]="isSaving">
+      <mat-icon>arrow_back</mat-icon>
+      Back
+    </button>
+  </header>
+
+  <div class="loader-wrap" *ngIf="isLoading">
+    <app-page-loader></app-page-loader>
+  </div>
+
+  <mat-card class="form-card" *ngIf="!isLoading">
+    <form [formGroup]="form" (ngSubmit)="save()">
+      <div class="section-head">
+        <span class="step">01</span>
+        <div>
+          <h2>Administrator</h2>
+          <p class="section-hint">The person who signs in to this console.</p>
+        </div>
+      </div>
+
+      <div class="grid">
+        <mat-form-field appearance="outline">
+          <mat-label>First name</mat-label>
+          <input matInput formControlName="first_name" autocomplete="off">
+          <mat-error *ngIf="form.get('first_name')?.hasError('required')">First name is required</mat-error>
+          <mat-error *ngIf="form.get('first_name')?.hasError('maxlength')">First name is too long</mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Last name</mat-label>
+          <input matInput formControlName="last_name" autocomplete="off">
+          <mat-error *ngIf="form.get('last_name')?.hasError('required')">Last name is required</mat-error>
+          <mat-error *ngIf="form.get('last_name')?.hasError('maxlength')">Last name is too long</mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Email</mat-label>
+          <input matInput type="email" formControlName="email" autocomplete="off">
+          <mat-hint>Used to sign in to the console.</mat-hint>
+          <mat-error *ngIf="form.get('email')?.hasError('required')">Email is required</mat-error>
+          <mat-error *ngIf="form.get('email')?.hasError('email')">Enter a valid email address</mat-error>
+        </mat-form-field>
+      </div>
+
+      <ng-container *ngIf="!isEdit">
+        <div class="section-head">
+          <span class="step">02</span>
+          <div>
+            <h2>Credentials</h2>
+            <p class="section-hint">
+              Share these with the operator securely; they can change the password once signed in.
+            </p>
+          </div>
+        </div>
+
+        <div class="grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Password</mat-label>
+            <input matInput type="password" formControlName="password" autocomplete="new-password">
+            <mat-hint>Between 6 and 20 characters.</mat-hint>
+            <mat-error *ngIf="form.get('password')?.hasError('required')">Password is required</mat-error>
+            <mat-error *ngIf="form.get('password')?.hasError('minlength')">
+              At least 6 characters
+            </mat-error>
+            <mat-error *ngIf="form.get('password')?.hasError('maxlength')">
+              At most 20 characters
+            </mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Confirm password</mat-label>
+            <input matInput type="password" formControlName="confirm_password" autocomplete="new-password">
+            <mat-error *ngIf="form.hasError('mismatch') && form.get('confirm_password')?.touched">
+              Passwords do not match
+            </mat-error>
+          </mat-form-field>
+        </div>
+      </ng-container>
+
+      <div class="actions">
+        <button mat-stroked-button class="btn-outline" type="button" (click)="goBack()" [disabled]="isSaving">
+          Cancel
+        </button>
+        <button mat-flat-button color="primary" class="btn-primary" type="submit"
+                [disabled]="isSaving">
+          {{ isSaving ? 'Saving...' : (isEdit ? 'Save changes' : 'Create administrator') }}
+        </button>
+      </div>
+    </form>
+  </mat-card>
+
+  <!-- Per-operator history: the trail this account has already written. Only an
+       existing operator has one, so this never renders on create. -->
+  <mat-card class="history-card" *ngIf="isEdit && !isLoading">
+    <div class="history-head">
+      <div class="history-title">
+        <mat-icon>history</mat-icon>
+        <div>
+          <h2>Recent activity</h2>
+          <p>
+            {{ historyTotal
+                ? historyTotal + ' recorded change' + (historyTotal === 1 ? '' : 's')
+                : 'Nothing recorded yet' }}
+          </p>
+        </div>
+      </div>
+
+      <button mat-stroked-button class="btn-outline" *ngIf="historyTotal > adminHistory.length"
+              type="button" (click)="viewFullHistory()">
+        View all
+      </button>
+    </div>
+
+    <div class="history-body">
+      <mat-spinner *ngIf="isHistoryLoading" diameter="24"></mat-spinner>
+
+      <div class="history-empty" *ngIf="!isHistoryLoading && adminHistory.length === 0">
+        <mat-icon>edit_note</mat-icon>
+        <p>No changes recorded for this operator yet.</p>
+      </div>
+
+      <ul class="history-list" *ngIf="!isHistoryLoading && adminHistory.length > 0">
+        <li *ngFor="let log of adminHistory">
+          <span class="history-action">{{ log.action }}</span>
+          <span class="history-summary" *ngIf="historySummary(log)">{{ historySummary(log) }}</span>
+          <span class="history-meta">
+            {{ log.actor_email || 'system' }}
+            <ng-container *ngIf="log.created_at"> · {{ log.created_at | date: 'mediumDate' }}</ng-container>
+          </span>
+        </li>
+      </ul>
+    </div>
+  </mat-card>
+</div>

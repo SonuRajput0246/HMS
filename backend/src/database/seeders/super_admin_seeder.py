@@ -25,9 +25,9 @@ def seed_super_admin(
     """Create one hotel's super admin -- the first account that can sign in.
 
     This is the *tenant's* top user, not the platform operator. A platform admin
-    is a different table (`platform_users`) with a different secret and its own
-    routes; it is never created here. The name is kept because within a hotel
-    the granted role really is SUPER_ADMIN.
+    is a different table (`super_admin_users`), seeded by
+    `platform_admin_seeder` and never created here. The name is kept because
+    within a hotel the granted role really is SUPER_ADMIN.
 
     Credentials are parameters now. They used to be the module constants above,
     which is fine for one developer's machine and wrong the moment a second

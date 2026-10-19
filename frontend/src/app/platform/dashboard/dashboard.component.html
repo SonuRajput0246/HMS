@@ -1,0 +1,97 @@
+<div class="dashboard">
+  <header class="page-head">
+    <div class="page-title">
+      <span class="eyebrow">Platform</span>
+      <h1>Overview</h1>
+      <p>Every hotel on this deployment, at a glance.</p>
+    </div>
+
+    <button mat-stroked-button class="btn-outline" (click)="loadSummary()" [disabled]="isLoading">
+      <mat-icon>refresh</mat-icon>
+      Refresh
+    </button>
+  </header>
+
+  <div class="loader-wrap" *ngIf="isLoading">
+    <app-page-loader></app-page-loader>
+  </div>
+
+  <ng-container *ngIf="!isLoading && summary">
+    <section class="hero">
+      <div class="hero-main">
+        <span class="hero-label">Total hotels</span>
+        <div class="hero-value">{{ value('total_tenants') }}</div>
+        <div class="hero-meta">
+          <mat-icon>group</mat-icon>
+          <span>{{ value('total_users') }} users across all hotels</span>
+        </div>
+      </div>
+
+      <div class="hero-chart">
+        <div class="chart-head">
+          <span class="chart-title">Lifecycle composition</span>
+          <span class="chart-sub">Share of all tenants</span>
+        </div>
+
+        <div class="composition">
+          <span class="seg active" [style.width.%]="share('active_tenants')"></span>
+          <span class="seg inactive" [style.width.%]="share('inactive_tenants')"></span>
+          <span class="seg archived" [style.width.%]="share('archived_tenants')"></span>
+        </div>
+
+        <ul class="legend">
+          <li *ngFor="let band of composition">
+            <span class="dot" [ngClass]="band.tone"></span>
+            <span class="legend-label">{{ band.label }}</span>
+            <b>{{ value(band.key) }}</b>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="cards">
+      <mat-card class="stat-card" *ngFor="let card of cards; let i = index"
+                [ngClass]="card.tone" [style.animation-delay.ms]="i * 60">
+        <span class="card-icon">
+          <mat-icon>{{ card.icon }}</mat-icon>
+        </span>
+        <div class="value">{{ value(card.key) }}</div>
+        <div class="label">{{ card.label }}</div>
+      </mat-card>
+    </section>
+
+    <section class="quick">
+      <a class="quick-card" routerLink="/platform/tenants/new">
+        <span class="quick-icon"><mat-icon>add_business</mat-icon></span>
+        <span class="quick-text">
+          <b>Create a hotel</b>
+          <span>Register a hotel and its first administrator</span>
+        </span>
+        <mat-icon class="quick-arrow">arrow_forward</mat-icon>
+      </a>
+
+      <a class="quick-card" routerLink="/platform/tenants">
+        <span class="quick-icon alt"><mat-icon>dns</mat-icon></span>
+        <span class="quick-text">
+          <b>Review hotels</b>
+          <span>Activate, archive or restore any hotel</span>
+        </span>
+        <mat-icon class="quick-arrow">arrow_forward</mat-icon>
+      </a>
+
+      <button class="quick-card" type="button" (click)="loadSummary()">
+        <span class="quick-icon muted"><mat-icon>refresh</mat-icon></span>
+        <span class="quick-text">
+          <b>Refresh data</b>
+          <span>Re-read the latest platform totals</span>
+        </span>
+        <mat-icon class="quick-arrow">arrow_forward</mat-icon>
+      </button>
+    </section>
+  </ng-container>
+
+  <div class="empty" *ngIf="!isLoading && !summary">
+    <mat-icon>cloud_off</mat-icon>
+    <p>No summary available yet.</p>
+  </div>
+</div>

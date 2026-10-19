@@ -1,0 +1,558 @@
+@use '../tokens' as *;
+
+// This page never scrolls itself; only the card's body does.
+//
+// `html, body` are `overflow: hidden` app-wide (src/styles.scss) so that the
+// app shell -- and only the shell -- owns the document's scroll region, and
+// `/platform/login` deliberately sits *outside* that shell (it is a sibling
+// route, so signing in never renders the toolbar).
+//
+// The host used to be the scroll container instead: any content taller than
+// the window was clipped with no way to reach it, and it first surfaced with
+// the compulsory two-factor enrolment card -- heading, 176px QR, manual key,
+// code field and two buttons -- whose submit button fell below the fold. That
+// worked, but scrolling that card also dragged the branded panel on the left
+// up with it, which reads as a bug in a split layout that is meant to be
+// side-by-side.
+//
+// So the page is pinned to the viewport (`overflow: hidden` here is the outer
+// bound) and the scroll lives inside the card: `.login-card` is capped at the
+// form panel's height, `.card-head` and `.foot` stay put, and only
+// `.card-body` -- the stage forms -- overflows and scrolls. The left panel
+// can therefore never move.
+//
+// `display: block` is required: the host is an unknown custom element, and an
+// inline box ignores height and overflow. `100vh` is the fallback for browsers
+// without dynamic viewport units, where `dvh` otherwise tracks the mobile URL
+// bar and shrinks the visible page.
+:host {
+  display: block;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+// Split layout: a branded panel on the left carrying the product's identity,
+// the sign-in card on the right. Below 980px the panel collapses to a compact
+// header strip so the form still gets the full width on a laptop or tablet.
+//
+// The height is a percentage of the host above rather than `100vh`, so the
+// page is exactly as tall as the box it lives in: with nothing allowed to
+// overflow the viewport, a taller-than-the-window layout would simply be
+// clipped with no way to reach the rest of it. Whatever *does* grow taller
+// than this -- the compulsory enrolment card, above all -- overflows inside its
+// own column and scrolls there (see `.card-body` below).
+.platform-login {
+  display: flex;
+  height: 100%;
+  background: $page-bg;
+}
+
+.brand-panel {
+  position: relative;
+  overflow: hidden;
+  flex: 1 1 54%;
+  display: flex;
+  align-items: center;
+  padding: 56px;
+  box-sizing: border-box;
+  color: #ffffff;
+  background: $grad-navy;
+}
+
+.panel-inner {
+  position: relative;
+  z-index: 2;
+  max-width: 460px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.brand-badge {
+  display: grid;
+  place-items: center;
+  width: 50px;
+  height: 50px;
+  border-radius: 15px;
+  background: $grad-teal;
+  box-shadow: 0 10px 22px -10px rgba(22, 180, 164, 0.95), inset 0 1px 0 rgba(255, 255, 255, 0.32);
+
+  mat-icon {
+    width: 28px;
+    height: 28px;
+    font-size: 28px;
+    color: #ffffff;
+  }
+}
+
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.eyebrow {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: $teal;
+}
+
+.title {
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: #ffffff;
+}
+
+.headline {
+  margin: 40px 0 0;
+  font-size: 40px;
+  font-weight: 700;
+  line-height: 1.12;
+  letter-spacing: -0.025em;
+  color: #ffffff;
+}
+
+.tagline {
+  margin: 18px 0 0;
+  max-width: 400px;
+  font-size: 15px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.features {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin: 40px 0 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+  }
+}
+
+.feature-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+
+  mat-icon {
+    width: 19px;
+    height: 19px;
+    font-size: 19px;
+    color: $teal;
+  }
+}
+
+.feature-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.45;
+
+  b {
+    font-size: 14px;
+    font-weight: 600;
+    color: #ffffff;
+  }
+
+  span {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.6);
+  }
+}
+
+// Decorative only. The orbs sit behind `.panel-inner` (z-index 2) and the grid
+// tint sits behind everything, so none of them intercept pointer events.
+.panel-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(70px);
+  pointer-events: none;
+}
+
+.orb-a {
+  top: -140px;
+  right: -110px;
+  width: 420px;
+  height: 420px;
+  background: rgba(22, 180, 164, 0.34);
+}
+
+.orb-b {
+  bottom: -180px;
+  left: -120px;
+  width: 380px;
+  height: 380px;
+  background: rgba(10, 67, 135, 0.75);
+}
+
+.panel-grid {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.5;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+  background-size: 46px 46px;
+  mask-image: radial-gradient(70% 70% at 30% 40%, #000 0%, transparent 75%);
+  -webkit-mask-image: radial-gradient(70% 70% at 30% 40%, #000 0%, transparent 75%);
+}
+
+// The card is centred with `margin: auto` rather than `align-items` /
+// `justify-content`. Auto margins take the free space first and collapse to
+// zero when the item is taller than the box, so a long card starts at the top
+// padding where every last pixel of it can be reached -- a centred flex item
+// would hang equally off both edges and hide the top from the scroll region.
+//
+// `overflow-y` is only a safety net: on its own the card never overflows this
+// panel (it is capped at the panel's height), but if a browser ever failed to
+// resolve that cap the card stays reachable instead of being clipped.
+.form-panel {
+  display: flex;
+  flex: 1 1 46%;
+  padding: 48px 32px;
+  box-sizing: border-box;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background:
+    radial-gradient(70% 50% at 100% 0%, rgba($navy-light, 0.06) 0%, rgba($navy-light, 0) 60%),
+    $page-bg;
+}
+
+// A column so the head and foot can be pinned while only the middle scrolls.
+// `max-height` is what makes the card a scroll container at all: without it
+// the card grows to its content and, since the page no longer scrolls, the
+// bottom of a long enrolment card would be unreachable.
+.login-card {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 410px;
+  max-height: 100%;
+  margin: auto;
+  padding: 34px 32px 26px;
+  box-sizing: border-box;
+  border: 1px solid $border;
+  border-radius: $radius-xl;
+  background: $card-bg;
+  box-shadow: $shadow-lg;
+  animation: card-in 0.5s $ease both;
+}
+
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.card-head {
+  flex: 0 0 auto;
+  margin-bottom: 24px;
+
+  .eyebrow {
+    @include eyebrow;
+    margin-bottom: 6px;
+  }
+
+  h2 {
+    margin: 0;
+    font-size: 21px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: $navy;
+  }
+
+  p {
+    margin: 6px 0 0;
+    font-size: 13.5px;
+    color: $text-muted;
+  }
+}
+
+// The card's one scroll region, and the answer to the long enrolment card:
+// the head and foot are pinned (`flex: 0 0 auto`), so only the stage forms
+// ever move, and only inside the card the user is already looking at.
+//
+// `min-height: 0` is what lets the flex item shrink below its content and hand
+// the overflow to this element's own scrollbar. Flex items default to
+// `min-height: auto`, which would keep the body at full content height and
+// push the card straight through its `max-height` cap instead.
+.card-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  // The page's one visible scrollbar, in the slim style the console's other
+  // scroll regions use (see manage-user's `.form-scroll`). It appears only
+  // while a stage is taller than the card; the credentials and code stages
+  // never reach it.
+  scrollbar-width: thin;
+  scrollbar-color: #c3d2e4 transparent;
+
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #c3d2e4;
+    border-radius: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  form {
+    margin-top: 10px;
+  }
+}
+
+.field {
+  width: 100%;
+  margin-bottom: 8px;
+
+  @include mdc-outlined-field;
+}
+
+// The second button on this screen, and the only other one. It shares the Sign
+// in button's tuned effect rather than the console-wide default: the same 0.5px
+// press (at 1.2px a 20px glyph smears into a smudge for the length of the
+// click) and the same blue family, so the two controls on this screen read as
+// one set.
+//
+// The sheen is the Sign in button's blue at lower alpha: this button sits on
+// the field's light surface rather than on navy, so full strength would read as
+// a streak crossing the glyph instead of as a highlight.
+.toggle {
+  --mdc-icon-button-icon-color: #{$text-muted};
+
+  @include sweep(rgba($press-shine, 0.3));
+  @include icon-button-feedback($navy-soft, 0.5px);
+
+  &:hover {
+    --mdc-icon-button-icon-color: #{$navy};
+  }
+}
+
+// The console's one large filled button, and the only place the press is tuned
+// differently.
+//
+// Default `console-button` + `mdc-filled-button` gave this button a white
+// hover streak and a white Material state layer. Over a big navy face both of
+// those are white-on-blue at scale, so the button appeared to wash out and
+// turn white while it was being clicked -- the label was still there, but the
+// face had stopped looking blue.
+//
+// So this button deviates in exactly three ways, all of them "use blue":
+//   1. the hover streak (`$press-shine`) is a lighter shade of navy, not white;
+//   2. the blur is small enough to be felt and not seen -- at 1.2px the label
+//      dissolved for the length of the press;
+//   3. the Material state layer is repointed at `$navy-light`, so holding the
+//      button deepens the blue instead of veiling it in white.
+.submit {
+  width: 100%;
+  height: 48px;
+  margin-top: 14px;
+  font-size: 15px;
+
+  @include console-button($press-shine, 0.5px);
+  @include mdc-filled-button($navy, #ffffff, $navy-light);
+  @include filled-button-feedback;
+}
+
+.foot {
+  display: flex;
+  align-items: flex-start;
+  flex: 0 0 auto;
+  gap: 8px;
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid $border;
+  font-size: 12px;
+  line-height: 1.45;
+  color: $text-muted;
+
+  mat-icon {
+    flex: 0 0 auto;
+    width: 16px;
+    height: 16px;
+    margin-top: 1px;
+    font-size: 16px;
+    color: $teal-deep;
+  }
+}
+
+// The second stage. Swap-in only: the credentials form is already gone, so a
+// short rise keeps the transition from flashing rather than sliding the card.
+.mfa-form {
+  animation: rise-in 0.32s $ease both;
+}
+
+.mfa-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+  margin-bottom: 18px;
+
+  h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: $navy;
+  }
+
+  p {
+    margin: 4px 0 0;
+    font-size: 13px;
+    line-height: 1.5;
+    color: $text-muted;
+  }
+}
+
+.mfa-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: $teal-soft;
+  color: $teal-deep;
+
+  mat-icon {
+    width: 22px;
+    height: 22px;
+    font-size: 22px;
+  }
+}
+
+// The enrolment icon gates the sign-in rather than merely decorating a code
+// step, so it is tinted navy instead of the quieter teal the plain step uses.
+.mfa-icon.required {
+  background: $navy-soft;
+  color: $navy;
+}
+
+// The QR sits on its own white patch: a code has to scan, and any tint behind
+// it lowers the contrast the reader sees.
+.qr-holder {
+  display: grid;
+  place-items: center;
+  margin: 0 0 14px;
+  padding: 14px;
+  border: 1px solid $border;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.secret-line {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: 0 0 18px;
+  font-size: 12.5px;
+  color: $text-muted;
+
+  code {
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: $navy-soft;
+    color: $navy;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+  }
+
+  .copy-btn {
+    --mdc-icon-button-icon-color: #{$text-muted};
+    --mat-icon-button-state-layer-color: #{$navy};
+    --mat-icon-button-ripple-color: #{rgba($navy, 0.1)};
+
+    color: $text-muted;
+  }
+}
+
+.back-link {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  padding: 6px;
+  border: 0;
+  background: none;
+  color: $text-muted;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.16s $ease;
+
+  &:hover:not([disabled]) {
+    color: $navy;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+}
+
+@media (max-width: 980px) {
+  .platform-login {
+    flex-direction: column;
+  }
+
+  // The panel keeps the brand lockup and drops the rest of the pitch.
+  .brand-panel {
+    flex: 0 0 auto;
+    padding: 28px 24px;
+  }
+
+  .headline,
+  .tagline,
+  .features {
+    display: none;
+  }
+
+  .form-panel {
+    flex: 1 1 auto;
+    padding: 32px 20px 48px;
+  }
+
+  .orb-a {
+    top: -180px;
+    right: -60px;
+  }
+}
+
+@media (max-width: 480px) {
+  .login-card {
+    padding: 26px 20px 20px;
+    border-radius: $radius-lg;
+  }
+}

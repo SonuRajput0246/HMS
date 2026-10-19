@@ -20,13 +20,18 @@ the UI worth looking at.
 A hotel created for real goes through `provision_tenant.provision_tenant`
 instead, which seeds the same defaults but none of the sample data.
 
-Two orderings are load-bearing and easy to break by re-sorting the calls:
+Three orderings are load-bearing and easy to break by re-sorting the calls:
 
-  1. Modules seed before roles. `role_seeder` reads the live `modules` table and
+  1. The platform admin seeds before anything else. It lives in
+     `super_admin_users`, carries no tenant_id, and is the account the console
+     signs in as to create the hotels below -- so an install whose platform rows
+     failed to seed is an install nobody can administer.
+
+  2. Modules seed before roles. `role_seeder` reads the live `modules` table and
      grants permissions only for modules that exist, so seeding roles first
      silently produces roles with no permissions at all.
 
-  2. The tenant's admin user seeds before the demo data. The demo reservation
+  3. The tenant's admin user seeds before the demo data. The demo reservation
      references a real `users.id`, and there is no user until the admin exists.
 """
 from src.database.seeders.countries_states_cities_seeder import seed_countries_states_cities
@@ -34,6 +39,7 @@ from src.database.seeders.currencies_seeder import seed_currencies
 from src.database.seeders.enum_seeder import seed_enums
 from src.database.seeders.inventory_units_seeder import seed_inventory_units
 from src.database.seeders.module_seeder import seed_modules
+from src.database.seeders.platform_admin_seeder import seed_platform_admin
 
 from src.database.seeders.additional_guest_seeder import seed_additional_guests
 from src.database.seeders.amenity_seeder import seed_room_amenities
@@ -64,6 +70,12 @@ DEFAULT_TENANT_NAME = "Demo Hotel"
 
 def seed_platform_data():
     """Product-owned rows. Seeded once per install, and never per tenant."""
+    ## The platform operator is global too: it sits in `super_admin_users`, which
+    ## carries no tenant_id, and it is seeded here for the same reason countries
+    ## and currencies are -- nothing about it belongs to a hotel. It goes first
+    ## because it is the account that creates the hotels below.
+    seed_platform_admin()
+
     ## Reference data first: enums, currencies, countries and units are inputs
     ## to everything below.
     seed_enums()

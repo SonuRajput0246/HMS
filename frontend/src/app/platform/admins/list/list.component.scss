@@ -1,0 +1,492 @@
+@use '../../tokens' as *;
+
+.admin-page {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.page-head {
+  @include page-head;
+}
+
+.page-title {
+  .eyebrow {
+    @include eyebrow;
+  }
+
+  h1 {
+    @include title;
+  }
+
+  p {
+    @include subtitle;
+  }
+}
+
+.btn-primary {
+  height: 44px;
+  padding: 0 18px;
+
+  @include console-button($press-shine);
+  @include mdc-filled-button($navy, #ffffff, $navy-light);
+  @include filled-button-feedback;
+
+  mat-icon {
+    margin-right: 6px;
+  }
+}
+
+.btn-outline {
+  height: 44px;
+  padding: 0 18px;
+
+  @include console-button;
+  @include mdc-outlined-button($navy, $border-strong);
+  @include outlined-button-feedback;
+}
+
+.filters {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  border: 1px solid $border;
+  border-radius: $radius-lg;
+  background: $card-bg;
+  box-shadow: $shadow-sm;
+
+  @include rise-in(60ms);
+
+  .search-field {
+    width: 280px;
+    max-width: 100%;
+
+    @include mdc-outlined-field;
+  }
+
+  .spacer {
+    flex: 1 1 auto;
+  }
+}
+
+// Segmented control, identical to the tenant list's so the two consoles read
+// as one product: a soft track with a raised white pill marking the current
+// view. Material's default paints the selected segment as a solid navy slab,
+// which dropped a heavy block of colour into the middle of an otherwise light
+// filter row; a lifted pill says "this one is on" without the weight, and it
+// leaves navy for the states that actually need to carry it.
+.status-filter {
+  padding: 3px;
+  border: 1px solid $border;
+  border-radius: 999px;
+  background: $navy-soft;
+
+  --mat-standard-button-toggle-height: 36px;
+  --mat-standard-button-toggle-shape: 999px;
+  --mat-standard-button-toggle-background-color: transparent;
+  --mat-standard-button-toggle-text-color: #{$text-muted};
+  // With the segments transparent, a leftover divider hairline reads as a
+  // rendering artefact rather than as separation.
+  --mat-standard-button-toggle-divider-color: transparent;
+  --mat-standard-button-toggle-selected-state-background-color: #ffffff;
+  --mat-standard-button-toggle-selected-state-text-color: #{$navy};
+  --mat-standard-button-toggle-state-layer-color: #{$navy};
+
+  .mat-button-toggle-label-content {
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .mat-button-toggle {
+    border-radius: 999px;
+    // Cuts everything drawn inside the segment -- Material's state-layer
+    // overlay and the ripple -- to the capsule. Both are plain rectangles
+    // otherwise, so without this the click effect outlives the shape it is
+    // supposed to belong to.
+    overflow: hidden;
+    transition: background-color 0.18s, color 0.18s, box-shadow 0.18s,
+      transform 0.16s, filter 0.22s;
+    transition-timing-function: $ease;
+
+    // Unselected segments sit flush in the track and step *deeper* under the
+    // pointer, with the label going navy. Lifting toward white was invisible:
+    // the track is already 96% white, so a 55% white wash over it moved the
+    // surface about 4% and the hovered segment could not be told from its
+    // neighbours.
+    //
+    // The selected segment is deliberately not touched here -- the checked
+    // band is what says which filter is live, and it must not change while
+    // the pointer is merely passing over it.
+    &:hover:not(.mat-button-toggle-checked) {
+      background: $navy-soft-hover;
+      color: $navy;
+    }
+
+    &:active:not(.mat-button-toggle-checked) {
+      background: $navy-soft-press;
+      color: $navy;
+    }
+
+    // The console's shared hover step, applied to every segment -- including
+    // the selected one, which the rules above are scoped away from. Without it
+    // the hover feedback disappeared under the cursor the moment a segment was
+    // chosen, so it appeared and vanished as the pointer crossed the row.
+    //
+    // The selected segment takes a lift, a light navy wash and a deeper shadow
+    // because white has nowhere to go except toward the track, and a pill that
+    // matches its track stops reading as a pill. The wash stays far shallower
+    // than an unselected segment's, so hovered and selected never look alike.
+    //
+    // Scoped off `:active` on purpose. While a press is held both states match,
+    // so if the hover state won the cascade it would cancel `press-sink` and
+    // the segment would lift under the finger instead of sinking into it.
+    &:hover:not(.mat-button-toggle-disabled):not(:active) {
+      transform: translateY(-1px);
+
+      &.mat-button-toggle-checked {
+        background: rgba($navy, 0.07);
+        box-shadow: $shadow-md;
+      }
+    }
+
+    // The sink and little blur every console button shares.
+    &:active {
+      @include press-sink;
+    }
+
+    // One step past the hover wash, so a held segment is still visibly further
+    // along than a merely hovered one.
+    &:active.mat-button-toggle-checked {
+      background: rgba($navy, 0.12);
+    }
+
+    &:focus-visible {
+      outline: 2px solid $teal;
+      outline-offset: -2px;
+    }
+  }
+
+  // Raised just enough to read as a separate surface on the track. Excluded
+  // while pressed so `press-sink`'s inset shadow can land instead.
+  .mat-button-toggle-checked:not(:active) {
+    box-shadow: $shadow-sm;
+  }
+
+  // Material's fill for a checked segment *is* this overlay, held at 50%
+  // opacity and painted over the selected-state background colour -- a navy
+  // wash on top of the white pill, in a 500px-tall box whose corner radii can
+  // never follow a 38px capsule. That is a legacy fill mechanism doing
+  // nothing the tokens below are not already doing, so it is switched off.
+  // The hover state layer on the same element stays at the theme's 4%.
+  .mat-button-toggle-checked .mat-button-toggle-focus-overlay {
+    opacity: 0;
+  }
+}
+
+.table-wrap {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid $border;
+  border-radius: $radius-lg;
+  background: $card-bg;
+  box-shadow: $shadow-sm;
+
+  &.is-refreshing {
+    .admin-table,
+    .admin-paginator {
+      opacity: 0.45;
+      pointer-events: none;
+      transition: opacity 0.18s $ease;
+    }
+  }
+}
+
+.admin-table {
+  width: 100%;
+
+  --mat-table-background-color: transparent;
+  --mat-table-header-headline-color: #{$text-muted};
+  --mat-table-row-item-label-text-color: #{$text};
+  --mat-table-row-item-outline-color: #{$border};
+
+  th.mat-mdc-header-cell {
+    height: 46px;
+    border-bottom: 1px solid $border;
+    background: #f8fafd;
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  td.mat-mdc-cell {
+    height: 58px;
+    font-size: 13.5px;
+  }
+
+  tr.mat-mdc-row {
+    transition: background-color 0.15s $ease;
+
+    &:hover td.mat-mdc-cell {
+      background: #f7faff;
+    }
+  }
+
+  .person {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+  }
+
+  .avatar {
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: $navy-soft;
+    color: $navy;
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .person-meta {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    line-height: 1.35;
+  }
+
+  .name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: $navy;
+  }
+
+  .you {
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: $teal-soft;
+    color: $teal-deep;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .email {
+    overflow: hidden;
+    font-size: 12.5px;
+    color: $text-muted;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .muted {
+    color: $text-muted;
+  }
+
+  .actions-head {
+    text-align: right;
+  }
+
+  .actions-cell {
+    white-space: nowrap;
+    text-align: right;
+
+    button.mat-mdc-icon-button {
+      --mdc-icon-button-icon-color: #{$text-muted};
+      --mat-icon-button-state-layer-color: #{$navy};
+      --mat-icon-button-ripple-color: #{rgba($navy, 0.1)};
+
+      color: $text-muted;
+
+      @include icon-button-feedback($navy-soft);
+    }
+
+    // Destructive verbs (deactivate) get the amber wash; the others keep navy.
+    button.row-action.danger {
+      --mdc-icon-button-icon-color: #{$amber};
+      --mat-icon-button-state-layer-color: #{$amber};
+      --mat-icon-button-ripple-color: #{rgba($amber, 0.1)};
+
+      color: $amber;
+
+      &:hover:not([disabled]) {
+        background: $amber-soft;
+      }
+    }
+  }
+}
+
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 11px 5px 9px;
+  border-radius: 999px;
+  background: $neutral-soft;
+  color: $neutral;
+  font-size: 12px;
+  font-weight: 600;
+
+  .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  &.active {
+    background: $success-soft;
+    color: $success;
+  }
+
+  &.inactive {
+    background: $amber-soft;
+    color: $amber;
+  }
+}
+
+// Sits beside the status chip when a brute-force lockout is active. Muted
+// rather than alarming: it is a temporary cooling-off, not a deactivation.
+.lock-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+  padding: 5px 11px 5px 8px;
+  border-radius: 999px;
+  background: $amber-soft;
+  color: $amber;
+  font-size: 12px;
+  font-weight: 600;
+
+  mat-icon {
+    width: 15px;
+    height: 15px;
+    font-size: 15px;
+  }
+}
+
+.mfa-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px 5px 9px;
+  border-radius: 999px;
+  background: $neutral-soft;
+  color: $neutral;
+  font-size: 12px;
+  font-weight: 600;
+
+  mat-icon {
+    width: 15px;
+    height: 15px;
+    font-size: 15px;
+  }
+
+  &.on {
+    background: $success-soft;
+    color: $success;
+  }
+
+  &.off {
+    background: $amber-soft;
+    color: $amber;
+  }
+}
+
+.table-loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.72);
+
+  --mdc-circular-progress-active-indicator-color: #{$navy};
+}
+
+.table-refreshing {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  border: 1px solid $border;
+  border-radius: 999px;
+  background: $card-bg;
+  box-shadow: $shadow-md;
+  color: $navy;
+  font-size: 12.5px;
+  font-weight: 600;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+
+  --mdc-circular-progress-active-indicator-color: #{$navy};
+}
+
+.table-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 64px 24px;
+  text-align: center;
+  color: $text-muted;
+
+  mat-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 40px;
+    color: $placeholder;
+  }
+
+  p {
+    margin: 0;
+    font-size: 14px;
+  }
+}
+
+// ------------------------------------------------------------
+//  Pagination
+//
+//  The bar itself -- the 50x26 page-size chip, the one-line layout
+//  and the compact option list -- is the shared `.table-footer`
+//  treatment in styles.scss, the same one every list page and the
+//  activity feed sit on. Nothing is restated here: overriding the
+//  --mat-paginator-* tokens is what this page used to do, and it is
+//  exactly what made the bar read differently from every other list
+//  page (a white container painting over the footer's tint,
+//  stock-sized arrows). Only the footer's own surface is
+//  component-local, since it is this card's bottom edge.
+// ------------------------------------------------------------
+.table-footer {
+  border-top: 1px solid $border;
+  background: #fbfcfe;
+  padding: 2px 14px 2px 0;
+}
+
+@media (max-width: 900px) {
+  .filters {
+    .search-field,
+    .status-filter {
+      width: 100%;
+    }
+  }
+}
+
+@media (max-width: 600px) {
+  .btn-primary,
+  .btn-outline {
+    width: 100%;
+  }
+}

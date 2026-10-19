@@ -1,0 +1,479 @@
+@use '../tokens' as *;
+
+.activity-page {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.page-head {
+  @include page-head;
+}
+
+.page-title {
+  .eyebrow {
+    @include eyebrow;
+  }
+
+  h1 {
+    @include title;
+  }
+
+  p {
+    @include subtitle;
+  }
+}
+
+.count-chip {
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: $navy-soft;
+  color: $navy;
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.filters {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  border: 1px solid $border;
+  border-radius: $radius-lg;
+  background: $card-bg;
+  box-shadow: $shadow-sm;
+
+  @include rise-in(60ms);
+
+  // Toolbar type. A Material form field defaults to 16px, which is wider than
+  // these fields are tall: "DD/MM/YYYY" ran past the end of the box and lost
+  // its last Y under the calendar toggle. 13px is the size the table body
+  // already uses, so the filter bar and the rows read as one page.
+  //
+  // ::ng-deep is needed past this point -- the placeholder and the input
+  // element live inside Material's own field template.
+  ::ng-deep {
+    .mat-mdc-input-element,
+    .mat-mdc-select-value-text,
+    .mat-mdc-form-field-placeholder {
+      font-size: 13px;
+    }
+
+    input::placeholder {
+      // The UA halves a placeholder's opacity on top of the colour token the
+      // field already sets, which washes $placeholder out to near-invisible.
+      opacity: 1;
+      font-size: 15px;
+    }
+  }
+
+  .filter-field {
+    width: 210px;
+    max-width: 100%;
+
+    @include mdc-outlined-field;
+  }
+
+  // Wider than its sibling: the verb labels ("Reset administrator password")
+  // are the longest strings in the toolbar, and the panel is sized to the
+  // trigger, so a narrow trigger would ellipsise them in the option list.
+  .action-field {
+    width: 250px;
+    max-width: 100%;
+  }
+
+  .id-field {
+    width: 120px;
+    max-width: 100%;
+
+    @include mdc-outlined-field;
+  }
+
+  .date-field ::ng-deep .mat-mdc-input-element {
+    font-size: 15px;
+  }
+
+  .id-field ::ng-deep .mat-mdc-input-element {
+    font-size: 15px;
+  }
+
+  .date-field {
+    // Wide enough for "DD/MM/YYYY" plus the calendar toggle beside it, with
+    // room to spare so the text never touches the button.
+    width: 170px;
+    max-width: 100%;
+
+    @include mdc-outlined-field;
+
+    // MatDatepickerToggle paints its glyph from these two tokens rather than a
+    // colour of its own: navy at rest, teal while the calendar is open, which
+    // is the same accent the selected option uses in the filter dropdowns.
+    --mat-datepicker-toggle-icon-color: #{$navy};
+    --mat-datepicker-toggle-active-state-icon-color: #{$teal};
+  }
+}
+
+// ------------------------------------------------------------
+//  Action / Entity dropdown panel
+//
+//  The option list itself -- white card, navy hover, teal selected row
+//  with its inset left rule and no check box -- is the shared
+//  `.console-select-panel` block in styles.scss. It was local to this
+//  file until the tenant form needed the identical list, and a second
+//  copy here would have meant two places to edit for one visual.
+//  Both selects bind that panelClass in the template.
+//
+//  Only the trigger half is component-local: the navy arrow and the
+//  semibold chosen value, both of which live inside <mat-select>'s own
+//  view and so need ::ng-deep.
+// ------------------------------------------------------------
+::ng-deep .filters .filter-field {
+  .mat-mdc-select-value-text {
+    color: $text;
+    font-weight: 600;
+  }
+
+  .mat-mdc-select-arrow {
+    color: $navy;
+  }
+}
+
+// ------------------------------------------------------------
+//  From / To calendar panel
+//
+//  Colour comes entirely from the `--mat-datepicker-calendar-*` tokens,
+//  which the prebuilt indigo-pink theme sets on `html` from `#3f51b5`.
+//  Overriding the tokens is therefore the whole job: the calendar picks
+//  up navy and teal without any of its internal class names being touched,
+//  and a future Material bump cannot break it.
+//
+//  WHERE THE HOOK CLASS ACTUALLY LANDS: Material puts [panelClass] on
+//  <mat-calendar> itself -- MatDatepickerContent's template reads
+//  `[ngClass]="datepicker.panelClass"` on that element -- so it is on
+//  neither the overlay pane nor the .mat-datepicker-content wrapper. The
+//  real DOM is:
+//
+//    <mat-datepicker-content class="mat-datepicker-content">   <- container tokens
+//      <div class="mat-datepicker-content-container">
+//        <mat-calendar class="mat-calendar activity-datepicker-panel">
+//
+//  `.activity-datepicker-panel` and `.mat-calendar` are therefore the SAME
+//  element, which is why the box and every token read inside it are styled
+//  off the hook class directly, and why only the four
+//  `--mat-datepicker-calendar-container-*` tokens need the :has() rule at
+//  the bottom: no descendant selector can reach the wrapper above.
+// ------------------------------------------------------------
+
+// Box size, plus every token the calendar reads for itself.
+//
+// The element name is load-bearing twice over. Material's hook lands on
+// <mat-calendar>, which is a custom element and not a <div>, so a `div.` prefix
+// here would match nothing at all. And it carries `.cdk-overlay-container`
+// because Material's own `.mat-datepicker-content .mat-calendar
+// { width: 296px; height: 354px }` counts two classes -- matching the tag gives
+// this rule (0,2,1) and settles the tie that injection order would otherwise
+// decide. 264px still clears the 224px min-width the day grid carries, and the
+// grid cells are percentage based, so every cell scales with the box.
+::ng-deep .cdk-overlay-container mat-calendar.activity-datepicker-panel {
+  width: 264px;
+  height: 316px;
+
+  --mat-datepicker-calendar-header-text-color: #{$navy};
+  --mat-datepicker-calendar-header-divider-color: #{$border};
+
+  --mat-datepicker-calendar-period-button-text-color: #{$navy};
+  --mat-datepicker-calendar-period-button-icon-color: #{$navy};
+  // "October 2026" is sized from a token, not from .mat-calendar-header, so it
+  // would keep Material's default in the shrunken box and crowd the arrows.
+  --mat-datepicker-calendar-period-button-text-size: 13px;
+  --mat-datepicker-calendar-navigation-button-icon-color: #{$navy};
+
+  --mat-datepicker-calendar-date-text-color: #{$text};
+  --mat-datepicker-calendar-date-hover-state-background-color: #{$navy-soft};
+  --mat-datepicker-calendar-date-focus-state-background-color: #{$navy-soft};
+  --mat-datepicker-calendar-date-selected-state-background-color: #{$teal};
+  --mat-datepicker-calendar-date-selected-state-text-color: #ffffff;
+  --mat-datepicker-calendar-date-today-outline-color: #{$navy};
+  // A teal fill needs a light ring, not white, or the date disappears into it.
+  --mat-datepicker-calendar-date-today-selected-state-outline-color: #{$card-bg};
+  --mat-datepicker-calendar-date-disabled-state-text-color: #{$placeholder};
+  --mat-datepicker-calendar-body-label-text-color: #{$text-muted};
+
+  .mat-calendar-header {
+    padding: 11px 10px 6px;
+  }
+
+  // Weekday initials, to the same uppercase micro-label treatment as the
+  // table header above the calendar.
+  .mat-calendar-table-header th {
+    color: $text-muted;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .mat-calendar-body-cell-content {
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  // A date greyed out by the other filter's clamp reads as unavailable, so
+  // strike it rather than leaving it merely faint.
+  .mat-calendar-body-disabled > .mat-calendar-body-cell-content {
+    text-decoration: line-through;
+  }
+}
+
+// The wrapper's own surface. It sits ABOVE the element Material gave the hook
+// class, so :has() is the only way to scope it back to this one calendar --
+// without it these four values would have to go on .mat-datepicker-content
+// globally and leak into any datepicker added later.
+::ng-deep .cdk-overlay-container .mat-datepicker-content:has(.activity-datepicker-panel) {
+  --mat-datepicker-calendar-container-background-color: #{$card-bg};
+  --mat-datepicker-calendar-container-text-color: #{$text};
+  --mat-datepicker-calendar-container-shape: #{$radius};
+  --mat-datepicker-calendar-container-elevation-shadow: #{$shadow-lg};
+
+  // No token covers the panel's edge, so the card's own hairline is added here
+  // to match the filter bar and the table card around it. overflow clips the
+  // calendar's square corners down to that radius.
+  border: 1px solid #{$border-strong};
+  overflow: hidden;
+}
+
+.btn-primary {
+  height: 44px;
+  padding: 0 18px;
+
+  @include console-button($press-shine);
+  @include mdc-filled-button($navy, #ffffff, $navy-light);
+  @include filled-button-feedback;
+
+  mat-icon {
+    margin-right: 6px;
+  }
+}
+
+.btn-outline {
+  height: 44px;
+  padding: 0 18px;
+
+  @include console-button;
+  @include mdc-outlined-button($navy, $border-strong);
+  @include outlined-button-feedback;
+}
+
+.table-wrap {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid $border;
+  border-radius: $radius-lg;
+  background: $card-bg;
+  box-shadow: $shadow-sm;
+
+  &.is-refreshing {
+    .activity-table,
+    .activity-paginator {
+      opacity: 0.45;
+      pointer-events: none;
+      transition: opacity 0.18s $ease;
+    }
+  }
+}
+
+.activity-table {
+  width: 100%;
+
+  --mat-table-background-color: transparent;
+  --mat-table-header-headline-color: #{$text-muted};
+  --mat-table-row-item-label-text-color: #{$text};
+  --mat-table-row-item-outline-color: #{$border};
+
+  th.mat-mdc-header-cell {
+    height: 46px;
+    border-bottom: 1px solid $border;
+    background: #f8fafd;
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  td.mat-mdc-cell {
+    padding-top: 10px;
+    padding-bottom: 10px;
+    font-size: 13px;
+    vertical-align: top;
+  }
+
+  tr.mat-mdc-row {
+    transition: background-color 0.15s $ease;
+
+    &:hover td.mat-mdc-cell {
+      background: #f7faff;
+    }
+  }
+
+  .when {
+    display: block;
+    font-weight: 600;
+    color: $navy;
+    white-space: nowrap;
+  }
+
+  .ip {
+    display: block;
+    margin-top: 2px;
+    font-size: 11.5px;
+    color: $text-muted;
+  }
+
+  code {
+    padding: 2px 6px;
+    border-radius: 6px;
+    background: $navy-soft;
+    color: $navy;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  // The writer's JSON, clamped so one verbose row cannot stretch the table.
+  code.details {
+    display: -webkit-box;
+    max-width: 320px;
+    overflow: hidden;
+    background: $neutral-soft;
+    color: $text;
+    font-weight: 500;
+    white-space: pre-wrap;
+    word-break: break-word;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
+}
+
+.action-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 11px 5px 9px;
+  border-radius: 999px;
+  background: $neutral-soft;
+  color: $neutral;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+
+  .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  &.success {
+    background: $success-soft;
+    color: $success;
+  }
+
+  &.warn {
+    background: $amber-soft;
+    color: $amber;
+  }
+
+  &.amber {
+    background: $amber-soft;
+    color: $amber;
+  }
+
+  &.neutral {
+    background: $navy-soft;
+    color: $navy;
+  }
+}
+
+.table-loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.72);
+
+  --mdc-circular-progress-active-indicator-color: #{$navy};
+}
+
+.table-refreshing {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  border: 1px solid $border;
+  border-radius: 999px;
+  background: $card-bg;
+  box-shadow: $shadow-md;
+  color: $navy;
+  font-size: 12.5px;
+  font-weight: 600;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+
+  --mdc-circular-progress-active-indicator-color: #{$navy};
+}
+
+.table-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 64px 24px;
+  text-align: center;
+  color: $text-muted;
+
+  mat-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 40px;
+    color: $placeholder;
+  }
+
+  p {
+    margin: 0;
+    font-size: 14px;
+  }
+}
+
+// ------------------------------------------------------------
+//  Pagination
+//
+//  The bar itself -- the 50x26 page-size chip, the one-line layout
+//  and the compact option list -- is the shared `.table-footer`
+//  treatment in styles.scss, the same one every list page sits on.
+//  Nothing is restated here: overriding the --mat-paginator-* tokens
+//  is what this page used to do, and it is exactly what made the bar
+//  read differently from every other list page (a white container
+//  painting over the footer's tint, stock-sized arrows). Only the
+//  footer's own surface is component-local, since it is this card's
+//  bottom edge.
+// ------------------------------------------------------------
+.table-footer {
+  border-top: 1px solid $border;
+  background: #fbfcfe;
+  padding: 2px 14px 2px 0;
+}
+
+@media (max-width: 900px) {
+  .filters {
+    .filter-field,
+    .action-field,
+    .id-field,
+    .date-field {
+      width: 100%;
+    }
+  }
+}

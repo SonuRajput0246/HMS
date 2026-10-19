@@ -40,7 +40,9 @@ GLOBAL_TABLES = {
 }
 
 ## §3.2: above every tenant, so they cannot carry a tenant_id.
-PLATFORM_TABLES = {"tenants", "platform_users"}
+PLATFORM_TABLES = {
+    "tenants", "super_admin_users", "super_admin_tokens", "audit_logs",
+}
 
 NON_SCOPED = GLOBAL_TABLES | PLATFORM_TABLES
 

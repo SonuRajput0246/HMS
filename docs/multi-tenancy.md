@@ -65,8 +65,10 @@ meant database-per-tenant; it was rejected in favour of shared schema.
 
 | Table | Purpose |
 |---|---|
-| `tenants` | The registry: slug, name, status |
-| `platform_users` | Identities that administer tenants. Deliberately **not** rows in `users`. |
+| `tenants` | The registry: slug, name, timezone, currency, status |
+| `super_admin_users` | Identities that administer tenants. Deliberately **not** rows in `users`. |
+| `super_admin_tokens` | Live platform sessions, so logout and a reset actually revoke. |
+| `audit_logs` | Who did what to the platform. Global, and outlives the admin who wrote it. |
 
 ### 3.3 Tenant-scoped — gets a `tenant_id`
 
@@ -110,22 +112,49 @@ tenants
   id            PK
   slug          VARCHAR(63)  UNIQUE   -- DNS label: [a-z0-9-], no leading/trailing hyphen
   name          VARCHAR(150)          -- display name
+  timezone      VARCHAR(50)           -- IANA zone the hotel trades in
+  currency      VARCHAR(3)            -- ISO 4217; mirrored into system_settings.default_currency
   is_active     BOOL                  -- provisioned & usable
-  is_suspended  BOOL                  -- administratively blocked
-  suspended_reason VARCHAR(255) NULL
-  created_at, updated_at, is_deleted, deleted_at
-
-platform_users
-  id, email UNIQUE, password, first_name, last_name
-  is_active, mfa_enabled, mfa_secret
-  last_password_update_at
   created_at, updated_at, is_deleted, deleted_at
 ```
 
-`platform_users` is separate from `users` on purpose. The alternative — `users.tenant_id` nullable,
+`is_active` and `is_deleted` are the whole lifecycle: the first is provisioning
+state (the hotel keeps its rows and stops accepting logins, reversible), the
+second is archiving (it leaves every list and its subdomain stops resolving,
+also reversible). There is no third flag — an earlier revision carried
+`is_suspended`/`suspended_reason` for an administrative block, dropped in
+migration `d7e4b2c9f016` as redundant with `is_active`.
+
+The platform console's own tables, none of which are tenant-scoped:
+
+```
+super_admin_users
+  id, email UNIQUE, password, first_name, last_name
+  is_active, mfa_enabled, mfa_secret
+  last_password_update_at
+  failed_login_attempts, locked_until        -- brute-force guard
+  created_at, updated_at, is_deleted, deleted_at
+
+super_admin_tokens
+  id, super_admin_id -> super_admin_users.id, access_token, is_revoked
+  created_at, updated_at, is_deleted, deleted_at
+
+audit_logs
+  id, super_admin_id (no FK, on purpose), actor_email
+  action, entity_type, entity_id, details (JSON text), ip_address
+  created_at, updated_at, is_deleted, deleted_at
+```
+
+`super_admin_users` is separate from `users` on purpose. The alternative — `users.tenant_id` nullable,
 NULL meaning "platform" — makes `tenant_id` mean two things and turns one forgotten filter into
 a cross-tenant exposure of the highest-privilege accounts in the system. A separate table keeps
 `users.tenant_id` **`NOT NULL`**, so the invariant is absolute.
+
+`timezone` and `currency` live on `tenants` rather than in configuration because a single
+process-wide setting cannot describe hotels in different zones or trading in different currencies.
+`BUSINESS_TIMEZONE` and the seeded `default_currency` survive as the defaults applied to newly
+created hotels, and `tenant.currency` is mirrored into the hotel's own `system_settings` row so the
+two sides cannot disagree about what a hotel trades in.
 
 ### 4.2 The mixin
 
@@ -288,7 +317,7 @@ tenant-scoped and its lookup needs the tenant first.
 2. **`X-Tenant` header** (development and cross-origin). The frontend derives it from the subdomain.
 3. If both are present they must agree.
 
-Then load `Tenant` by slug and stash it on `g`. Unknown slug → 404; `is_suspended` → 403; a request
+Then load `Tenant` by slug and stash it on `g`. Unknown slug → 404; deactivated → 403; a request
 that names **no** tenant at all → 404 as well. The last one is not pedantry: without it a header-less
 request would run with no tenant filter, and the login route's `users` lookup could match a row from
 any hotel.
@@ -323,31 +352,80 @@ is 404; another hotel's credentials are refused; and the temp MFA token is bound
 
 ### 6.3 Platform authentication
 
-**Implemented (Phase 4e).** The operator who sits above every hotel is a row in `platform_users`, not
-in `users`. They authenticate with a **separate secret** (`PLATFORM_JWT_SECRET_KEY`; unset by default,
-so platform routes refuse every call rather than degrade into "any token is fine") and a distinct
-`scope: "platform"` claim. A hotel token therefore fails signature verification on a platform route and
-a platform token fails it on a hotel route — the scope check is the second line of defence.
+**Implemented (Phase 4e; extended by the platform console).** The operator who sits above every hotel is
+a row in `super_admin_users`, not in `users`. They authenticate with a **separate secret**
+(`PLATFORM_JWT_SECRET_KEY`; unset by default, so platform routes refuse every call rather than degrade
+into "any token is fine") and a distinct `scope: "super_admin"` claim. A hotel token therefore fails
+signature verification on a platform route and a platform token fails it on a hotel route — the scope
+check is the second line of defence, and `authenticate()` refuses a platform token on its own missing
+`user_id` claim.
 
-`src/api/middlewares/platform_auth.py` is the gate, the counterpart of `authenticate()`:
-`platform_required` decodes with the platform secret, requires the scope, loads the (non-tenant-scoped)
-`PlatformUser`, and stashes it on `g`. Routes under `/api/v1/platform/`, which the tenant resolver is
-exempt for:
+`src/api/middlewares/super_admin_auth.py` is the gate, the counterpart of `authenticate()`:
+`requires_super_admin` decodes with the platform secret, requires the scope, loads the
+(non-tenant-scoped) `SuperAdminUser`, checks the token against the `super_admin_tokens` revocation
+list, and stashes it on `g`. Routes under `/api/v1/platform/`, which the tenant resolver is exempt for.
 
-- `POST /login` — public; mints a platform token.
-- `GET /tenants` — list every hotel.
-- `POST /tenants` — provision one (calls `provision_tenant`; §7).
-- `POST /tenants/<id>/suspend` and `.../reactivate` — the toggle the resolver enforces as 403.
-- `POST /tenants/<id>/reset-admin-password` — resets the hotel's `SUPER_ADMIN` password **and revokes
-  its live tokens**, so the reset is not cosmetic.
+**Sign-in is two steps and MFA is compulsory.** A correct password returns a short-lived
+`super_admin_mfa_pending` token, never a session; only `POST /auth/verify-mfa` with a valid 6-digit
+code mints one. An account that has never enrolled is walked through enrolment on its first login
+rather than let in on a password alone, and enrolment is committed on the confirming code — so an
+abandoned sign-up cannot lock the account out. Repeated wrong passwords lock the account for
+`SUPER_ADMIN_LOCKOUT_MINUTES` (`SUPER_ADMIN_MAX_LOGIN_ATTEMPTS` to reach); the lock is checked *before*
+the password comparison so it leaks nothing by timing, and the right password is refused with the same
+429 while it holds.
 
-Verified by `src/database/scripts/platform_auth_test.py` (`hms_platformtest`, **20/20**): both
-cross-audience directions are refused; provisioning through the route yields a working hotel admin; a
-suspended hotel's requests are 403 and reactivation restores them; and a password reset stops the old
-password and the tokens it had bought.
+**Sessions are revocable.** `super_admin_tokens` is the server-side record, so `POST /auth/logout`,
+a deactivation and a password reset all kill a token immediately instead of waiting out its expiry.
+Sign-in is single-session: a second login revokes its predecessors.
 
-Platform tokens are **stateless** — there is no `platform_tokens` table, so a session cannot be revoked
-before it expires (default 60 minutes). Platform MFA is not wired either. Both are deliberate; see §10.
+The console's surface:
+
+- **Auth** — `POST /auth/login`, `POST /auth/verify-mfa` (both public); `GET /auth/me`,
+  `POST /auth/logout`, `POST /auth/change-password`, `POST /auth/mfa/setup`, `POST /auth/mfa/enable`.
+- **Dashboard / config** — `GET /dashboard/summary`, `GET /config` (`public_base_url` and the host
+  suffix hotel links are built from, so the panel cannot print a development host in production).
+- **Lookups** — `GET /lookups/currencies`, `GET /lookups/timezones`. A platform token cannot reach the
+  tenant-side `/api/v1/common` lookups (those need a hotel `user_id`), so the tenant form's pickers are
+  served here instead. The zone list comes from `zoneinfo`, so it is exactly the set
+  `tenant_management_service` validates against.
+- **Tenants** — `GET /tenants` (paginated, searchable, with an `active|inactive|archived`
+  facet), `POST /tenants` (provisions; §7), `GET|PATCH /tenants/<id>`,
+  `PATCH /tenants/<id>/status` (activate/deactivate -- the toggle the resolver enforces as 403),
+  `POST /tenants/<id>/archive` and `.../restore`,
+  `POST /tenants/<id>/reset-admin-password` (resets the hotel's `SUPER_ADMIN` password **and revokes
+  its live tokens**, so the reset is not cosmetic).
+- **Operators** — `GET|POST /admins`, `GET|PATCH /admins/<id>`,
+  `PATCH /admins/<id>/status`, `POST /admins/<id>/reset-password`, `POST /admins/<id>/reset-mfa`
+  (recovery for an operator who lost their authenticator — a password reset alone does not help while
+  MFA is compulsory).
+- **Audit** — `GET /audit-logs`, paginated and filterable by action, entity, actor and date range.
+
+Two guards are enforced in the service rather than left to the UI, because the failure they prevent is
+locking yourself out of the whole platform: an operator cannot deactivate their own account, and cannot
+reset their own password through the recovery endpoint (self-service `change-password` is the only path
+to your own, and it alone requires the current one).
+
+`archiving` is soft delete only — every booking, payment and audit row the hotel owns stays exactly
+where it is. A restored hotel comes back **inactive**: coming back and trading are two separate
+decisions, and silently switching a hotel on is the riskier default.
+
+Every platform action writes an `audit_logs` row through `AuditService`. `super_admin_id` is a plain
+integer with **no foreign key**, so the trail outlives the operator who wrote it. Audit writes are
+best-effort by design — a missing diagnostic row is a gap, a rolled-back activation is a surprise.
+
+Verified by `src/database/scripts/platform_auth_test.py` (`hms_platformtest`, **59/59**): the password
+step issues no session and only a valid code mints one; both cross-audience directions are refused;
+provisioning through the route yields a working hotel admin carrying its timezone and currency;
+reserved slugs and bogus timezones are refused; a deactivated hotel's requests are 403 and re-activation
+restores them; the retired suspend/reactivate endpoints answer 404; a password reset stops the old
+password and the tokens it had bought; archive/restore
+moves the hotel off resolution and back; logout kills the token for a second client too; and every
+action above left its audit row behind.
+
+The first operator is seeded by `src/database/seeders/platform_admin_seeder.py` (called from
+`seed_platform_data()`, so `run_base_seeders` produces one), idempotent on email, with credentials from
+configuration. Seeded that way, the account still cannot reach a session without enrolling in MFA —
+the seeder creates the principal, not a bypass.
 
 ---
 
@@ -358,13 +436,16 @@ provisioning is just the ordered call of them.
 
 `provision_tenant(slug, name, admin_email, admin_password, …)`:
 
-1. Create the `tenants` row and commit it. Seeders own their own sessions and commit independently,
-   so a tenant that is not durable first would leave seeded rows pointing at an id that never was.
+1. Create the `tenants` row — with `timezone` and `currency`, defaulting to `BUSINESS_TIMEZONE` and the
+   seeded `default_currency` when the caller does not name them — and commit it. Seeders own their own
+   sessions and commit independently, so a tenant that is not durable first would leave seeded rows
+   pointing at an id that never was.
 2. Seed the tenant's **roles + `role_module_access`**, from the global `modules` tree.
 3. Seed **`prefixes`** and **`reservation_sequences`** (a sequence belongs to a prefix).
-4. Seed default **`system_settings`** — `default_currency`, `company_name` (resolved to the hotel's
-   own name), `app_logo_image`, `terms_condition_url`, `privacy_policy_url` — and
-   **`message_templates`** (the 3 OTP rows, whose copy signs off as `{{ company_name }}`).
+4. Seed default **`system_settings`** — `default_currency` (the code this hotel was provisioned with),
+   `company_name` (resolved to the hotel's own name), `app_logo_image`, `terms_condition_url`,
+   `privacy_policy_url` — and **`message_templates`** (the 3 OTP rows, whose copy signs off as
+   `{{ company_name }}`).
 5. Seed default **`login_sliders`**.
 6. Create the tenant's first **`users`** row, in its own `SUPER_ADMIN` role.
 
@@ -489,7 +570,7 @@ does not exist are both refused with the 404 page, matching the API in both case
   `run_base_seeders()` twice to prove the documented dev command is idempotent. The scratch database
   is dropped afterwards; the dev database is never touched.
 - **Request-level tests.** `tenant_auth_test.py` (§6.2), `platform_auth_test.py` (§6.3) and
-  `tenant_booking_test.py` (§10): a token minted for A is rejected on B; a suspended tenant is 403;
+  `tenant_booking_test.py` (§10): a token minted for A is rejected on B; a deactivated tenant is 403;
   the hotel and platform identities never cross; and the second hotel can create a reservation and
   record a payment, attributed to its own user.
 - **Branding (done with Phase 6).** `tenant_branding_test.py` (`hms_brandingtest`, **26/26**): each
@@ -532,10 +613,13 @@ does not exist are both refused with the 404 page, matching the API in both case
     hotel. A per-tenant `GUEST` role (no module access) is now seeded, and self-registration resolves
     it by `role_code` within the current hotel. Missing `GUEST` **closes** registration rather than
     falling back to any other role. **Fixed** (`tenant_branding_test.py`).
-- **Platform auth is deliberately minimal (Phase 4e).** No `platform_tokens` table, so a platform
-  session is stateless and cannot be revoked before its expiry (default 60 minutes); no second factor
-  on platform login; and no platform-user seeder — the first operator is created out-of-band (a row in
-  `platform_users`). Each of these is a product decision rather than a tenancy requirement.
+- ~~**Platform auth is deliberately minimal (Phase 4e).**~~ **Resolved.** The console now has the full
+  lifecycle: `super_admin_tokens` makes a platform session revocable (logout, deactivation and a reset
+  all take effect immediately), MFA is **compulsory** on platform sign-in with an enrolment step and a
+  `reset-mfa` recovery path, and `audit_logs` records every platform action. What remains deliberately
+  is the *absence of roles*: there is one platform role, so `requires_super_admin` checks membership
+  in `super_admin_users` and nothing finer. Anything past that would need a per-platform permission
+  model, which is a product decision rather than a tenancy requirement.
 - **Pre-existing, not tenancy-specific:** `authenticate()` skips the revocation check for any token
   carrying a `scope` claim (`auth_middleware.py:78`), which is what lets the `mfa_pending` temp token be
   accepted as a bearer token for its five-minute life — i.e. it bypasses the second factor. It is bound
@@ -556,10 +640,10 @@ does not exist are both refused with the 404 page, matching the API in both case
 
 | # | Phase | Status | Deliverable | Verified by |
 |---|---|---|---|---|
-| 1 | Tenant registry & resolution | **done** | `tenants`, `platform_users` models; `tenant_context`; `before_request` resolution; public tenant-info endpoint | App boots unchanged; `acme` resolves to a tenant; platform routes are skipped |
+| 1 | Tenant registry & resolution | **done** | `tenants`, `super_admin_users` models; `tenant_context`; `before_request` resolution; public tenant-info endpoint | App boots unchanged; `acme` resolves to a tenant; platform routes are skipped |
 | 2 | Model scoping | **done** | `TenantScoped` mixin on every §3.3 model; composite constraints | Models import clean; migrations regenerated by hand |
 | 3 | Enforcement | **done** | `do_orm_execute` filter, `before_flush` stamp + FK guard, `Session.get` wrapper, leak audit script, leak tests | `tenant_leak_test.py` **141/141**; `tenant_leak_audit.py` clean; the four §5.3 hazards proven |
-| 4 | Auth integration | **done** | `tenant_id` JWT claim on all token types; `authenticate()` cross-check; host-only refresh cookie; platform auth (`platform_users`, separate secret + scope, `/api/v1/platform/*`); §10 booking/payment ids fixed | `tenant_auth_test.py` **13/13**; `platform_auth_test.py` **20/20**; `tenant_booking_test.py` **9/9**; suspended tenant 403 |
+| 4 | Auth integration | **done** | `tenant_id` JWT claim on all token types; `authenticate()` cross-check; host-only refresh cookie; platform auth (`super_admin_users`, separate secret + `super_admin` scope, revocable sessions, compulsory MFA, audit trail, `/api/v1/platform/*`); §10 booking/payment ids fixed | `tenant_auth_test.py` **13/13**; `platform_auth_test.py` **59/59**; `tenant_booking_test.py` **9/9**; deactivated tenant 403 |
 | 5 | Provisioning | **done** (early — see §7) | Tenant-aware seeders; `provision_tenant()`; `seed_platform_data` / `seed_tenant_defaults` / `seed_tenant_demo_data` | Two tenants provisioned into a scratch DB, each isolated (see §9) |
 | 6 | Per-tenant config & content | **done** | Per-tenant `system_settings` + branding, email `company_name`, seeded `GUEST` role, registration fix | `tenant_branding_test.py` **26/26** |
 | 7 | Frontend | **done** | Tenant-aware `InstanceService`, `X-Tenant` header, per-tenant token key, boot-time branding, unknown-host 404, dev CORS + `allowedHosts` | Karma **122/122**; the §8 two-hotel walkthrough is the remaining manual check |

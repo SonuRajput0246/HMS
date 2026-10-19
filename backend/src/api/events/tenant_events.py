@@ -24,12 +24,6 @@ def tenant_before_insert(mapper, connection, target):
     else:
         target.deleted_at = None
 
-    ## A suspended tenant always carries a reason. Only the first suspension is
-    ## recorded -- re-suspending without a new reason must not blank the one
-    ## that explains the current outage.
-    if not target.is_suspended:
-        target.suspended_reason = None
-
 
 ### BEFORE UPDATE
 @event.listens_for(Tenant, "before_update")
@@ -46,8 +40,3 @@ def tenant_before_update(mapper, connection, target):
             target.deleted_at = target.deleted_at or now
         else:
             target.deleted_at = None
-
-    ## Clearing suspension clears the reason with it, so a reactivated tenant
-    ## cannot keep a stale explanation attached.
-    if state.attrs.is_suspended.history.has_changes() and not target.is_suspended:
-        target.suspended_reason = None
