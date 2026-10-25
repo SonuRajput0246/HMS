@@ -1,6 +1,6 @@
 @use '../../tokens' as *;
 
-// The visual language is the hotel screen's (`manage-tenant`), reduced to one
+// The visual language is the tenant screen's (`manage-tenant`), reduced to one
 // entity. Kept as a copy rather than a shared partial because the two screens
 // have drifted apart before and a wrong edit to shared layout would move both
 // at once; the sibling list components follow the same convention.

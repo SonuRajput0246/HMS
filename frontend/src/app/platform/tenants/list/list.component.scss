@@ -253,7 +253,7 @@
   }
 
   // The tenant's first letter, tinted per row so the table scans as a list of
-  // distinct hotels rather than a wall of text.
+  // distinct workspaces rather than a wall of text.
   .tenant-name {
     display: flex;
     align-items: center;
@@ -453,7 +453,7 @@
 //
 //  The bar itself -- the 50x26 page-size chip, the one-line layout
 //  and the compact option list -- is the shared `.table-footer`
-//  treatment in styles.scss, the same one every list page and the
+//  treatment in styles.scss, the same one the HMS list pages and the
 //  activity feed sit on. Nothing is restated here: overriding the
 //  --mat-paginator-* tokens is what this page used to do, and it is
 //  exactly what made the bar read differently from every other list

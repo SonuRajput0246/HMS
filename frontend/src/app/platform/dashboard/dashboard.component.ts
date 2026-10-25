@@ -40,20 +40,14 @@ export class PlatformDashboardComponent {
   summary: ITenantSummary | null = null;
 
   readonly cards: ISummaryCard[] = [
-    { key: 'total_tenants', label: 'Total hotels', icon: 'storefront', tone: 'neutral' },
+    { key: 'total_tenants', label: 'Total tenants', icon: 'storefront', tone: 'neutral' },
     { key: 'active_tenants', label: 'Active', icon: 'check_circle', tone: 'positive' },
     { key: 'inactive_tenants', label: 'Inactive', icon: 'pause_circle', tone: 'warn' },
     { key: 'archived_tenants', label: 'Archived', icon: 'archive', tone: 'muted' },
     { key: 'total_users', label: 'Users', icon: 'group', tone: 'neutral' },
   ];
 
-  /**
-   * The three lifecycle bands that make up the total, in that order.
-   *
-   * Inactive and archived are counted separately by the backend because they are
-   * different decisions: one hotel stopped trading and can be switched back, the
-   * other has left the platform and its subdomain no longer resolves.
-   */
+  /** The three lifecycle bands that make up the total, in that order. */
   readonly composition: ICompositionBand[] = [
     { key: 'active_tenants', label: 'Active', tone: 'active' },
     { key: 'inactive_tenants', label: 'Inactive', tone: 'inactive' },

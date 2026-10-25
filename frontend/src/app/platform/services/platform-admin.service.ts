@@ -16,7 +16,7 @@ export interface IAdminListQuery {
 /**
  * The platform's own operators, as seen by an operator.
  *
- * Every call lands on `/api/v1/platform/admins`, attributed to the platform
+ * Every call lands on `/api/super-admin/admins`, attributed to the platform
  * token alone. Self-protection (you cannot deactivate or reset yourself) is
  * enforced server-side; the UI mirrors it by disabling those actions on your
  * own row, but the server is the authority.

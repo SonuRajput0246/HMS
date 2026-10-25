@@ -7,13 +7,13 @@ import { IEntityResponse } from '../../models/ICommon.model';
 import { ICurrencyOption, ITimezoneOption } from '../models/platform.model';
 
 /**
- * Reference data the hotel screens pick from: the ISO 4217 currencies the
+ * Reference data the tenant screens pick from: the ISO 4217 currencies the
  * `currencies` table holds, and the IANA zones Python's `zoneinfo` can resolve.
  *
- * These deliberately live on `/api/v1/platform`, not on the shared
- * `/api/v1/common` lookups the hotel app uses. The two APIs authenticate
+ * These deliberately live on `/api/super-admin`, not on the shared
+ * `/api/v1/common` lookups the tenant app uses. The two APIs authenticate
  * differently and neither token works on the other's side: a platform token
- * carries no hotel `user_id`, so `auth_middleware.authenticate` (which
+ * carries no tenant `user_id`, so `auth_middleware.authenticate` (which
  * `requires_module` runs) refuses it outright. Served through the platform
  * guard instead, they are readable from the console and still come from the
  * same `CommonService` rows as everything else.
@@ -27,7 +27,7 @@ export class PlatformLookupService {
   private readonly baseURL: string;
 
   constructor() {
-    this.baseURL = `${this.config.get<string>('BASE_URL')}/api/v1/platform`;
+    this.baseURL = `${this.config.get<string>('BASE_URL')}/api/super-admin`;
   }
 
   currencies(): Observable<IEntityResponse> {

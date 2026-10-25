@@ -3,7 +3,7 @@
     <div class="page-title">
       <span class="eyebrow">Platform</span>
       <h1>Overview</h1>
-      <p>Every hotel on this deployment, at a glance.</p>
+      <p>Every workspace on this deployment, at a glance.</p>
     </div>
 
     <button mat-stroked-button class="btn-outline" (click)="loadSummary()" [disabled]="isLoading">
@@ -19,11 +19,11 @@
   <ng-container *ngIf="!isLoading && summary">
     <section class="hero">
       <div class="hero-main">
-        <span class="hero-label">Total hotels</span>
+        <span class="hero-label">Total tenants</span>
         <div class="hero-value">{{ value('total_tenants') }}</div>
         <div class="hero-meta">
           <mat-icon>group</mat-icon>
-          <span>{{ value('total_users') }} users across all hotels</span>
+          <span>{{ value('total_users') }} users across all workspaces</span>
         </div>
       </div>
 
@@ -64,8 +64,8 @@
       <a class="quick-card" routerLink="/platform/tenants/new">
         <span class="quick-icon"><mat-icon>add_business</mat-icon></span>
         <span class="quick-text">
-          <b>Create a hotel</b>
-          <span>Register a hotel and its first administrator</span>
+          <b>Create a tenant</b>
+          <span>Register a workspace and its first administrator</span>
         </span>
         <mat-icon class="quick-arrow">arrow_forward</mat-icon>
       </a>
@@ -73,8 +73,8 @@
       <a class="quick-card" routerLink="/platform/tenants">
         <span class="quick-icon alt"><mat-icon>dns</mat-icon></span>
         <span class="quick-text">
-          <b>Review hotels</b>
-          <span>Activate, archive or restore any hotel</span>
+          <b>Review tenants</b>
+          <span>Activate, archive or restore any workspace</span>
         </span>
         <mat-icon class="quick-arrow">arrow_forward</mat-icon>
       </a>

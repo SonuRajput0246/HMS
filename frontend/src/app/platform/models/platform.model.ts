@@ -3,8 +3,8 @@
  *
  * These mirror `backend/src/api/services/tenant_management_service.py` and
  * `super_admin_auth_service.py` exactly, including the derived `status` word
- * the backend computes from its flags -- the UI renders one label rather than
- * re-deriving active/inactive/archived from two booleans.
+ * the backend computes from the two flags -- the UI renders one label rather
+ * than re-deriving active/inactive/archived from `is_active` + `is_deleted`.
  */
 
 export type TenantStatus = 'active' | 'inactive' | 'archived';
@@ -64,19 +64,48 @@ export interface ITenant {
   slug: string;
   timezone: string;
   currency: string;
-  /** Provisioning state: a deactivated hotel keeps its rows and stops
-   *  accepting logins. Reversible without touching archiving. */
   is_active: boolean;
-  /** Archived: leaves every list and its subdomain stops resolving. */
   is_deleted: boolean;
   status: TenantStatus;
   created_at?: string | null;
   updated_at?: string | null;
   deleted_at?: string | null;
   user_count?: number | null;
+    /**
+   * The tenant's newest administrator invitation, or `null` if it has never
+   * had one (pre-dating the invitation flow, or seeded). Returned by
+   * `GET /tenants/<id>` so the edit screen can offer a resend only when there
+   * is a live record behind it.
+   */
+  admin_invitation?: ITenantInvitation | null;
 }
 
-/** Create payload: the hotel and its first administrator in one form. */
+/** Lifecycle of one invitation link, as the backend's `status_of` derives it. */
+export type InvitationStatus = 'pending' | 'accepted' | 'expired' | 'revoked';
+
+/**
+ * One `tenant_admin_invitations` row, as serialized by
+ * `tenant_invitation_service._serialize` -- both the tenant detail response
+ * and the invitation preview endpoint speak this shape.
+ */
+export interface ITenantInvitation {
+  id: number;
+  first_name: string;
+  last_name: string;
+  email: string;
+  status: InvitationStatus;
+  expires_at: string | null;
+  accepted_at: string | null;
+  invited_by?: string | null;
+  created_at: string | null;
+}
+
+/**
+ * Create payload: the tenant and its first administrator. There is no
+ * password here by design -- the administrator sets one by accepting the
+ * emailed invitation link, so the only credential this form produces is an
+ * address to send it to.
+ */
 export interface ICreateTenant {
   name: string;
   slug: string;
@@ -85,8 +114,10 @@ export interface ICreateTenant {
   admin_first_name: string;
   admin_last_name: string;
   admin_email: string;
+  admin_mode?: 'owner' | 'invitation';
   admin_password: string;
 }
+
 
 /** Partial edit payload -- the service only touches fields that are present. */
 export interface IUpdateTenant {

@@ -6,26 +6,25 @@ import { finalize } from 'rxjs/operators';
 
 import { CustomSnackbarService } from '../../../shared/custom-snackbar/custom-snackbar.service';
 import { IEntityResponse } from '../../../models/ICommon.model';
-import { IAuditLog, ICurrencyOption, ITenant, ITimezoneOption } from '../../models/platform.model';
+import { IAuditLog, ICurrencyOption, ITenant, ITenantInvitation, ITimezoneOption } from '../../models/platform.model';
 import { PlatformAuditService } from '../../services/platform-audit.service';
 import { PlatformConfigService } from '../../services/platform-config.service';
 import { PlatformLookupService } from '../../services/platform-lookup.service';
 import { PlatformTenantService } from '../../services/platform-tenant.service';
 
 /** Mirrors the backend's SLUG_REGEX exactly -- see tenant_management_schema.py. */
-const SLUG_PATTERN = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
-
-/** The name column is 150 wide; the server enforces the same window. */
-const NAME_MAX = 150;
+const SLUG_PATTERN = /^[a-z0-9](?:[a-z0-9-]{0,48}[a-z0-9])?$/;
 
 /**
- * One screen for both halves of a create -- the hotel and its first
+ * One screen for both halves of a create -- the workspace and its first
  * administrator -- and for the (necessarily narrower) edit, where the admin
  * fields are absent because the backend does not accept them there.
  *
- * Client-side rules restate the server's rather than replace them: the same
- * regex, the same 6..20 password window. The server remains the authority; a
- * mismatch only decides whether the browser warns first or the API does.
+ * The create form collects a name and an email address, not a password. The
+ * backend provisions the workspace and emails the administrator a single-use
+ * link; they choose their own password by accepting it. So the only
+ * client-side rules this screen owns are the server's name, slug and email
+ * shapes -- it never sees a credential at all.
  *
  * Timezone and currency are picked from lists the server supplies, not typed.
  * They used to be free-text inputs with a small hardcoded suggestion list, so
@@ -56,11 +55,23 @@ export class ManageTenantComponent implements OnDestroy {
   isSaving = false;
   isLookupsLoading = false;
 
+  /** Choose how the first owner is created on a new tenant. */
+  adminMode: 'owner' | 'invitation' = 'invitation';
+
   /** This tenant's own audit trail, newest first. Populated only when editing,
    * since a brand-new tenant has no history to show. */
   tenantHistory: IAuditLog[] = [];
   isHistoryLoading = false;
   historyTotal = 0;
+
+  /**
+   * The newest administrator invitation for the tenant being edited, as the
+   * detail endpoint reports it. Drives the resend card: shown only when a
+   * record exists and has not been accepted, so the button never appears on
+   * a tenant the backend would refuse with 400. Stays null on create.
+   */
+  invitation: ITenantInvitation | null = null;
+  isResending = false;
 
   /** Every active currency, and the subset currently shown after filtering. */
   currencyOptions: ICurrencyOption[] = [];
@@ -84,9 +95,10 @@ export class ManageTenantComponent implements OnDestroy {
   }
 
   /**
-   * The host this hotel will be served from, recomputed as the slug is typed.
-   * The subdomain is the hotel's real identity, so showing its consequence next
-   * to the field is the difference between "a slug" and "a URL people will use".
+   * The host this workspace will be served from, recomputed as the slug is
+   * typed. The subdomain is the tenant's real identity, so showing its
+   * consequence next to the field is the difference between "a slug" and
+   * "a URL people will use".
    *
    * The domain comes from the deployment rather than from a literal here: the
    * form's job is to show what the operator's own install will do with the
@@ -128,13 +140,13 @@ export class ManageTenantComponent implements OnDestroy {
 
   private buildForm(): void {
     const controls: Record<string, unknown> = {
-      name: ['', [Validators.required, Validators.maxLength(NAME_MAX)]],
+      name: ['', [Validators.required, Validators.maxLength(120)]],
       slug: [
         '',
         [
           Validators.required,
           Validators.minLength(2),
-          Validators.maxLength(63),
+          Validators.maxLength(50),
           Validators.pattern(SLUG_PATTERN),
         ],
       ],
@@ -149,16 +161,44 @@ export class ManageTenantComponent implements OnDestroy {
         '',
         [Validators.required, Validators.email, Validators.maxLength(255)],
       ];
-      controls['admin_password'] = [
-        '',
-        [Validators.required, Validators.minLength(6), Validators.maxLength(20)],
-      ];
+      controls['admin_password'] = ['', [Validators.minLength(6), Validators.maxLength(20)]];
     }
 
     this.form = this.fb.group(controls);
+    if (!this.isEdit) {
+      this.updateAdminMode(this.adminMode);
+    }
   }
 
-  /** Re-filter a picker whenever its search box changes. */
+  /** Switch between sending an invitation or creating the owner directly. */
+  setAdminMode(mode: 'owner' | 'invitation'): void {
+    if (this.isEdit || this.isSaving) {
+      return;
+    }
+    this.updateAdminMode(mode);
+  }
+
+  private updateAdminMode(mode: 'owner' | 'invitation'): void {
+    this.adminMode = mode;
+    const password = this.form?.get('admin_password');
+    if (!password) {
+      return;
+    }
+
+    if (mode === 'owner') {
+      password.setValidators([Validators.required, Validators.minLength(6), Validators.maxLength(20)]);
+    } else {
+      password.clearValidators();
+      password.setValue('');
+    }
+    password.updateValueAndValidity();
+  }
+
+  /**
+   * Keep the pickers' visible options in step with their search boxes. The
+   * terms live outside the form because they filter what is offered; they are
+   * not values the tenant has.
+   */
   private watchFilters(): void {
     this.subs.add(
       this.currencyFilter.valueChanges.subscribe((term) => {
@@ -250,6 +290,7 @@ export class ManageTenantComponent implements OnDestroy {
             timezone: tenant.timezone,
             currency: tenant.currency,
           });
+          this.invitation = tenant.admin_invitation ?? null;
           this.loadHistory();
         },
         error: (err) => {
@@ -342,7 +383,8 @@ export class ManageTenantComponent implements OnDestroy {
           admin_first_name: value.admin_first_name,
           admin_last_name: value.admin_last_name,
           admin_email: value.admin_email,
-          admin_password: value.admin_password,
+          admin_mode: this.adminMode,
+          admin_password: this.adminMode === 'owner' ? value.admin_password : undefined,
         });
 
     request$
@@ -359,6 +401,61 @@ export class ManageTenantComponent implements OnDestroy {
           );
         },
       });
+  }
+
+  /**
+   * Re-send the administrator's invitation link. The server's message is
+   * surfaced verbatim because it already names the recipient and says
+   * whether the email left -- including the "issued, but SMTP failed" case
+   * the snackbar must not dress up as success.
+   *
+   * On success the local record is stale (a resend supersedes it with a new
+   * expiry), so it is refreshed from the detail endpoint rather than guessed.
+   */
+  resendInvitation(): void {
+    if (!this.tenantId || this.isResending) {
+      return;
+    }
+
+    this.isResending = true;
+    this._tenants.resendInvitation(this.tenantId)
+      .pipe(finalize(() => (this.isResending = false)))
+      .subscribe({
+        next: (resp) => {
+          this._snackbar.openSnackBar(resp?.message || 'Invitation sent.', 'success');
+          this._tenants.get(this.tenantId as number).subscribe({
+            next: (detail) => {
+              this.invitation = (detail?.data as ITenant | null)?.admin_invitation ?? null;
+            },
+            error: () => { /* the card simply keeps the previous status */ },
+          });
+        },
+        error: (err) => {
+          this._snackbar.openSnackBar(
+            err?.error?.message || 'Could not resend the invitation.',
+            'error'
+          );
+        },
+      });
+  }
+
+  /** True while the card should render: a live, not-yet-accepted invitation. */
+  get hasLiveInvitation(): boolean {
+    return !!this.invitation && this.invitation.status !== 'accepted';
+  }
+
+  /** `pending` / `expired` / `revoked` as an operator-facing sentence. */
+  get invitationStatusLabel(): string {
+    switch (this.invitation?.status) {
+      case 'pending':
+        return 'Waiting to be accepted';
+      case 'expired':
+        return 'Link expired';
+      case 'revoked':
+        return 'Superseded';
+      default:
+        return this.invitation?.status ?? '';
+    }
   }
 
   goBack(): void {

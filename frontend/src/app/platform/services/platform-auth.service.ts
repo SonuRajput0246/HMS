@@ -3,25 +3,19 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
 import { AppConfig } from '../../core/config/config';
-import {
-  PLATFORM_ACCESS_TOKEN_KEY,
-  PLATFORM_PROFILE_KEY,
-} from '../../core/config/platform-storage';
 import { IEntityResponse } from '../../models/ICommon.model';
 import { IPlatformLoginData, IPlatformProfile } from '../models/platform.model';
 
 /**
- * Platform (super admin) session, kept apart from the hotel session.
+ * Platform (super admin) session, kept apart from the tenant session.
  *
  * Both can be open in the same browser, so they cannot share storage keys: a
- * hotel token under the platform's key (or the reverse) would be sent to the
- * wrong API and rejected, or -- worse -- accepted by a guard that only looked at
- * whether a token was present. The key names live in
- * `core/config/platform-storage.ts` so this service and the interceptor cannot
- * disagree about them.
+ * tenant token under the platform's key (or the reverse) would be sent to the
+ * wrong API and rejected, or -- worse -- accepted by a scope check that only
+ * looked at whether a token was present. `hms_sa_*` is the platform namespace.
  *
- * Requests to `/api/v1/platform` carry no `X-Tenant` header: the interceptor
- * skips it for this API, because a platform caller has no hotel.
+ * Requests to `/api/super-admin` carry no `X-Tenant-Slug`: the interceptor
+ * skips it for this API, because a platform caller has no workspace.
  */
 @Injectable({ providedIn: 'root' })
 export class PlatformAuthService {
@@ -37,13 +31,13 @@ export class PlatformAuthService {
 
   login(payload: { email: string; password: string }): Observable<IEntityResponse> {
     return this.http.post<IEntityResponse>(
-      `${this.baseURL}/api/v1/platform/auth/login`,
+      `${this.baseURL}/api/super-admin/auth/login`,
       payload
     );
   }
 
   me(): Observable<IEntityResponse> {
-    return this.http.get<IEntityResponse>(`${this.baseURL}/api/v1/platform/auth/me`);
+    return this.http.get<IEntityResponse>(`${this.baseURL}/api/super-admin/auth/me`);
   }
 
   /**
@@ -56,7 +50,7 @@ export class PlatformAuthService {
    */
   verifyMfa(payload: { temp_token: string; totp: string }): Observable<IEntityResponse> {
     return this.http.post<IEntityResponse>(
-      `${this.baseURL}/api/v1/platform/auth/verify-mfa`,
+      `${this.baseURL}/api/super-admin/auth/verify-mfa`,
       payload
     );
   }
@@ -65,12 +59,12 @@ export class PlatformAuthService {
    * until `enableMfa` confirms a code, so an abandoned attempt simply makes
    * the next sign-in run the compulsory setup step again. */
   setupMfa(): Observable<IEntityResponse> {
-    return this.http.post<IEntityResponse>(`${this.baseURL}/api/v1/platform/auth/mfa/setup`, {});
+    return this.http.post<IEntityResponse>(`${this.baseURL}/api/super-admin/auth/mfa/setup`, {});
   }
 
   enableMfa(payload: { totp: string }): Observable<IEntityResponse> {
     return this.http.post<IEntityResponse>(
-      `${this.baseURL}/api/v1/platform/auth/mfa/enable`,
+      `${this.baseURL}/api/super-admin/auth/mfa/enable`,
       payload
     );
   }
@@ -84,21 +78,21 @@ export class PlatformAuthService {
     new_password: string;
   }): Observable<IEntityResponse> {
     return this.http.post<IEntityResponse>(
-      `${this.baseURL}/api/v1/platform/auth/change-password`,
+      `${this.baseURL}/api/super-admin/auth/change-password`,
       payload
     );
   }
 
   logout(): Observable<IEntityResponse> {
     return this.http.post<IEntityResponse>(
-      `${this.baseURL}/api/v1/platform/auth/logout`,
+      `${this.baseURL}/api/super-admin/auth/logout`,
       {}
     );
   }
 
   saveSession(data: IPlatformLoginData): void {
-    sessionStorage.setItem(PLATFORM_ACCESS_TOKEN_KEY, data.access_token);
-    localStorage.setItem(PLATFORM_PROFILE_KEY, JSON.stringify(data.profile));
+    sessionStorage.setItem('hms_sa_accessToken', data.access_token);
+    localStorage.setItem('hms_sa_profile', JSON.stringify(data.profile));
   }
 
   /**
@@ -107,11 +101,11 @@ export class PlatformAuthService {
    * server; the token is untouched.
    */
   saveProfile(profile: IPlatformProfile): void {
-    localStorage.setItem(PLATFORM_PROFILE_KEY, JSON.stringify(profile));
+    localStorage.setItem('hms_sa_profile', JSON.stringify(profile));
   }
 
   get profile(): IPlatformProfile | null {
-    const raw = localStorage.getItem(PLATFORM_PROFILE_KEY);
+    const raw = localStorage.getItem('hms_sa_profile');
     if (!raw) {
       return null;
     }
@@ -128,7 +122,7 @@ export class PlatformAuthService {
   }
 
   clearSession(): void {
-    sessionStorage.removeItem(PLATFORM_ACCESS_TOKEN_KEY);
-    localStorage.removeItem(PLATFORM_PROFILE_KEY);
+    sessionStorage.removeItem('hms_sa_accessToken');
+    localStorage.removeItem('hms_sa_profile');
   }
 }

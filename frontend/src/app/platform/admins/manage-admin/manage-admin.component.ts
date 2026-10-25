@@ -24,7 +24,7 @@ const PASSWORD_MAX = 20;
  * intact; the list rebuilds itself from scratch when the operator navigates
  * back, so it does not need telling that something changed.
  *
- * The shape is the hotel screen's (`manage-tenant`) reduced to one entity: a
+ * The shape is the tenant screen's (`manage-tenant`) reduced to one entity: a
  * create has no history to show, an edit appends the operator's own audit trail
  * below the form.
  */

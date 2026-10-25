@@ -42,7 +42,7 @@ export class AdminListComponent {
   readonly displayedColumns = ['admin', 'mfa', 'status', 'last_password_update_at', 'actions'];
 
   // Shared with every other list page, so the page-size trigger and its
-  // option list are sized identically across the hotel app and the platform console.
+  // option list are sized identically across the HMS and the platform console.
   readonly pageSizeSelect: MatPaginatorSelectConfig = PAGE_SIZE_SELECT_CONFIG;
 
   admins: ISuperAdmin[] = [];
@@ -133,6 +133,10 @@ export class AdminListComponent {
     this._dialog.open(ResetPasswordDialogComponent, {
       data: admin,
       autoFocus: 'first-tabbable',
+      // Both classes are styled in src/styles.scss: the dialog frame is
+      // created by the CDK overlay, outside every component's view.
+      panelClass: 'console-dialog',
+      backdropClass: 'console-dialog-backdrop',
     })
       .afterClosed()
       .subscribe((changed: boolean) => {

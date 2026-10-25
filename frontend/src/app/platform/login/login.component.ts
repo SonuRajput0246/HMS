@@ -9,11 +9,10 @@ import { IPlatformLoginData, IPlatformMfaChallenge, IPlatformMfaSetup } from '..
 import { PlatformAuthService } from '../services/platform-auth.service';
 
 /**
- * Platform sign-in. Deliberately not the hotel login with a different logo:
- * it talks to `/api/v1/platform/auth/login`, writes the `platform_*` keys and
- * lands on `/platform/dashboard`. The hotel screen does none of those, and the
- * two must never be reachable from each other's host -- see the `canMatch` host
- * split in app-routing.module.ts.
+ * Platform sign-in. Deliberately not the tenant login with a different logo:
+ * it talks to `/api/super-admin/auth/login`, writes the `hms_sa_*` keys and
+ * lands on `/platform/dashboard`. The tenant screen does none of those, and the
+ * two must never be reachable from each other's host.
  *
  * Three stages. Credentials first, then the second factor -- and because MFA
  * is compulsory for platform administrators, that second factor has two shapes:

@@ -1,8 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { MatPaginatorSelectConfig, PageEvent } from '@angular/material/paginator';
-import { MatDialog } from '@angular/material/dialog';
-import { Observable } from 'rxjs';
 import { finalize } from 'rxjs/operators';
 
 import { ConfirmationService } from '../../../services/confirmation.service';
@@ -12,24 +10,17 @@ import { IEntityResponse } from '../../../models/ICommon.model';
 import { ITenant } from '../../models/platform.model';
 import { PlatformConfigService } from '../../services/platform-config.service';
 import { PlatformTenantService } from '../../services/platform-tenant.service';
-import { ResetHotelAdminPasswordDialogComponent } from '../reset-admin-password-dialog/reset-admin-password-dialog.component';
 
 /**
- * Every hotel on the platform, with the lifecycle verbs the operator owns.
+ * Every workspace on the platform, with the lifecycle verbs the operator owns.
  *
  * The status facet mirrors the backend's three views (`active` / `inactive` /
  * `archived`) rather than two boolean filters, so a tab maps to exactly one
  * request parameter and an impossible combination cannot be expressed.
  *
- * `inactive` and `archived` are separate here for the same reason they are
- * separate flags on the backend. Deactivation stops a hotel trading but leaves
- * it on every list; archiving takes it off the lists and its subdomain stops
- * resolving, without destroying anything. Collapsing them into one "disabled"
- * switch would make two differently-reversible actions look interchangeable.
- *
- * Destructive verbs go through a confirmation, and the reason is the product one
- * -- deactivating bites on the next request, archiving hides the hotel -- not a
- * formality.
+ * Destructive verbs go through a confirmation, and the reason is the product
+ * one -- deactivating bites on the next request, archiving hides the cafe --
+ * not a formality.
  */
 @Component({
   selector: 'app-tenant-list',
@@ -43,7 +34,6 @@ export class TenantListComponent {
   private _router = inject(Router);
   private _snackbar = inject(CustomSnackbarService);
   private _confirm = inject(ConfirmationService);
-  private _dialog = inject(MatDialog);
 
   readonly displayedColumns = [
     'name',
@@ -56,7 +46,7 @@ export class TenantListComponent {
   ];
 
   // Shared with every other list page, so the page-size trigger and its
-  // option list are sized identically across the app and the platform console.
+  // option list are sized identically across the HMS and the platform console.
   readonly pageSizeSelect: MatPaginatorSelectConfig = PAGE_SIZE_SELECT_CONFIG;
 
   tenants: ITenant[] = [];
@@ -111,7 +101,7 @@ export class TenantListComponent {
           this.tenants = [];
           this.totalRecords = 0;
           this._snackbar.openSnackBar(
-            err?.error?.message || 'Could not load hotels.',
+            err?.error?.message || 'Could not load tenants.',
             'error'
           );
         },
@@ -151,7 +141,7 @@ export class TenantListComponent {
   async toggleStatus(tenant: ITenant): Promise<void> {
     const activating = !tenant.is_active;
     const result = await this._confirm.confirm(
-      activating ? 'Activate hotel?' : 'Deactivate hotel?',
+      activating ? 'Activate tenant?' : 'Deactivate tenant?',
       activating
         ? `"${tenant.name}" and its users will be able to sign in again.`
         : `"${tenant.name}" will stop accepting sign-ins immediately. Its data is untouched.`,
@@ -161,12 +151,18 @@ export class TenantListComponent {
       return;
     }
 
-    this.run(tenant, this._tenants.setStatus(tenant.id, activating));
+    this.busyTenantId = tenant.id;
+    this._tenants.setStatus(tenant.id, activating)
+      .pipe(finalize(() => (this.busyTenantId = null)))
+      .subscribe({
+        next: (resp) => this.afterMutation(resp),
+        error: (err) => this.reportFailure(err),
+      });
   }
 
   async archiveTenant(tenant: ITenant): Promise<void> {
     const result = await this._confirm.confirm(
-      'Archive hotel?',
+      'Archive tenant?',
       `"${tenant.name}" will be hidden and unreachable at its subdomain. ` +
         `Nothing is deleted -- you can restore it later.`,
       'Yes, archive'
@@ -175,12 +171,18 @@ export class TenantListComponent {
       return;
     }
 
-    this.run(tenant, this._tenants.archive(tenant.id));
+    this.busyTenantId = tenant.id;
+    this._tenants.archive(tenant.id)
+      .pipe(finalize(() => (this.busyTenantId = null)))
+      .subscribe({
+        next: (resp) => this.afterMutation(resp),
+        error: (err) => this.reportFailure(err),
+      });
   }
 
   async restoreTenant(tenant: ITenant): Promise<void> {
     const result = await this._confirm.confirm(
-      'Restore hotel?',
+      'Restore tenant?',
       `"${tenant.name}" will come back inactive. Activate it when you are ` +
         `ready for it to trade again.`,
       'Yes, restore'
@@ -189,36 +191,12 @@ export class TenantListComponent {
       return;
     }
 
-    this.run(tenant, this._tenants.restore(tenant.id));
-  }
-
-  /**
-   * Reset a hotel's own administrator. The one recovery a hotel cannot perform
-   * itself -- when its only admin loses the password there is nobody inside to
-   * do it -- so the dialog collects a new one and warns that the target is
-   * signed out everywhere.
-   */
-  resetAdminPassword(tenant: ITenant): void {
-    this._dialog.open(ResetHotelAdminPasswordDialogComponent, {
-      data: tenant,
-      autoFocus: 'first-tabbable',
-    })
-      .afterClosed()
-      .subscribe((changed: boolean) => {
-        if (changed) {
-          this.loadTenants();
-        }
-      });
-  }
-
-  /** One lifecycle verb, with the row lock and the reload/refill handled. */
-  private run(tenant: ITenant, request$: Observable<IEntityResponse>): void {
     this.busyTenantId = tenant.id;
-    request$
+    this._tenants.restore(tenant.id)
       .pipe(finalize(() => (this.busyTenantId = null)))
       .subscribe({
-        next: (resp: IEntityResponse) => this.afterMutation(resp),
-        error: (err: any) => this.reportFailure(err),
+        next: (resp) => this.afterMutation(resp),
+        error: (err) => this.reportFailure(err),
       });
   }
 

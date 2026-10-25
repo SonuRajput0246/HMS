@@ -26,9 +26,6 @@ const ACTION_OPTIONS: IActionOption[] = [
   { value: 'DEACTIVATE_TENANT', label: 'Deactivated hotel', tone: 'warn' },
   { value: 'ARCHIVE_TENANT', label: 'Archived hotel', tone: 'amber' },
   { value: 'RESTORE_TENANT', label: 'Restored hotel', tone: 'neutral' },
-  // Recovery on a hotel's own admin -- the one thing a hotel cannot do for
-  // itself, so it is recorded like every other platform action.
-  { value: 'RESET_TENANT_ADMIN_PASSWORD', label: 'Reset hotel admin password', tone: 'amber' },
   { value: 'CREATE_SUPER_ADMIN', label: 'Created administrator', tone: 'success' },
   { value: 'UPDATE_SUPER_ADMIN', label: 'Updated administrator', tone: 'neutral' },
   { value: 'ACTIVATE_SUPER_ADMIN', label: 'Activated administrator', tone: 'success' },
@@ -46,7 +43,7 @@ const ACTION_OPTIONS: IActionOption[] = [
 ];
 
 const ENTITY_OPTIONS = [
-  { value: 'tenant', label: 'Hotel' },
+  { value: 'tenant', label: 'Tenants' },
   { value: 'super_admin', label: 'Administrator' },
 ];
 
@@ -73,14 +70,14 @@ export class PlatformActivityComponent {
   readonly entityOptions = ENTITY_OPTIONS;
 
   // Shared with every other list page, so the page-size trigger and its
-  // option list are sized identically across the hotel app and the platform console.
+  // option list are sized identically across the HMS and the platform console.
   readonly pageSizeSelect: MatPaginatorSelectConfig = PAGE_SIZE_SELECT_CONFIG;
 
   readonly displayedColumns = ['created_at', 'actor_email', 'action', 'entity', 'details'];
 
   logs: IAuditLog[] = [];
   totalRecords = 0;
-  pageSize = 15;
+  pageSize = 10;
   pageIndex = 0;
 
   actionFilter = '';
@@ -204,7 +201,7 @@ export class PlatformActivityComponent {
   }
 
   entityLabel(log: IAuditLog): string {
-    const type = log.entity_type === 'tenant' ? 'Hotel' : 'Administrator';
+    const type = log.entity_type === 'tenant' ? 'Tenant' : 'Administrator';
     return log.entity_id != null ? `${type} #${log.entity_id}` : type;
   }
 

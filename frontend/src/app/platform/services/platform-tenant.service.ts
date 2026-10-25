@@ -14,11 +14,11 @@ export interface ITenantListQuery {
 }
 
 /**
- * Hotel lifecycle, as seen by the platform operator.
+ * Tenant lifecycle, as seen by the platform operator.
  *
- * Every call lands on `/api/v1/platform/tenants`, attributed to the platform
+ * Every call lands on `/api/super-admin/tenants`, attributed to the platform
  * token alone -- these endpoints deliberately resolve no hotel, so no `X-Tenant`
- * header is sent for them.
+ * `X-Tenant-Slug` is sent for them.
  */
 @Injectable({ providedIn: 'root' })
 export class PlatformTenantService {
@@ -29,7 +29,7 @@ export class PlatformTenantService {
   private readonly baseURL: string;
 
   constructor() {
-    this.baseURL = `${this.config.get<string>('BASE_URL')}/api/v1/platform`;
+    this.baseURL = `${this.config.get<string>('BASE_URL')}/api/super-admin`;
   }
 
   summary(): Observable<IEntityResponse> {
@@ -78,15 +78,17 @@ export class PlatformTenantService {
   }
 
   /**
-   * Set a new password on a hotel's own super admin, ending their sessions.
+   * Re-issue and re-send the first administrator's invitation link.
    *
-   * The one recovery a hotel cannot perform itself: when its only admin loses
-   * the password there is nobody inside the hotel who could reset it. The
-   * server revokes that admin's live tokens, so this is not cosmetic.
+   * The backend decides whether that is possible: it supersedes any older
+   * unaccepted link, refuses (400) when there is no record or the account is
+   * already accepted, and answers `email_sent: false` in `data` when SMTP
+   * failed -- the message text says so either way.
    */
-  resetAdminPassword(id: number, newPassword: string): Observable<IEntityResponse> {
-    return this.http.post<IEntityResponse>(`${this.baseURL}/tenants/${id}/reset-admin-password`, {
-      password: newPassword,
-    });
+  resendInvitation(id: number): Observable<IEntityResponse> {
+    return this.http.post<IEntityResponse>(
+      `${this.baseURL}/tenants/${id}/admin-invitation/resend`,
+      {}
+    );
   }
 }

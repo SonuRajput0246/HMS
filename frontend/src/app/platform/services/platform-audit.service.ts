@@ -19,7 +19,7 @@ export interface IAuditLogQuery {
 /**
  * The platform audit trail.
  *
- * `GET /api/v1/platform/audit-logs` is the reader for the rows every
+ * `GET /api/super-admin/audit-logs` is the reader for the rows every
  * management action already writes. It runs under the platform guard, like the
  * rest of this API, so no tenant slug travels with it.
  */
@@ -32,7 +32,7 @@ export class PlatformAuditService {
   private readonly baseURL: string;
 
   constructor() {
-    this.baseURL = `${this.config.get<string>('BASE_URL')}/api/v1/platform`;
+    this.baseURL = `${this.config.get<string>('BASE_URL')}/api/super-admin`;
   }
 
   list(query: IAuditLogQuery): Observable<IEntityResponse> {
