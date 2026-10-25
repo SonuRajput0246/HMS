@@ -11,7 +11,7 @@ import { PlatformConfigService } from './platform-config.service';
  */
 describe('PlatformConfigService.deriveSuffix', () => {
   it('drops the console\'s own label in development', () => {
-    expect(PlatformConfigService.deriveSuffix('admin.localhost', '4200')).toBe('localhost:4200');
+    expect(PlatformConfigService.deriveSuffix('platform.localhost', '4200')).toBe('localhost:4200');
   });
 
   it('keeps the whole host when the console is the dev apex', () => {
@@ -38,7 +38,7 @@ describe('PlatformConfigService.deriveSuffix', () => {
   });
 
   it('lowercases and tolerates a missing host', () => {
-    expect(PlatformConfigService.deriveSuffix('ADMIN.EXAMPLE.COM', '')).toBe('example.com');
+    expect(PlatformConfigService.deriveSuffix('PLATFORM.EXAMPLE.COM', '')).toBe('example.com');
     expect(PlatformConfigService.deriveSuffix('', '')).toBe('');
   });
 });

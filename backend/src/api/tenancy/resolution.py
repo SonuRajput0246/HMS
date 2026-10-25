@@ -69,7 +69,17 @@ TENANT_SLUG_HEADER = "X-Tenant-Slug"
 ## tenant could take one, admin.localhost would resolve as a hotel and the
 ## management panel would stop being reachable. `is_reserved_slug()` is used on
 ## the write side so that refusal is decided in one place and cannot drift.
-_RESERVED_LABELS = {"localhost", "www", "api", "app", "admin", "superadmin", "sa", "panel"}
+_RESERVED_LABELS = {
+    "localhost",
+    "www",
+    "api",
+    "app",
+    "admin",
+    "platform",
+    "superadmin",
+    "sa",
+    "panel",
+}
 
 
 def is_reserved_slug(slug: str | None) -> bool:

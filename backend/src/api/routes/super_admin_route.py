@@ -1,22 +1,21 @@
 """Platform (super admin) HTTP layer.
 
-Separate blueprint, separate URL space (`/api/v1/platform`), separate guard.
-The split is the whole point: these views run with no tenant bound, so they must
-never share a wrapper with a path that resolves one -- which is also why
-`TENANT_EXEMPT_PREFIXES` in `tenant_resolver.py` covers this prefix.
+Separate blueprint, separate URL space (`/api/super-admin`), separate guard.
+The split is the whole point: these views run with no tenant bound, so they
+must never share a wrapper with a path that resolves one.
 
 Route order is deliberately public-first: `/auth/login` and `/auth/verify-mfa`
 are the only endpoints that accept an unauthenticated caller. Both run
-mid-sign-in, so there is no session to require yet -- the second one presents the
-short-lived pending token the first handed out -- and every other rule carries
-`@requires_super_admin`. There is no `requires_module` here -- that decorator
+mid-sign-in, so there is no session to require yet -- the second one presents
+the short-lived pending token the first handed out -- and every other rule
+carries `@requires_super_admin`. There is no `requires_module` here -- that decorator
 resolves grants from `role_module_access`, which is per-tenant, and a platform
 admin has no tenant's role. Membership in `super_admin_users` is the grant.
 
-These routes carry neither `__required_module__` nor `__auth_only__`: those mark a
-tenant-module contract this view does not take part in, so
-scripts/audit_authorization.py classifies them as public rather than reporting a
-platform route as an undeclared *tenant* endpoint.
+These routes carry neither `__required_module__` nor `__auth_only__`: those
+mark a tenant-module contract this view does not take part in, so
+scripts/audit_authorization.py classifies them as public rather than reporting
+a platform route as an undeclared *tenant* endpoint.
 """
 from flask import Blueprint, g, jsonify, request
 
@@ -36,7 +35,6 @@ from src.api.schemas.super_admin_schema import (
 from src.api.schemas.tenant_management_schema import (
     CreateTenantSchema,
     ListTenantsSchema,
-    ResetTenantAdminPasswordSchema,
     TenantStatusSchema,
     UpdateTenantSchema,
 )
@@ -47,7 +45,7 @@ from src.api.services.super_admin_user_service import SuperAdminUserService
 from src.api.services.tenant_management_service import TenantManagementService
 from src.database.session import db_session
 
-super_admin_bp = Blueprint("platform", __name__)
+super_admin_bp = Blueprint("super_admin", __name__)
 
 
 class SuperAdminRoute:
@@ -80,9 +78,8 @@ class SuperAdminRoute:
         return jsonify(result), status_code
 
     def verify_mfa_login(self):
-        ## Public like login: the caller holds a short-lived
-        ## `super_admin_mfa_pending` token, not a session, so there is no bearer
-        ## token to require here.
+        ## Public like login: the caller holds a short-lived `super_admin_mfa_pending`
+        ## token, not a session, so there is no bearer token to require here.
         payload = request.get_json() or {}
         validated_data = SuperAdminVerifyMfaSchema().load(payload)
         result, status_code = self.auth_service.verify_mfa_login(validated_data)
@@ -120,21 +117,21 @@ class SuperAdminRoute:
     ## ---------------------------------------------------------------- config
     @requires_super_admin
     def platform_config(self):
-        ## Public origin + hotel host suffix, straight from configuration. It is
-        ## behind the token even though the value is not secret: every other view
-        ## on this blueprint is, and opening one unauthenticated rule here would
-        ## buy nothing -- the panel only renders once signed in anyway.
+        ## Public origin + tenant domain, straight from `PUBLIC_BASE_URL`. It is
+        ## behind the token even though the value is not secret: every other
+        ## view on this blueprint is, and opening one unauthenticated rule here
+        ## would buy nothing -- the panel only renders once signed in anyway.
         result, status_code = self.tenant_service.platform_config()
         return jsonify(result), status_code
 
     ## -------------------------------------------------------------- lookups
     @requires_super_admin
     def list_currencies(self):
-        ## A platform token cannot reach the hotel-side `/api/v1/common` lookups:
-        ## those run through `authenticate()`, which needs a hotel `user_id` a
-        ## platform token does not carry. These two endpoints expose the same
-        ## data through the platform guard so the tenant form's currency/timezone
-        ## pickers can be populated.
+        ## A platform token cannot reach the tenant-side `/api/v1/common`
+        ## lookups: those run through `authenticate()`, which needs a tenant
+        ## `user_id` a platform token does not carry. These two endpoints expose
+        ## the same data through the platform guard so the tenant form's
+        ## currency/timezone pickers can be populated.
         result, status_code = self.common_service.get_all_currencies_list({})
         return jsonify(result), status_code
 
@@ -146,9 +143,9 @@ class SuperAdminRoute:
     ## -------------------------------------------------------------- tenants
     @requires_super_admin
     def list_tenants(self):
-        ## GET with query parameters. The hotel-side lists are POST bodies, but
-        ## this one is a plain read that the panel's filters address directly,
-        ## and a 404 here means "no such tab", not "no such row".
+        ## GET with query parameters. The tenant-side lists are POST bodies,
+        ## but this one is a plain read that the panel's filters address
+        ## directly, and a 404 here means "no such tab", not "no such row".
         validated_data = ListTenantsSchema().load(request.args.to_dict())
         result, status_code = self.tenant_service.get_tenants(validated_data)
         return jsonify(result), status_code
@@ -197,12 +194,12 @@ class SuperAdminRoute:
         return jsonify(result), status_code
 
     @requires_super_admin
-    def reset_tenant_admin_password(self, tenant_id):
-        ## The one recovery a hotel cannot perform itself: when its only admin
-        ## has lost the password, nobody inside the hotel can reset it.
-        validated_data = ResetTenantAdminPasswordSchema().load(request.get_json() or {})
-        result, status_code = self.tenant_service.reset_tenant_admin_password(
-            tenant_id, validated_data["password"], g.current_super_admin
+    def resend_admin_invitation(self, tenant_id):
+        ## No body: the recipient's details come from the invitation already
+        ## on record (there is no admin account yet to ask), so the only
+        ## thing this call can add is the operator's decision to re-send.
+        result, status_code = self.tenant_service.resend_admin_invitation(
+            tenant_id, g.current_super_admin
         )
         return jsonify(result), status_code
 
@@ -310,8 +307,8 @@ super_admin_bp.add_url_rule(
     "/config", view_func=super_admin_route.platform_config, methods=["GET"]
 )
 
-## Form lookups the tenant screens need. Global reference data (currencies, the
-## IANA zones), so no tenant is resolved for either.
+## Form lookups the tenant screens need. Global reference data (currencies,
+## the IANA zones), so no tenant is resolved for either.
 super_admin_bp.add_url_rule(
     "/lookups/currencies", view_func=super_admin_route.list_currencies, methods=["GET"]
 )
@@ -337,9 +334,12 @@ super_admin_bp.add_url_rule(
 super_admin_bp.add_url_rule(
     "/tenants/<int:tenant_id>/restore", view_func=super_admin_route.restore_tenant, methods=["POST"]
 )
+## Re-issue + re-email the first administrator's invitation. POST, because it
+## changes state (the previous link dies); it lives under its tenant like the
+## other tenant sub-rules.
 super_admin_bp.add_url_rule(
-    "/tenants/<int:tenant_id>/reset-admin-password",
-    view_func=super_admin_route.reset_tenant_admin_password,
+    "/tenants/<int:tenant_id>/admin-invitation/resend",
+    view_func=super_admin_route.resend_admin_invitation,
     methods=["POST"],
 )
 

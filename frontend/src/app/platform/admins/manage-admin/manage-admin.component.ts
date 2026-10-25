@@ -151,7 +151,7 @@ export class ManageAdminComponent {
 
   /** Opens the full feed, already scoped to this operator. */
   viewFullHistory(): void {
-    this._router.navigate(['/platform/activity'], {
+    this._router.navigate(['/activity'], {
       queryParams: { entity_type: 'super_admin', entity_id: this.adminId },
     });
   }
@@ -214,6 +214,6 @@ export class ManageAdminComponent {
   }
 
   goBack(): void {
-    this._router.navigate(['/platform/admins']);
+    this._router.navigate(['/admins']);
   }
 }

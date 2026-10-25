@@ -69,6 +69,6 @@ export class PlatformLayoutComponent {
   private finishLogout(): void {
     this._auth.clearSession();
     this._snackbar.openSnackBar('Logged out successfully.', 'success');
-    this._router.navigate(['/platform/login'], { replaceUrl: true });
+    this._router.navigate(['/login'], { replaceUrl: true });
   }
 }

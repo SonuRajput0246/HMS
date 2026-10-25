@@ -9,8 +9,8 @@ from src.database.base_model import BaseModel
 class SuperAdminUser(BaseModel):
     """A platform operator: the account that manages tenants themselves.
 
-    Deliberately NOT a `TenantScoped` model: this account belongs to the platform,
-    not to any one hotel. The tenant `users` table requires a `tenant_id` and is
+    Deliberately NOT a `BaseTenantModel`: this account belongs to the platform,
+    not to any one cafe. The tenant `users` table requires a `tenant_id` and is
     unique on `(tenant_id, email)`, so a global operator has no valid row there
     -- giving one a fabricated tenant would make it a customer account and drag
     it into every tenant-scoped query and JWT. Keeping it on `BaseModel` means

@@ -11,7 +11,7 @@ import { platformHostMatch, tenantHostMatch } from './core/platform-host.guard';
  *
  * One bundle serves both the hotel app and the platform (super admin) console,
  * and the two must never be reachable from each other. Which one a visitor gets
- * is decided by the host: `admin.localhost:4200` is the console, every other
+ * is decided by the host: `platform.localhost:4200` is the console, every other
  * host is a hotel.
  *
  * Each surface is a single component-less "shell" route carrying a `canMatch`
@@ -39,22 +39,26 @@ export const routes: Routes = [
     canMatch: [platformHostMatch],
     children: [
       {
+        // The console's front door. `/` is the sign-in, not a dashboard, so a
+        // visitor is never sent through an authenticated shell first.
         path: '',
         pathMatch: 'full',
-        redirectTo: 'platform/dashboard'
+        redirectTo: 'login'
       },
       {
-        // The URL an operator reaches for first on the console host.
+        // The URLs an operator reaches for out of habit, and old bookmarks.
         path: 'auth/login',
-        redirectTo: 'platform/login'
+        redirectTo: 'login'
       },
       {
         path: 'auth',
         pathMatch: 'full',
-        redirectTo: 'platform/login'
+        redirectTo: 'login'
       },
       {
-        path: 'platform',
+        // Mounted at the console host's root, so the surface owns `/login`,
+        // `/dashboard`, `/tenants`, ... rather than living under `/platform`.
+        path: '',
         loadChildren: () => import('./platform/platform.module').then(a => a.PlatformModule)
       }
     ]

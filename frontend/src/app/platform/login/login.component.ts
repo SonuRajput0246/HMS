@@ -11,7 +11,7 @@ import { PlatformAuthService } from '../services/platform-auth.service';
 /**
  * Platform sign-in. Deliberately not the tenant login with a different logo:
  * it talks to `/api/super-admin/auth/login`, writes the `hms_sa_*` keys and
- * lands on `/platform/dashboard`. The tenant screen does none of those, and the
+ * lands on `/dashboard`. The tenant screen does none of those, and the
  * two must never be reachable from each other's host.
  *
  * Three stages. Credentials first, then the second factor -- and because MFA
@@ -196,6 +196,6 @@ export class PlatformLoginComponent {
   private saveSession(data: IPlatformLoginData): void {
     this._auth.saveSession(data);
     this._snackbar.openSnackBar('Signed in.', 'success');
-    this._router.navigate(['/platform/dashboard']);
+    this._router.navigate(['/dashboard']);
   }
 }

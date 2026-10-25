@@ -1,81 +1,72 @@
 from typing import TYPE_CHECKING
 
-from src.database.base_model import BaseModel
-from sqlalchemy import String, Boolean, CheckConstraint, Index
+from sqlalchemy import Index, String, Boolean
 from sqlalchemy.orm import Mapped, mapped_column
+
+from src.database.base_model import BaseModel
 
 if TYPE_CHECKING:
     pass
 
 
 class Tenant(BaseModel):
-    """One hotel. The isolation boundary for every tenant-scoped row.
+    """One customer of the platform -- a single cafe, in the general case.
 
-    Every table in the tenancy boundary carries a `tenant_id` pointing here, so
-    this row is what "the current tenant" means.
+    This is the only row in the database that is not itself scoped to a tenant.
+    Everything else either hangs off `tenant_id` or is shared reference data
+    (countries, currencies, the module/menu tree, enum definitions).
 
-    `slug` is a DNS label, not a free-form name: it is the subdomain the hotel
-    logs in on (acme.hms.example.com) and the value carried in the X-Tenant
-    header and the JWT claim. It is therefore constrained to lowercase letters,
-    digits and hyphens -- see ck_tenant_slug_format -- because a slug that is no
-    longer a valid DNS label stops resolving, and the failure looks like an
-    outage rather than a bad input.
+    `slug` is the login code a user types to say which cafe they are logging
+    into. It is unique across all tenants and is the only tenant identifier
+    that is safe to put in a URL or a form, because unlike the numeric id it
+    carries no information and cannot be guessed to enumerate accounts.
 
-    `timezone` and `currency` are what the hotel actually trades in, and they
-    live here rather than in configuration for the same reason CMS's do: a single
-    process-wide setting cannot describe hotels in different zones or trading in
-    different currencies. Both are registry facts the platform console sets at
-    creation time. `timezone` is validated against the IANA database by the
-    service that writes it, because a typo shifts every daily report figure;
-    `currency` is an ISO 4217 code and is mirrored into the tenant's
-    `system_settings.default_currency`, which is what the hotel-side code reads.
+    Why timezone and currency live here rather than in configuration:
+    `BUSINESS_TIMEZONE` was a single env var, and every report's day boundary
+    is computed against it. Two cafes in different zones -- or trading in
+    different currencies -- cannot share one process-wide setting, so both
+    moved onto the tenant. The config value survives as the default applied to
+    newly created tenants.
 
-    `is_active` and `is_deleted` are the two lifecycle flags, and they mean
-    different things. `is_active` is provisioning state: a deactivated hotel
-    keeps every row it owns and simply stops accepting logins, and flipping it
-    back re-opens the hotel. `is_deleted` is archiving -- the hotel leaves every
-    list and its subdomain stops resolving, but nothing is destroyed and it can
-    be restored.
-
-    There is deliberately no third state. An earlier revision carried
-    `is_suspended` / `suspended_reason` for an administrative block distinct from
-    deactivation; it was removed as redundant, because a hotel that is blocked
-    with a reason is exactly what `is_active = false` already expresses, and two
-    flags for one decision is two that can disagree.
+    Deliberately NOT extending BaseTenantModel: a tenant cannot belong to a
+    tenant. The whole scope of this table is the single tenant it describes.
     """
-
-    __tablename__ = 'tenants'
+    __tablename__ = "tenants"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    slug: Mapped[str] = mapped_column(String(63), nullable=False, unique=True, index=True)
-    name: Mapped[str] = mapped_column(String(150), nullable=False)
-    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+
+    ## Human name, e.g. "Sunrise Cafe". Shown in the UI and in the email footer.
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+
+    ## The login code, e.g. "sunrise". Lowercase, no spaces; the frontend and
+    ## the login schema both normalise before comparing.
+    slug: Mapped[str] = mapped_column(String(50), nullable=False)
 
     ## IANA zone the business trades in, e.g. "Asia/Kolkata". Reports bucket
     ## hourly aggregates by this, so an unset value shifts every closing-hour
     ## figure into the wrong day.
-    timezone: Mapped[str] = mapped_column(String(50), nullable=False, default="Asia/Kolkata")
+    timezone: Mapped[str] = mapped_column(String(50), nullable=False)
 
-    ## ISO 4217 code, e.g. "INR". Drives currency formatting in the hotel UI and
+    ## ISO 4217 code, e.g. "INR". Drives currency formatting in the POS and
     ## the reports' totals.
     currency: Mapped[str] = mapped_column(String(3), nullable=False, default="INR")
 
+    ## A deactivated tenant keeps its rows (orders, invoices, audit trail) and
+    ## simply stops accepting logins. Deleting a cafe's sales history is not
+    ## something a flag flip should be able to do, so there is no hard-delete
+    ## path here.
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 
     __table_args__ = (
-        ## Structural check only: 1-63 characters, lowercase alphanumeric, and
-        ## any hyphen must be interior. Real validation stays in the schema
-        ## layer, which can say which rule was broken; the database only refuses
-        ## the insert. Mirrors the ck_user_email_format precedent.
-        CheckConstraint(
-            "slug REGEXP '^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$'",
-            name="ck_tenant_slug_format",
-        ),
-
-        ## Resolution runs on every request that names a tenant, and looks this
-        ## up by slug. The unique index on slug alone does not include
-        ## is_deleted, which every lookup filters on.
-        Index("ix_active_tenant_slug", "is_deleted", "slug"),
+        ## No tenant index here, and there must never be one: this table
+        ## has no tenant_id column. It IS the tenant.
+        ## Login is by slug, so this is the hot path for every sign-in.
+        Index("ux_tenant_slug", "slug", unique=True),
+        ## Tenant pickers list active tenants only.
+        Index("ix_tenant_active_id", "is_deleted", "is_active", "id"),
+        ## The admin "search tenants" box.
+        Index("ix_tenant_name", "is_deleted", "name"),
     )
 
     def __repr__(self):
-        return f"Tenant(id={self.id}, slug='{self.slug}')"
+        return f"<Tenant(id={self.id}, slug={self.slug!r}, name={self.name!r})>"

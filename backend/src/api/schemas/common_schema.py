@@ -38,6 +38,13 @@ class GetAllCurrenciesSchema(BaseSchema):
     )
 
 
+class GetAllTimezonesSchema(BaseSchema):
+    search_value = fields.String(
+        required=False,
+        allow_none=True,
+        validate=validate.Length(min=0)
+    )
+
 
 class GetEnumOptionsSchema(BaseSchema):
     enum_key = fields.String(

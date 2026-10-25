@@ -4,7 +4,7 @@
 //
 // `html, body` are `overflow: hidden` app-wide (src/styles.scss) so that the
 // app shell -- and only the shell -- owns the document's scroll region, and
-// `/platform/login` deliberately sits *outside* that shell (it is a sibling
+// `/login` deliberately sits *outside* that shell (it is a sibling
 // route, so signing in never renders the toolbar).
 //
 // The host used to be the scroll container instead: any content taller than

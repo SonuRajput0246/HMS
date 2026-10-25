@@ -182,7 +182,10 @@ describe('root routing', () => {
     const platformShell = appRoutes.find(
       r => r.path === '' && r.canMatch?.includes(platformHostMatch)
     );
-    const mount = platformShell?.children?.find(r => r.path === 'platform');
+    // Mounted at the host's root: the console's URLs are `/login`,
+    // `/dashboard`, ... with no `/platform` prefix.
+    const mount = platformShell?.children?.find(r => r.loadChildren);
+    expect(mount?.path).toBe('');
     expect(mount?.loadChildren).toBeDefined();
     expect(mount?.component).toBeUndefined();
   });
@@ -204,11 +207,11 @@ describe('root routing', () => {
       .filter(r => r.redirectTo)
       .map(r => `${r.path} -> ${r.redirectTo}`);
 
-    // `auth` and `auth/login` are both here because an operator's bookmark, and
-    // muscle memory from the hotel app, both point at the sign-in path.
-    expect(redirects).toContain(' -> platform/dashboard');
-    expect(redirects).toContain('auth/login -> platform/login');
-    expect(redirects).toContain('auth -> platform/login');
+    // The console's front door is the sign-in, not the dashboard, and the
+    // redirects keep an operator's bookmark and hotel-app muscle memory working.
+    expect(redirects).toContain(' -> login');
+    expect(redirects).toContain('auth/login -> login');
+    expect(redirects).toContain('auth -> login');
   });
 
   it('the 403 route is declared before the catch-all', () => {

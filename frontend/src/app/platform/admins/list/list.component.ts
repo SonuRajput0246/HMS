@@ -122,11 +122,11 @@ export class AdminListComponent {
   }
 
   createAdmin(): void {
-    this._router.navigate(['/platform/admins/new']);
+    this._router.navigate(['/admins/new']);
   }
 
   editAdmin(admin: ISuperAdmin): void {
-    this._router.navigate(['/platform/admins', admin.id, 'edit']);
+    this._router.navigate(['/admins', admin.id, 'edit']);
   }
 
   resetPassword(admin: ISuperAdmin): void {

@@ -1,73 +1,56 @@
-"""Creating and maintaining hotels, from the platform side.
+"""Creating and maintaining tenants, from the platform side.
 
 This is the one place in the codebase that is allowed to operate across
 tenants, and it stays inside two narrow lanes:
 
   * The `tenants` table is global (`BaseModel`), so listing and editing it
     needs no filter bypass at all -- the tenant criterion only ever applies to
-    `TenantScoped` models.
-  * Provisioning a brand-new hotel, and syncing its currency setting, are the
-    only blocks that touch tenant-scoped rows, and both do so through an
-    explicit `tenant_context()` that is opened for exactly as long as it is
-    needed.
+    `BaseTenantModel`.
+  * Provisioning a brand-new tenant is the sole block that touches
+    tenant-scoped rows, and it does so through `provision_tenant()`, which
+    opens an explicit `tenant_scope` for exactly as long as it needs one.
 
-Nothing here calls `bypass_tenant_filter()` and nothing here can accidentally run
-as a hotel: a platform request never has one bound, and the tenant resolver
-exempts this whole URL space (`TENANT_EXEMPT_PREFIXES`) so no scope is ever set
-for it. That is what makes the platform-wide `users` count below honest rather
-than a filter that failed to run.
+Nothing here calls `bypass_tenant_filter()` and nothing here can accidentally
+run as a tenant: a platform request never has one bound. If that ever stopped
+being true, a tenant-scoped query would return one cafe's rows rather than all
+of them -- a leak of *correctness*, never of a tenant's data to the operator
+who already owns it.
 
 CROSS-TENANT WRITES ARE NOT ONE TRANSACTION, AND DELIBERATELY SO
-----------------------------------------------------------------
-Create = insert hotel -> commit, then provision -> commit, then audit -> commit.
+---------------------------------------------------------------
+Create = insert tenant -> commit, then provision -> commit, then audit -> commit.
 The seeders own their own transactions and call `db_session.remove()`, so they
 cannot run inside a caller's transaction without discarding it. Rather than
 restructure the seeder layer to pretend otherwise, the boundary is stated
-explicitly and compensated: if provisioning fails, the hotel is archived and an
-error is returned, so a half-created tenant is never left reachable at its
+explicitly and compensated: if provisioning fails, the tenant is archived and
+an error is returned, so a half-created cafe is never left reachable at its
 subdomain.
 """
-import ipaddress
 import json
 import logging
 from datetime import datetime, timezone
-from urllib.parse import urlsplit
 from zoneinfo import ZoneInfo
 
 from flask import has_request_context, request
 from sqlalchemy import func, or_
 
-from src.api.extensions import bcrypt
-from src.api.middlewares.tenant_resolver import is_reserved_slug
 from src.api.models.audit_log_model import AuditLog
-from src.api.models.role_model import Role
-from src.api.models.system_setting_model import SystemSetting
 from src.api.models.tenant_model import Tenant
-from src.api.models.token_model import Token
 from src.api.models.user_model import User
+from src.api.services.tenant_invitation_service import TenantInvitationService
+from src.api.tenancy.resolution import is_reserved_slug
 from src.api.utils.responses import service_response
+from src.api.utils.tenant_urls import tenant_domain as _tenant_domain
 from src.config import get_config
-from src.database.tenant_context import tenant_context
+from src.database.seeders.tenant_defaults_seeder import provision_tenant
 
 
-## The three faces a hotel can present to the operator. Derived from the two
+## The three faces a tenant can present to the operator. Derived from the two
 ## columns that already exist rather than stored, so status can never disagree
-## with the flags the login resolver actually reads. Archiving outranks
-## activation because an archived hotel has no live state at all.
+## with the flags the login resolver actually reads.
 ACTIVE = "active"
 INACTIVE = "inactive"
 ARCHIVED = "archived"
-
-## The setting row that mirrors `tenants.currency`. The hotel-side code
-## (`payment_service`) resolves `default_currency` rather than reaching onto the
-## registry, so the registry is the place an operator changes it and this row is
-## the hotel's copy of that answer.
-CURRENCY_SETTING_KEY = "default_currency"
-
-## The role code a hotel's own top account carries. Looked up by code rather than
-## by display name, because the code is the stable contract and a hotel admin is
-## free to rename the role to "Owner" in the UI.
-SUPER_ADMIN_ROLE_CODE = "SUPER_ADMIN"
 
 
 def _status_of(tenant: Tenant) -> str:
@@ -78,7 +61,7 @@ def _status_of(tenant: Tenant) -> str:
 
 def _valid_timezone(name: str) -> bool:
     """Is `name` a real IANA zone? Worth checking at the boundary: a typo here
-    silently shifts every daily report figure for that hotel."""
+    silently shifts every daily report figure for that cafe."""
     try:
         ZoneInfo(name)
         return True
@@ -90,70 +73,31 @@ def _iso(value):
     return value.isoformat() if value else None
 
 
-def _tenant_host_suffix(public_base_url: str) -> str:
-    """The host every hotel's subdomain hangs off.
-
-    `TENANT_BASE_DOMAIN` is the authority when it is set: it is the same value
-    `tenant_resolver` reads off an incoming `Host` header, so returning it here
-    guarantees the console prints an address that actually resolves.
-
-    Development leaves it unset -- the API and the app are on different origins,
-    so the subdomain never reaches the backend's `Host`. There the console is
-    served from `PUBLIC_BASE_URL` itself and the suffix is derived from it by
-    dropping the deployment's own first label, the exact inverse of what the
-    resolver does when it reads `Host`:
-
-        http://localhost:4200         -> localhost:4200
-        http://127.0.0.1:4200         -> 127.0.0.1:4200
-        https://console.example.com   -> example.com
-
-    One variable to configure instead of two: a second one would be a second
-    chance for the console to print a host no hotel is actually served on.
-    """
-    base_domain = (get_config().TENANT_BASE_DOMAIN or "").strip().lower()
-    parsed = urlsplit(public_base_url)
-    port = parsed.port
-
-    if base_domain:
-        return f"{base_domain}:{port}" if port else base_domain
-
-    hostname = (parsed.hostname or "").lower()
-    if not hostname:
-        return ""
-
-    ## An IP literal has no labels to spare -- `5.6.7.8` minus its first label
-    ## would be `6.7.8`, a host nobody could reach.
-    try:
-        ipaddress.ip_address(hostname)
-        domain = hostname
-    except ValueError:
-        labels = hostname.split(".")
-        domain = hostname if len(labels) <= 2 else ".".join(labels[1:])
-
-    return f"{domain}:{port}" if port else domain
-
-
 class TenantManagementService:
     def __init__(self, db):
         self.db = db
+        ## Beside, not inside, this service: issuing and delivering an
+        ## invitation is its own lifecycle (issue -> email -> accept), and
+        ## create/resend are two entry points onto it.
+        self.invitation_service = TenantInvitationService(db)
 
     ## ------------------------------------------------------------------ read
 
     def dashboard_summary(self):
         """Totals for the panel header.
 
-        All counts come from the same table, and four indexed counts over a
-        handful of rows is the honest choice over a cleverer single pass.
+        All four counts come from the same table in one pass of groupings via
+        conditional aggregates would be cleverer but harder to read; four
+        indexed counts over a handful of rows is the honest choice.
 
-        `total_users` spans every hotel on purpose -- this request has no tenant
-        bound, so `users` is unfiltered here. That is the intent (the operator's
-        platform-wide total), not a filter that failed to run.
+        `total_users` spans every tenant on purpose -- this request has none
+        bound, so `users` is unfiltered here. That is the intent (the
+        operator's platform-wide total), not a filter that failed to run.
         """
         base = self.db.query(Tenant)
-        live = base.filter(Tenant.is_deleted == False)
-        total = live.count()
-        active = live.filter(Tenant.is_active == True).count()
-        inactive = live.filter(Tenant.is_active == False).count()
+        total = base.filter(Tenant.is_deleted == False).count()
+        active = base.filter(Tenant.is_deleted == False, Tenant.is_active == True).count()
+        inactive = base.filter(Tenant.is_deleted == False, Tenant.is_active == False).count()
         archived = base.filter(Tenant.is_deleted == True).count()
         total_users = self.db.query(func.count(User.id)).filter(User.is_deleted == False).scalar() or 0
 
@@ -173,13 +117,14 @@ class TenantManagementService:
     def platform_config(self):
         """The deployment the console is running against.
 
-        Read on demand from configuration instead of being baked into the client
-        bundle, so one build serves every environment and the panel can never
-        print a development host in production.
+        Read on demand from `PUBLIC_BASE_URL` instead of being baked into the
+        client bundle, so one build serves every environment and the panel can
+        never print a development host in production.
 
-        The origin and the hotel host suffix travel together: the browser only
-        needs the second, but returning both means it never has to re-derive a
-        host rule the server already owns.
+        The origin and the tenant domain beneath it travel together: the
+        browser only needs the second, but returning both means it never has to
+        re-derive a host rule the server already owns -- and disagrees with
+        nobody when they match, which in every sane deployment they do.
         """
         public_base_url = (get_config().PUBLIC_BASE_URL or "").rstrip("/")
 
@@ -188,7 +133,7 @@ class TenantManagementService:
             "Configuration fetched successfully.",
             {
                 "public_base_url": public_base_url,
-                "tenant_host_suffix": _tenant_host_suffix(public_base_url),
+                "tenant_host_suffix": _tenant_domain(public_base_url),
             },
             200,
         )
@@ -204,9 +149,9 @@ class TenantManagementService:
         if status == ARCHIVED:
             query = query.filter(Tenant.is_deleted == True)
         else:
-            ## Archived hotels are excluded from every normal view, exactly as
-            ## the login resolver excludes them: "list hotels" means the live ones
-            ## unless asked otherwise.
+            ## Archived tenants are excluded from every normal view, exactly as
+            ## the login resolver excludes them: "list tenants" means the live
+            ## ones unless asked otherwise.
             query = query.filter(Tenant.is_deleted == False)
             if status == ACTIVE:
                 query = query.filter(Tenant.is_active == True)
@@ -261,10 +206,24 @@ class TenantManagementService:
         if not tenant:
             return service_response(False, "Tenant not found.", None, 404)
 
-        ## Archived hotels stay viewable: restoring one starts by reading it.
-        user_count = self._user_count(tenant.id)
+        ## Archived tenants stay viewable: restoring one starts by reading it.
+        user_count = (
+            self.db.query(func.count(User.id))
+            .filter(User.tenant_id == tenant.id, User.is_deleted == False)
+            .scalar()
+            or 0
+        )
+        payload = self._serialize(tenant, user_count)
+        ## The first administrator's invitation rides along so the edit
+        ## screen can offer "Resend invitation" exactly when there is a live
+        ## record to resend, and stay silent when there is not. None (never
+        ## issued) rather than an error: this is a display concern, not a
+        ## precondition for reading a tenant.
+        payload["admin_invitation"] = self.invitation_service.latest_for_tenant(
+            tenant.id
+        )
         return service_response(
-            True, "Tenant fetched successfully.", self._serialize(tenant, user_count), 200
+            True, "Tenant fetched successfully.", payload, 200
         )
 
     ## ----------------------------------------------------------------- write
@@ -290,47 +249,50 @@ class TenantManagementService:
                 400,
             )
 
-        ## Matched WITHOUT `is_deleted`: the unique index on `slug` covers the
-        ## whole column, so an archived hotel still owns its slug. Checking only
-        ## live rows would let this pass validation and then fail the insert as an
-        ## unhandled IntegrityError.
+        ## Matched WITHOUT `is_deleted`: `ux_tenant_slug` is unique across the
+        ## whole column, so an archived tenant still owns its slug. Checking
+        ## only live rows would let this pass validation and then fail the
+        ## insert as an unhandled IntegrityError.
         if self.db.query(Tenant).filter(Tenant.slug == slug).first() is not None:
             return service_response(
                 False, "A tenant with this slug already exists.", None, 409
             )
 
-        ## Snapshot the actor's identity as plain values, now.
-        ##
-        ## `provision_tenant` seeds through a layer that calls
-        ## `db_session.remove()` as each seeder finishes, which detaches every
-        ## object the caller's session held -- including the operator behind
-        ## `g.current_super_admin`. Reading `actor.id` after that is a
-        ## DetachedInstanceError, not a value, so the audit row for the create
-        ## would be lost. Reading it before the call is the whole fix.
-        actor_id, actor_email = self._actor(actor)
-
-        ## Imported here, not at module import time: the seeders are only needed
-        ## when a tenant is actually created, and importing them with the routes
-        ## would pull the whole seeding graph into every boot.
-        from src.database.seeders.provision_tenant import provision_tenant
+        tenant = Tenant(
+            name=data["name"],
+            slug=slug,
+            timezone=timezone_name,
+            currency=currency,
+            is_active=True,
+            is_deleted=False,
+        )
+        self.db.add(tenant)
+        self.db.commit()
+        self.db.refresh(tenant)
+        tenant_id = tenant.id
 
         ## Provisioning runs as its own committed step -- see the module
         ## docstring for why. On failure the tenant is archived so it cannot be
         ## reached at a subdomain that has no roles, prefixes or admin.
+        ##
+        ## The password is present only when the operator chose to create the
+        ## owner directly; `provision_tenant` branches on that and never sees
+        ## a credential it should not use.
         try:
-            provision_tenant(
-                slug=slug,
-                name=data["name"],
+            provisioned = provision_tenant(
+                tenant_id=tenant_id,
                 timezone_name=timezone_name,
                 currency=currency,
-                admin_email=data["admin_email"].strip().lower(),
-                admin_password=data["admin_password"],
-                admin_first_name=data["admin_first_name"],
-                admin_last_name=data["admin_last_name"],
+                admin={
+                    "first_name": data["admin_first_name"],
+                    "last_name": data["admin_last_name"],
+                    "email": data["admin_email"].strip().lower(),
+                    "password": data.get("admin_password"),
+                },
             )
         except Exception:
             logging.exception("Tenant %s created but provisioning failed", slug)
-            self._archive_after_failed_provisioning(slug)
+            self._archive_after_failed_provisioning(tenant_id)
             return service_response(
                 False,
                 "The tenant was created but its setup failed, so it has been "
@@ -339,29 +301,81 @@ class TenantManagementService:
                 500,
             )
 
-        ## Re-read rather than reusing whatever the seeders left behind: every
-        ## seeder calls db_session.remove(), so any object held across the call
-        ## is detached and would raise on the next attribute access.
-        tenant = self.db.query(Tenant).filter(Tenant.slug == slug).first()
-        tenant_id = tenant.id
+        mode = provisioned.get("mode", "invitation")
 
-        self._audit(
-            actor_id,
-            actor_email,
-            "CREATE_TENANT",
-            "tenant",
-            tenant_id,
-            {"slug": slug, "name": data["name"], "timezone": timezone_name, "currency": currency},
+        ## Delivery is deliberately OUTSIDE the provisioning try: the tenant
+        ## and its admin record are committed, and a mail server refusing a
+        ## message must not archive a perfectly good cafe. Failure lands in
+        ## `email_sent` below, and the operator has Resend invitation. The
+        ## direct-owner path has nothing to deliver at all.
+        created = self.db.query(Tenant).filter(Tenant.id == tenant_id).first()
+        email_sent = False
+        if mode == "invitation":
+            try:
+                email_sent = self.invitation_service.send_invitation(
+                    tenant=created,
+                    invitation_id=provisioned["invitation_id"],
+                    raw_token=provisioned["token"],
+                )
+            except Exception:
+                logging.exception(
+                    "Tenant %s created but the admin invitation email failed", slug
+                )
+
+        details = {
+            "slug": slug,
+            "name": data["name"],
+            "timezone": timezone_name,
+            "currency": currency,
+            "admin_email": provisioned["email"],
+            "admin_mode": mode,
+        }
+        if mode == "invitation":
+            ## Part of the record: whether the admin can act on the create
+            ## RIGHT NOW depends on this flag, not on the row.
+            details["invitation_email_sent"] = email_sent
+        self._audit(actor, "CREATE_TENANT", "tenant", tenant_id, details)
+
+        payload = self._serialize(created)
+        payload["admin_mode"] = mode
+        ## None in owner mode: there is no invitation to resend, and the edit
+        ## screen keys the resend card off exactly this value.
+        payload["admin_invitation"] = (
+            {
+                "email": provisioned["email"],
+                "expires_at": _iso(provisioned["expires_at"]),
+                "email_sent": email_sent,
+            }
+            if mode == "invitation"
+            else None
         )
 
-        return service_response(True, "Tenant created successfully.", self._serialize(tenant), 201)
+        if mode == "owner":
+            message = (
+                f"Tenant created. The owner account for {provisioned['email']} "
+                "was created with the password you set."
+            )
+        elif email_sent:
+            message = (
+                f"Tenant created. The administrator invitation was emailed to "
+                f"{provisioned['email']}."
+            )
+        elif mode == "invitation":  ## issued, but SMTP refused
+            message = (
+                f"Tenant created, but the invitation email could not be sent "
+                f"to {provisioned['email']}. Use 'Resend invitation' to try again."
+            )
+        else:  ## pragma: no cover -- provisioning only returns the two modes
+            ## above; reaching this would mean the seeder invented a third one.
+            message = "Tenant created without an administrator."
+        return service_response(True, message, payload, 201)
 
     def update_tenant(self, tenant_id: int, data: dict, actor):
         tenant = self.db.query(Tenant).filter(Tenant.id == tenant_id).first()
         if not tenant:
             return service_response(False, "Tenant not found.", None, 404)
         if tenant.is_deleted:
-            ## Editing an archived hotel would move the address of something the
+            ## Editing an archived cafe would move the address of something the
             ## resolver refuses, which is never what the operator meant.
             return service_response(
                 False, "Restore this tenant before editing it.", None, 400
@@ -421,20 +435,13 @@ class TenantManagementService:
         if not changed:
             return service_response(True, "Nothing changed.", self._serialize(tenant), 200)
 
-        ## Commit the registry row first, then mirror the currency into the
-        ## hotel's own settings. Kept separate because the second needs an
-        ## explicit tenant scope and a failure there must not undo the first.
         self.db.commit()
-
-        if "currency" in changed:
-            self._sync_currency_setting(tenant.id, tenant.currency)
-
         self.db.refresh(tenant)
 
         ## A slug change rewrites the hotel's URL, so it is called out in the
         ## audit detail rather than sitting in an undifferentiated field list.
         self._audit(
-            *self._actor(actor),
+            actor,
             "UPDATE_TENANT",
             "tenant",
             tenant_id,
@@ -459,16 +466,16 @@ class TenantManagementService:
         if tenant.is_active == is_active:
             return service_response(True, "Nothing changed.", self._serialize(tenant), 200)
 
-        ## `is_deleted` is deliberately untouched: deactivating a hotel stops it
+        ## `is_deleted` is deliberately untouched: deactivating a cafe stops it
         ## trading without claiming it was archived. The resolver refuses both
-        ## states and `auth_middleware` re-checks on every request, so an
+        ## states, and `auth_middleware` re-checks on every request, so an
         ## already-issued token stops working too.
         tenant.is_active = is_active
         self.db.commit()
         self.db.refresh(tenant)
 
         self._audit(
-            *self._actor(actor),
+            actor,
             "ACTIVATE_TENANT" if is_active else "DEACTIVATE_TENANT",
             "tenant",
             tenant_id,
@@ -489,18 +496,16 @@ class TenantManagementService:
         if tenant.is_deleted:
             return service_response(False, "This tenant is already archived.", None, 400)
 
-        ## Soft delete only. Every booking, payment and audit row the hotel owns
-        ## stays exactly where it is -- archived, not destroyed. `deleted_at` is
-        ## stamped by the shared listener on this update. Deactivated on the way
-        ## through so it stops trading immediately, and so a restore brings back
-        ## a hotel the operator must consciously re-activate.
+        ## Soft delete only. Every order, invoice and audit row the cafe owns
+        ## stays exactly where it is -- archived, not destroyed. `deleted_at`
+        ## is stamped by the shared base_events listener on this update.
         tenant.is_active = False
         tenant.is_deleted = True
         self.db.commit()
         self.db.refresh(tenant)
 
         self._audit(
-            *self._actor(actor),
+            actor,
             "ARCHIVE_TENANT",
             "tenant",
             tenant_id,
@@ -519,7 +524,7 @@ class TenantManagementService:
             return service_response(False, "This tenant is not archived.", None, 400)
 
         ## Restored but left INACTIVE: coming back and trading are two separate
-        ## decisions, and silently switching a hotel on is the riskier default.
+        ## decisions, and silently switching a cafe on is the riskier default.
         ## `slug` is reclaimed on the same statement, so its unique index frees
         ## the subdomain again.
         tenant.is_deleted = False
@@ -528,7 +533,7 @@ class TenantManagementService:
         self.db.refresh(tenant)
 
         self._audit(
-            *self._actor(actor),
+            actor,
             "RESTORE_TENANT",
             "tenant",
             tenant_id,
@@ -542,118 +547,27 @@ class TenantManagementService:
             200,
         )
 
-    def reset_tenant_admin_password(self, tenant_id: int, new_password: str, actor):
-        """Set a new password on a hotel's own super admin, and end its sessions.
+    def resend_admin_invitation(self, tenant_id: int, actor):
+        """Re-issue and re-email the tenant's first-administrator invitation.
 
-        A recovery path the hotel cannot run itself: when its only admin loses
-        the password there is nobody inside the hotel who could reset it. The
-        admin lives inside the tenant, so the lookup is scoped to it -- a
-        platform request carries no tenant of its own, so the scope is entered
-        explicitly rather than assumed from the ambient context.
-
-        Revoking the admin's live tokens is what makes the reset more than
-        cosmetic: whoever held the old password keeps the sessions it bought
-        otherwise.
+        Kept here as a thin door onto `TenantInvitationService.resend`: the
+        tenant-existence rules are this service's (identical to edit: find
+        the row, refuse an archived one), and everything about invitations
+        lives in the invitation service.
         """
-        tenant = self.db.query(Tenant).filter(
-            Tenant.id == tenant_id, Tenant.is_deleted == False
-        ).first()
+        tenant = self.db.query(Tenant).filter(Tenant.id == tenant_id).first()
         if not tenant:
             return service_response(False, "Tenant not found.", None, 404)
-
-        with tenant_context(tenant.id):
-            admin = (
-                self.db.query(User)
-                .join(Role, Role.id == User.role_id)
-                .filter(
-                    Role.role_code == SUPER_ADMIN_ROLE_CODE,
-                    User.is_deleted == False,
-                    User.is_active == True,
-                )
-                .order_by(User.id.asc())
-                .first()
+        if tenant.is_deleted:
+            return service_response(
+                False, "Restore this tenant before resending its invitation.", None, 400
             )
-            if admin is None:
-                return service_response(
-                    False, "This tenant has no active super admin.", None, 404
-                )
 
-            admin.password = bcrypt.generate_password_hash(new_password, 12).decode("utf-8")
-            admin.last_password_update_at = datetime.now(timezone.utc)
-
-            self.db.query(Token).filter(
-                Token.user_id == admin.id,
-                Token.is_revoked == False,
-            ).update({"is_revoked": True})
-            self.db.commit()
-
-            admin_id = admin.id
-
-        self._audit(
-            *self._actor(actor),
-            "RESET_TENANT_ADMIN_PASSWORD",
-            "tenant",
-            tenant_id,
-            {"slug": tenant.slug, "user_id": admin_id},
-        )
-
-        return service_response(
-            True,
-            "Admin password reset. The administrator must sign in again.",
-            {"tenant_id": tenant.id, "user_id": admin_id},
-            200,
-        )
+        return self.invitation_service.resend(tenant, actor)
 
     ## --------------------------------------------------------------- helpers
 
-    def _user_count(self, tenant_id: int) -> int:
-        return (
-            self.db.query(func.count(User.id))
-            .filter(User.tenant_id == tenant_id, User.is_deleted == False)
-            .scalar()
-            or 0
-        )
-
-    def _sync_currency_setting(self, tenant_id: int, currency: str) -> None:
-        """Mirror the registry's currency into the hotel's own settings.
-
-        The hotel side reads `system_settings.default_currency`, not
-        `tenants.currency`, so a registry edit that did not land here would leave
-        the console showing one currency and the hotel transacting in another.
-
-        Wrapped in its own tenant scope because `system_settings` is
-        tenant-scoped and this request has none bound. Best effort in the sense
-        that it runs after the registry row is already committed: a failure here
-        is logged and the operator's edit still stands.
-        """
-        try:
-            with tenant_context(tenant_id):
-                row = (
-                    self.db.query(SystemSetting)
-                    .filter(
-                        SystemSetting.tenant_id == tenant_id,
-                        SystemSetting.key == CURRENCY_SETTING_KEY,
-                    )
-                    .first()
-                )
-                if row is None:
-                    row = SystemSetting(
-                        tenant_id=tenant_id,
-                        key=CURRENCY_SETTING_KEY,
-                        value=currency,
-                    )
-                    self.db.add(row)
-                else:
-                    row.value = currency
-                self.db.commit()
-        except Exception:
-            self.db.rollback()
-            logging.exception(
-                "Could not mirror currency %s into system_settings for tenant %s",
-                currency, tenant_id,
-            )
-
-    def _archive_after_failed_provisioning(self, slug: str) -> None:
+    def _archive_after_failed_provisioning(self, tenant_id: int) -> None:
         """Compensating action for a create that got half-way there.
 
         The row is deleted-but-present rather than left active, so it cannot be
@@ -662,7 +576,7 @@ class TenantManagementService:
         instead of claiming the tenant was cleaned up.
         """
         try:
-            tenant = self.db.query(Tenant).filter(Tenant.slug == slug).first()
+            tenant = self.db.query(Tenant).filter(Tenant.id == tenant_id).first()
             if tenant and not tenant.is_deleted:
                 tenant.is_active = False
                 tenant.is_deleted = True
@@ -670,29 +584,16 @@ class TenantManagementService:
         except Exception:
             self.db.rollback()
             logging.exception(
-                "Could not archive tenant %s after failed provisioning", slug
+                "Could not archive tenant %s after failed provisioning", tenant_id
             )
 
-    @staticmethod
-    def _actor(actor):
-        """The actor's identity as two plain values.
-
-        Taken up front rather than read at write time because the actor is an ORM
-        object on the request's session, and provisioning closes that session
-        underneath it. `super_admin_id` and `actor_email` are copied into the
-        audit row precisely so the trail outlives the session that wrote it --
-        taking them here is that promise kept.
-        """
-        return getattr(actor, "id", None), getattr(actor, "email", None)
-
-    def _audit(self, actor_id, actor_email, action: str, entity_type: str,
-               entity_id: int, details: dict) -> None:
+    def _audit(self, actor, action: str, entity_type: str, entity_id: int, details: dict) -> None:
         """Record the change. Never fails the operation: a missing audit row is
         a diagnostic gap, a rolled-back activation is a surprise."""
         try:
             self.db.add(AuditLog(
-                super_admin_id=actor_id,
-                actor_email=actor_email,
+                super_admin_id=getattr(actor, "id", None),
+                actor_email=getattr(actor, "email", None),
                 action=action,
                 entity_type=entity_type,
                 entity_id=entity_id,
@@ -721,7 +622,7 @@ class TenantManagementService:
             "is_active": tenant.is_active,
             "is_deleted": tenant.is_deleted,
             ## Derived, not stored -- see _status_of. Gives the UI one word for
-            ## the flags it would otherwise have to reason about.
+            ## the pair of flags it would otherwise have to reason about.
             "status": _status_of(tenant),
             "created_at": _iso(tenant.created_at),
             "updated_at": _iso(tenant.updated_at),

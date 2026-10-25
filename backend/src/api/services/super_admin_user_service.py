@@ -1,9 +1,9 @@
 """Listing and maintaining the platform's own operators.
 
 A second management surface beside `TenantManagementService`, pointed at
-`super_admin_users` instead of `tenants`. Same rules apply: both tables are
-global (`BaseModel`), so no tenant is ever resolved and the tenant filter never
-touches these queries.
+`super_admin_users` instead of `tenants`. Same rules apply: the table is global
+(`BaseModel`), so no tenant is ever resolved and the tenant filter never touches
+these queries.
 
 Every action writes an audit row through `AuditService`, so the platform's
 activity feed covers the operator lifecycle too -- creating an admin is exactly

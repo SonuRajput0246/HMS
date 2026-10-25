@@ -58,7 +58,7 @@ export class TenantService {
   async load(): Promise<void> {
     const slug = this.instance.slug;
     if (!slug) {
-      /// The platform console host names no hotel -- `admin.localhost` is the
+      /// The platform console host names no hotel -- `platform.localhost` is the
       /// console's own reserved label, not a tenant. Asking the API to resolve
       /// it would be a guaranteed 404 on every console boot, so the question is
       /// not even put. `state` stays `ok` so the guard would let anything

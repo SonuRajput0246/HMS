@@ -335,7 +335,7 @@ export class ManageTenantComponent implements OnDestroy {
 
   /** Opens the full feed, already scoped to this tenant. */
   viewFullHistory(): void {
-    this._router.navigate(['/platform/activity'], {
+    this._router.navigate(['/activity'], {
       queryParams: { entity_type: 'tenant', entity_id: this.tenantId },
     });
   }
@@ -459,6 +459,6 @@ export class ManageTenantComponent implements OnDestroy {
   }
 
   goBack(): void {
-    this._router.navigate(['/platform/tenants']);
+    this._router.navigate(['/tenants']);
   }
 }

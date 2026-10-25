@@ -1,6 +1,6 @@
 <div class="platform-shell">
   <header class="topbar">
-    <a class="brand" routerLink="/platform/dashboard">
+    <a class="brand" routerLink="/dashboard">
       <span class="brand-badge">
         <mat-icon>shield_person</mat-icon>
       </span>
@@ -11,19 +11,19 @@
     </a>
 
     <nav class="links" aria-label="Platform sections">
-      <a mat-button class="nav-link" routerLink="/platform/dashboard" routerLinkActive="active-link">
+      <a mat-button class="nav-link" routerLink="/dashboard" routerLinkActive="active-link">
         <mat-icon>space_dashboard</mat-icon>
         <span>Dashboard</span>
       </a>
-      <a mat-button class="nav-link" routerLink="/platform/tenants" routerLinkActive="active-link">
+      <a mat-button class="nav-link" routerLink="/tenants" routerLinkActive="active-link">
         <mat-icon>dns</mat-icon>
         <span>Tenants</span>
       </a>
-      <a mat-button class="nav-link" routerLink="/platform/admins" routerLinkActive="active-link">
+      <a mat-button class="nav-link" routerLink="/admins" routerLinkActive="active-link">
         <mat-icon>admin_panel_settings</mat-icon>
         <span>Administrators</span>
       </a>
-      <a mat-button class="nav-link" routerLink="/platform/activity" routerLinkActive="active-link">
+      <a mat-button class="nav-link" routerLink="/activity" routerLinkActive="active-link">
         <mat-icon>history</mat-icon>
         <span>Activity</span>
       </a>
@@ -51,7 +51,7 @@
           <span class="menu-email">{{ userEmail }}</span>
         </span>
       </div>
-      <button mat-menu-item class="menu-security" routerLink="/platform/security">
+      <button mat-menu-item class="menu-security" routerLink="/security">
         <mat-icon>shield</mat-icon>
         <span>Security</span>
       </button>

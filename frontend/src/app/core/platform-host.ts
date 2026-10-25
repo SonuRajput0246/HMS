@@ -2,9 +2,10 @@
  * Which hostnames serve the platform (super admin) console.
  *
  * The console is a second surface inside the same bundle: it is reached at a
- * reserved subdomain -- `admin.localhost:4200` in development, `admin.example.com`
- * in production -- and is never addressable from a hotel's subdomain. Only the
- * first DNS label is consulted, so both forms behave identically.
+ * reserved subdomain -- `platform.localhost:4200` in development,
+ * `platform.example.com` in production -- and is never addressable from a
+ * hotel's subdomain. Only the first DNS label is consulted, so both forms
+ * behave identically.
  *
  * These labels are a subset of the backend's `RESERVED_SLUGS`
  * (`backend/src/api/middlewares/tenant_resolver.py`), which is what makes the
@@ -18,7 +19,7 @@
  * the API still refuses to resolve; a label added there and not here would be a
  * hotel that could shadow the console.
  */
-export const PLATFORM_HOST_LABELS = ['admin', 'platform', 'superadmin', 'console'];
+export const PLATFORM_HOST_LABELS = ['platform', 'superadmin', 'console'];
 
 /** True when `hostname` (defaulting to the current one) names the platform. */
 export function isPlatformHost(hostname?: string): boolean {

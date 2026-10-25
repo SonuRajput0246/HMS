@@ -131,11 +131,11 @@ export class TenantListComponent {
   }
 
   createTenant(): void {
-    this._router.navigate(['/platform/tenants/new']);
+    this._router.navigate(['/tenants/new']);
   }
 
   editTenant(tenant: ITenant): void {
-    this._router.navigate(['/platform/tenants', tenant.id, 'edit']);
+    this._router.navigate(['/tenants', tenant.id, 'edit']);
   }
 
   async toggleStatus(tenant: ITenant): Promise<void> {

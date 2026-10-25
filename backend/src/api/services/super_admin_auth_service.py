@@ -1,15 +1,10 @@
 """Platform sign-in, profile and logout.
 
 Mirrors the shape of `auth_service.AuthService` (same `service_response`
-returns, same single-live-session rule, same revocation idea) without reusing its
-code, because the two authenticate different principals: this one has no tenant,
-no menu tree and no role. Sharing the implementation would mean every line of the
-hotel path had to learn about a case it does not have.
-
-MFA is compulsory for platform administrators -- no account reaches a session on
-a password alone -- and sign-in is rate-limited per account, because this is the
-most valuable login on the system: it has no tenant scope, so it can reach every
-hotel.
+returns, same single-live-session rule, same revocation idea) without reusing
+its code, because the two authenticate different principals: this one has no
+tenant, no menu tree and no role. Sharing the implementation would mean every
+line of the tenant path had to learn about a case it does not have.
 """
 import uuid
 from datetime import datetime, timezone, timedelta
@@ -18,13 +13,9 @@ import jwt
 from flask import current_app
 
 from src.api.extensions import bcrypt
-from src.api.middlewares.super_admin_auth import (
-    SUPER_ADMIN_MFA_PENDING_SCOPE,
-    SUPER_ADMIN_SCOPE,
-    super_admin_secret,
-)
 from src.api.models.super_admin_token_model import SuperAdminToken
 from src.api.models.super_admin_user_model import SuperAdminUser
+from src.api.middlewares.super_admin_auth import SUPER_ADMIN_MFA_PENDING_SCOPE, SUPER_ADMIN_SCOPE
 from src.api.services.audit_service import AuditService
 from src.api.utils.mfa import generate_secret, get_uri, verify_otp
 from src.api.utils.responses import service_response
@@ -34,7 +25,7 @@ class SuperAdminAuthService:
     def __init__(self, db):
         self.db = db
         ## Sign-in, sign-out, password and MFA changes all write here, so the
-        ## activity feed covers the security events -- not just the hotel and
+        ## activity feed covers the security events -- not just the tenant and
         ## operator management ones the other services already recorded.
         self.audit = AuditService(db)
 
@@ -136,7 +127,7 @@ class SuperAdminAuthService:
         """
         access_token = self._mint_token(admin)
 
-        ## Single live session per admin, matching the hotel login. Revoking
+        ## Single live session per admin, matching the tenant login. Revoking
         ## the predecessors here is what makes a second sign-in cut the first
         ## off rather than leaving it running alongside.
         self.db.query(SuperAdminToken).filter(
@@ -216,7 +207,7 @@ class SuperAdminAuthService:
 
     def _mint_mfa_token(self, admin: SuperAdminUser) -> str:
         """A short-lived pending token, valid only to complete MFA. Its scope
-        is distinct from the hotel login's `mfa_pending` so the two temporary
+        is distinct from the tenant login's `mfa_pending` so the two temporary
         tokens can never be replayed against each other's verify endpoint."""
         return jwt.encode(
             {
@@ -226,8 +217,8 @@ class SuperAdminAuthService:
                 "exp": datetime.now(timezone.utc) + timedelta(minutes=5),
                 "jti": uuid.uuid4().hex,
             },
-            super_admin_secret(),
-            algorithm=current_app.config["PLATFORM_JWT_ALGORITHM"],
+            current_app.config["JWT_SECRET_KEY"],
+            algorithm=current_app.config["JWT_ALGORITHM"],
         )
 
     def _mint_token(self, admin: SuperAdminUser) -> str:
@@ -246,8 +237,8 @@ class SuperAdminAuthService:
                 ## the failure that causes).
                 "jti": uuid.uuid4().hex,
             },
-            super_admin_secret(),
-            algorithm=current_app.config["PLATFORM_JWT_ALGORITHM"],
+            current_app.config["JWT_SECRET_KEY"],
+            algorithm=current_app.config["JWT_ALGORITHM"],
         )
 
     def me(self, admin):
@@ -276,8 +267,8 @@ class SuperAdminAuthService:
         try:
             payload = jwt.decode(
                 data["temp_token"],
-                super_admin_secret(),
-                algorithms=[current_app.config["PLATFORM_JWT_ALGORITHM"]],
+                current_app.config["JWT_SECRET_KEY"],
+                algorithms=[current_app.config["JWT_ALGORITHM"]],
             )
         except jwt.ExpiredSignatureError:
             return service_response(

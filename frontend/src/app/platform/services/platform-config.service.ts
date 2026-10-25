@@ -115,8 +115,8 @@ export class PlatformConfigService {
    * What this deployment is assumed to look like when the server has not said.
    *
    * The two-label rule `resolution.py` applies to a `Host` header, run
-   * backwards: `admin.localhost:4200` -> `localhost:4200`, and
-   * `admin.example.com` -> `example.com`. `resolution.py` is the authority --
+   * backwards: `platform.localhost:4200` -> `localhost:4200`, and
+   * `platform.example.com` -> `example.com`. `resolution.py` is the authority --
    * if the two ever disagree the panel prints a host no tenant answers on.
    *
    * A bare domain keeps every label it has, because there is no deployment

@@ -22,8 +22,15 @@ describe('isPlatformHost', () => {
   });
 
   it('is case-insensitive and tolerates whitespace', () => {
-    expect(isPlatformHost('ADMIN.localhost')).toBe(true);
-    expect(isPlatformHost('  Admin.LocalHost  ')).toBe(true);
+    expect(isPlatformHost('PLATFORM.localhost')).toBe(true);
+    expect(isPlatformHost('  Platform.LocalHost  ')).toBe(true);
+  });
+
+  it('no longer selects the console on the old admin label', () => {
+    // The console moved to `platform`; `admin.localhost` is not a console host
+    // anymore, and the backend still reserves the slug so a hotel cannot take
+    // it either.
+    expect(isPlatformHost('admin.localhost')).toBe(false);
   });
 
   it('never treats an IP literal as the console', () => {
